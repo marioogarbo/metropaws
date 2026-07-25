@@ -204,18 +204,6 @@ export async function deleteMember(id: string): Promise<void> {
   await api.delete(`/admin/members/${id}`);
 }
 
-// --- Admin ---
-export async function scanQr(token: string): Promise<Member> {
-  const { data } = await api.get<Member>(`/admin/scan/${token}`);
-  return data;
-}
-
-export async function deployService(payload: {
-  member_id: string; service_type_id: string; pet_id?: string; notes?: string;
-}): Promise<void> {
-  await api.post('/admin/deploy-service', payload);
-}
-
 export async function listMembers(): Promise<Member[]> {
   const { data } = await api.get<Member[]>('/admin/members');
   return data;
