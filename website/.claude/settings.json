@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node \"C:\\\\Users\\\\mario\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\context.mjs\")",
+      "Read(//c/Users/mario/.claude/skills/impeccable/reference/**)"
+    ]
+  }
+}

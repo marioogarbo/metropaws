@@ -1,0 +1,54 @@
+# ── MetroPaws monorepo root .gitignore ──────────────────────────────────────
+# Belt-and-suspenders: each subproject also has its own .gitignore, which git
+# still honours here. This root file guarantees secrets and heavy build output
+# never get committed regardless of the subdir rules.
+
+# ── Secrets (NEVER commit) ──────────────────────────────────────────────────
+**/.env
+**/.env.*
+!**/.env.example
+**/key.properties
+**/*.jks
+**/*.keystore
+**/*.pem
+**/.render-service-id
+**/.render-service-id.*
+**/serviceAccountKey.json
+
+# ── Python (backend) ────────────────────────────────────────────────────────
+**/.venv/
+**/venv/
+**/env/
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+backend/uploads/
+
+# ── Node / Next.js (website) ────────────────────────────────────────────────
+**/node_modules/
+**/.next/
+**/out/
+**/.vercel/
+**/*.tsbuildinfo
+website/next-env.d.ts
+
+# ── Flutter / Dart (mobile) ─────────────────────────────────────────────────
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.gradle/
+**/*.g.dart.lock
+mobile/.flutter-plugins*
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/ios/Pods/
+
+# ── OS / IDE ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.iml

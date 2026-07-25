@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "MetroPaws (Local)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    },
+    {
+      "name": "MetroPaws (Local — Android emulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--dart-define=API_URL=http://10.0.2.2:8000"]
+    },
+    {
+      "name": "MetroPaws (Dev server)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--dart-define=ENV=dev"]
+    },
+    {
+      "name": "MetroPaws (Prod)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--dart-define=ENV=prod"]
+    },
+    {
+      "name": "MetroPaws (Prod — release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "release",
+      "args": ["--dart-define=ENV=prod"]
+    }
+  ]
+}

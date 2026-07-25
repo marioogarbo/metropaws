@@ -1,0 +1,206 @@
+# CLAUDE.md — MetroPaws Mobile (Flutter)
+
+AI coding-agent instructions for this directory. MUST read this entire file before writing or modifying any mobile code.
+
+---
+
+## PRIME DIRECTIVES
+
+### Filesystem Scope
+
+MUST ONLY write code inside `lib/`, `assets/`, `pubspec.yaml`, and `android/app/src/`. NEVER touch infrastructure, CI, or build files.
+
+### Hard Stops — Stop and ask the user before any of these:
+
+- Deleting any file
+- Adding a new dependency to `pubspec.yaml`
+- Changing the BLoC routing structure
+- Modifying `AuthStorage` key names (key changes break stored tokens in production)
+
+### Immutable Rules
+
+- MUST update this file whenever you discover something future LLMs should know — new patterns, architectural decisions, gotchas, routing changes. Write it here so it isn't rediscovered the hard way.
+- NEVER hardcode colors, font sizes, or spacing values in widgets — all design tokens come from `theme.dart` via `Theme.of(context)`.
+- NEVER store sensitive data (token, user info) outside `flutter_secure_storage` — no `SharedPreferences`, no plain files.
+- NEVER add features, abstractions, or files beyond what was explicitly requested.
+- NEVER call `http` directly from a BLoC or widget — all HTTP goes through `core/services/api_service.dart`.
+- NEVER use `setState` for feature-level state — use BLoC.
+- NEVER hardcode the API base URL anywhere except `core/constants/api_constants.dart`.
+- NEVER add direct database calls or SQL — all data comes through the FastAPI backend.
+- NEVER copy credentials from `backend/.env` into mobile code.
+- NEVER create a new BLoC for something that belongs in an existing feature BLoC.
+
+> **Design Context:** Full brand personality, design tokens, principles, and mobile layout guidelines are in [`mobile/.impeccable.md`](.impeccable.md) — the file in THIS directory. MUST read that file before generating any UI or making design decisions. Do NOT reference the root project `.impeccable.md` or `website/.impeccable.md` for design decisions in this project.
+
+---
+
+## Backend Project Reference
+
+The FastAPI backend lives at `C:\Users\mario\Documents\mario\Projects\metropaws\backend\`.
+MUST read `backend/CLAUDE.md` before modifying any API call or data model assumption.
+
+| Setting                 | Value                                                               |
+| ----------------------- | ------------------------------------------------------------------- |
+| **Production base URL** | `https://metropaws-backend.onrender.com`                            |
+| **Local dev base URL**  | `http://10.0.2.2:8000` (Android emulator) / `http://localhost:8000` |
+| **Auth algorithm**      | HS256 JWT — token expires in 10080 min (7 days)                     |
+| **Database**            | PostgreSQL via Supabase (connection managed by backend only)        |
+| **File uploads**        | Served from `BASE_URL/uploads/` — pet photos, vax cards             |
+
+Key backend files to cross-reference when changing API contracts:
+
+- `backend/schemas.py` — all request/response shapes (Pydantic models)
+- `backend/models.py` — ORM table definitions / DB schema
+- `backend/routers/auth.py` — `/register`, `/login`, `/me`, forgot/reset password
+- `backend/routers/members.py` — member profile CRUD
+- `backend/routers/pets.py` — pet CRUD + photo/vax card uploads
+- `backend/routers/admin.py` — QR scan, service deployment, service assignment, logs
+
+> **NEVER copy credentials from `backend/.env` into mobile code.** Base URL goes in `core/constants/api_constants.dart` only.
+
+---
+
+## Website Project Reference (Design Source of Truth)
+
+The Next.js website lives at `C:\Users\mario\Documents\mario\Projects\metropaws\website\`.
+The website and mobile app share the **same brand, design tokens, and UX principles** — use the website as the design reference when building or reviewing mobile UI.
+
+Key design reference files:
+
+- `website/CLAUDE.md` — Website-specific AI instructions and constraints
+
+> **Design source of truth for mobile:** Use `mobile/.impeccable.md` (this directory) — NOT `website/.impeccable.md`. The mobile file already contains all shared tokens and principles adapted for Flutter.
+
+### Shared Design Tokens (sourced from `mobile/.impeccable.md`)
+
+| Token          | Value     | Usage                                      |
+| -------------- | --------- | ------------------------------------------ |
+| `--navy`       | `#263258` | Primary — CTAs, branding, trust signals    |
+| `--gold`       | `#b89a3e` | Accent — highlights, delight moments       |
+| `--surface`    | `#f8f7f4` | Page/scaffold background — warm near-white |
+| `--text`       | `#1a1e32` | Body text — near-black navy, high contrast |
+| `--navy-light` | `#eef0f8` | Hover states, tag backgrounds              |
+| `--gold-light` | `#fbf6e9` | Soft gold fills, warning surfaces          |
+| `--grey`       | `#8b8fa8` | Secondary/muted text, placeholders         |
+| `--grey-light` | `#e8eaf2` | Borders, dividers, subtle fills            |
+
+**Fonts:** `Montserrat` throughout — ExtraBold (800) display, Bold (700) headings, SemiBold (600) labels/UI, Regular (400) body. Loaded via `google_fonts` package, **served from BUNDLED assets** in `assets/fonts/` (Latin-subset weights 400/500/600/700/800, named `Montserrat-Regular/Medium/SemiBold/Bold/ExtraBold.ttf`). google_fonts auto-detects these from the asset manifest and uses them instead of fetching over the network on first launch (no fallback-font flash, no dependency on Google's servers). Runtime fetching is left ENABLED as a safety net. To hard-guarantee offline-only, add `GoogleFonts.config.allowRuntimeFetching = false;` in `main()` — but verify glyph rendering on a real device first. If you add a `GoogleFonts.<family>()` call with a new weight, bundle that weight too or it will silently fetch.
+
+**Border radius:** Cards `16px`, buttons `12px`, chips `full`
+
+**Elevation:** Subtle only — no harsh drop shadows
+
+### Shared UX Principles
+
+1. **Pet as Hero** — Every screen centers the pet (name, photo, breed, sessions). Owner is supporting cast.
+2. **Delight Key Moments** — Registration success, QR scan + service deploy, and viewing sessions deserve joyful treatment.
+3. **Accessible Warmth** — 44×44px minimum touch targets, no low-contrast text, warmth through color/copy not legibility sacrifices.
+4. **Graceful Confidence** — Every error, empty, and loading state must feel considered — never raw.
+
+> **Mockup Override Rule:** If reference mockups feature dark mode, glowing effects, gradient text, or any palette outside the tokens above — ignore that styling. Translate layout into the light-mode design system defined here.
+
+---
+
+## Brand Assets
+
+Official and updated brand assets live at `C:\Users\mario\Documents\mario\Projects\metropaws\updated-assets\`.
+MUST use assets from this folder — they supersede anything currently in `assets/images/`.
+
+| File                                           | Usage                                                             |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| `Metro Paws Logo 13.04.2026 Curves-01 PNG.png` | Primary logo (full color, transparent bg) — preferred for app use |
+| `Metro Paws Logo 13.04.2026 Curves-02 PNG.png` | Secondary logo variant                                            |
+| `Pet Care Dog.png`                             | Hero/onboarding illustration (transparent bg)                     |
+| `Pet Care with Text.jpg`                       | Hero image with tagline — login/register backgrounds              |
+| `Pet Care No Text.jpg`                         | Clean hero image without text — use where copy is overlaid        |
+| `Digital ID.jpg`                               | Digital member ID visual reference                                |
+| `Founding 50.jpg`                              | Founding 50 members campaign asset                                |
+
+> When updating `assets/images/`, MUST copy files from `updated-assets/`. NEVER rename or modify the originals.
+
+---
+
+## Architecture at a Glance
+
+```
+Widget (UI) → BLoC (event) → ApiService (HTTP) → FastAPI Backend
+                    ↓
+             BLoC (state) → Widget rebuilds
+                    ↓
+          AuthStorage (secure token read/write)
+```
+
+**One BLoC per feature.** No cross-feature BLoC dependencies. Shared state (auth token, current user role) lives in `AuthStorage` and is read directly by `ApiService`.
+
+---
+
+## File Responsibilities
+
+| File                                     | What it owns                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lib/main.dart`                          | App entry point, `MaterialApp`, initial route, BLoC providers                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `lib/theme.dart`                         | `ThemeData` — all colors, typography, component themes. Single source of truth for design tokens.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `core/constants/api_constants.dart`      | Base URL and all endpoint path strings                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `core/models/`                           | Pure Dart data classes — `fromJson` / `toJson` only, no business logic                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `core/services/api_service.dart`         | All HTTP calls using `http` package. Attaches Bearer token from `AuthStorage`.                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `core/services/auth_storage.dart`        | Read/write JWT token and role via `flutter_secure_storage`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `core/widgets/mp_button.dart`            | Shared primary button component                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `core/widgets/mp_text_field.dart`        | Shared text input component. Optional `style:` override (null everywhere by default) — use it to add `fontFeatures: [FontFeature.tabularFigures()]` on currency/amount fields so digits don't jiggle while typing.                                                                                                                                                                                                                                                                                                                         |
+| `core/widgets/pet_avatar.dart`           | Shared pet photo / avatar widget                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `core/widgets/scale_button.dart`         | Press-scale tap wrapper (0.97 scale, easeOutBack spring) — the app's standard tap feedback for custom tappable cards. Use instead of a bare `GestureDetector`.                                                                                                                                                                                                                                                                                                                                                                             |
+| `core/widgets/paw_coin.dart`             | `PawCoin(size)` — the PawPoints brand mark (gold coin + dark paw, matching the marketing "paw coin"). Use it wherever PawPoints needs an icon; NEVER a star (stars are reserved for featured/bonus meanings, e.g. the Founding Member badge). Token-only, no image asset; if a real coin graphic arrives, swap this widget's internals.                                                                                                                                                                                                    |
+| `core/widgets/paw_points_strip.dart`     | The navy PawPoints balance chip (icon + points + "History & Rewards") — shared by the Home tab strip and the Benefits hub so they can't drift in size/copy again.                                                                                                                                                                                                                                                                                                                                                                          |
+| `core/widgets/wallet_category_card.dart` | `WalletPetCard` — ONE Benefit Wallet card per pet showing TWO stacked pool meters via `_WalletPoolMeter` (Preventive Wellness + Emergency; wallet model revised 2026-07-16 to two pools per plan — see Reimbursements below). Emergency meter only renders when `emergencyWalletCentavos > 0`. Each meter: remaining balance, progress bar, optional used/pending stats via `showStats`. Used only by the Benefits hub. Remaining-amount uses gold/goldDark (contrast-safe per mode) — it's the member's money, so it gets the accent per "Gold Marks What Matters."                                          |
+| `core/widgets/staggered_reveal.dart`     | `StaggeredReveal(index, child)` — fade+slide-up entrance for list items on first load (60ms/item delay, respects `disableAnimations`). Used by the Benefits hub's wallet cards and the Reimbursements My Claims list. Reuse this for any new list reveal instead of writing another private stagger widget.                                                                                                                                                                                                                                |
+| `core/widgets/agreement_checkbox.dart`   | The "I have read and accept the Membership Agreement, Privacy Policy, and Member Manual" clickwrap row (links open via `url_launcher`). Required-checked before ANY payment: Add-a-Pet plan step and the `_PlanConfirmSheet` in `plan_selection_screen.dart`. The version-stamped legal acceptance is recorded at registration (`register_screen.dart`, `_agreementVersion` must match backend `CURRENT_AGREEMENT_VERSION`) — this widget is the pre-payment reaffirmation. Keep its document list in sync with the registration checkbox. |
+| `features/auth/`                         | Login + Register screens + `AuthBloc`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `features/member/`                       | Member dashboard + Pet profile screens + `MemberBloc`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `features/admin/`                        | QR Scanner + Deploy service screens + `AdminBloc`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+
+---
+
+## Key Business Logic
+
+- **Pet as Hero:** Member UI MUST center the pet (name, photo, breed, sessions). Owner info is secondary.
+- **QR ID:** Members display their `qr_token` as a QR code using `qr_flutter`. The token is fetched from the backend — NEVER generated client-side.
+- **Service Sessions:** `remaining_sessions` comes from the backend. The mobile app reads and displays it only — NEVER mutates it directly. Only the Admin "Deploy Service" flow triggers a backend decrement.
+- **Plan payments (PayMongo) — money path, treat as critical:** A plan is granted server-side via FOUR independent paths, all in `backend/routers/payments.py`: (1) webhook — **dead on the dev/staging env** (PayMongo delivers to one URL); (2) client poll `GET /payments/{id}` — reconciles with PayMongo server-side on every call; (3) the browser return page `/payments/return/success?payment_id=…` — reconciles + deep-links `metropaws://payment/...` back to the app; (4) profile-load safety net — `GET /members/me` reconciles the member's recent (≤7 days, ≤5) pending payments, so simply reopening the dashboard self-heals a paid-but-stuck plan (added 2026-07-07 after an Add-a-Pet checkout was PAID on PayMongo but sat `pending`). On mobile, BOTH checkout flows MUST keep the `paymentId` from `createCheckout` and poll: `PlanSelectionScreen` polls via `MemberBloc` (`PaymentStatusPolled`); `AddPetScreen` polls directly via `ApiService.getPayment` (3s timer started when "Complete Payment" is tapped, plus an `AppLinks` listener for the return deep-link; timer + subscription cancelled in dispose). NEVER discard the payment id after `createCheckout` — that regression is exactly what stranded a paid member. Both flows also gate payment behind `AgreementCheckbox`.
+- **Role-Based Routing:** After login, MUST route by role: `member` → `MemberDashboard`, `admin` → `AdminScanner`. NEVER expose member screens to admins or vice versa.
+- **Token Storage:** JWT MUST be stored in `flutter_secure_storage` under the consistent key defined in `auth_storage.dart`. NEVER store tokens in `SharedPreferences`.
+- **In-app notifications:** The dashboard AppBar bell is real — badge shows the unread count (polled every 60s via `NotificationsCountRequested` while the shell is alive; `Timer` cancelled in dispose) and opens `features/member    /screens/notifications_screen.dart`. Notifications are created by the **backend** (`reimbursement_utils.notify_status`) alongside status emails — the app only reads/marks-read (`/members/me/notifications*`). Tapping a `reimbursement`-type notification marks it read and opens `ReimbursementScreen(initialTab: 0)` (My Claims). No push (FCM) yet — polling only, so nothing fires while the app is closed; email covers that.
+- **Reimbursements:** Members claim money back for services paid out-of-pocket via `features/member/screens/reimbursement_screen.dart` (**2 tabs: My Claims / Submit**; accepts `initialTab`, `0` = My Claims, `1` = Submit), reached from the **Benefits** bottom tab (`features/member/screens/benefits_screen.dart`, `BenefitsTab`) — a hub that also surfaces PawPoints and the Benefit Wallet. The Wallet view lives ONLY on the Benefits hub now — `reimbursement_screen.dart` dropped its own Wallet tab because it duplicated the hub one tap away (confirmed redundant in testing); don't re-add a third tab there without removing the hub's wallet section first, or they'll drift again. Bottom nav slot 2 is FLAG-DRIVEN (see "Booking on standby" below): Home · Book/Events · Benefits · Account (`_MpNavBar._tabs` getter + the shell `IndexedStack` must stay in the same order). PawPoints also still has its Home strip shortcut. It reuses `MemberBloc` (no new BLoC) — events `ReimbursementsLoadRequested` / `ReimbursementSubmitted` / `ReimbursementResubmitted`. **All money is integer centavos** (`pesoFromCentavos()` in `core/models/reimbursement.dart` formats for display) — never send/parse whole pesos. Receipts upload via multipart field `receipt` (filename `receipt.<ext>`). `file_picker` was added for PDF receipts; `image_picker` still handles photos. Claim cards show a "View receipt" link (image viewer dialog / external PDF open via `url_launcher`). A `needs_info` claim's "Fix and resubmit" opens a **full-edit bottom sheet** (amount/provider/date/notes + optional new receipt) — the backend resubmit endpoint accepts all of these, so never reduce it back to photo-only. Amount inputs must parse comma-formatted pesos (`_parseAmount` strips separators) — plain `double.tryParse` rejects "1,500.00". **Wallet model (client decision 2026-07-16, REVISED — reverses the never-deployed single-pool design): TWO pools per plan** — `Plan.reimbursement_wallet_centavos` (Preventive Wellness) + `Plan.emergency_wallet_centavos` (Emergency) on the backend. A claim's service **category name** picks the pool: `"Emergency"` → emergency pool, everything else → preventive (name-matched in `backend/reimbursement_utils.py` `is_emergency_category`, same pattern as the grooming cooldown; no `is_emergency` DB flag). Per-category caps (`PlanService.reimbursement_cap_centavos`) are still LEGACY and gate nothing. `GET /members/me/wallet` returns `{pets: [...], service_types: [...]}` where each `WalletPet` carries BOTH pools' `{wallet,pending,used,remaining}_centavos` and `emergency_{wallet,pending,used,remaining}_centavos` (see `core/models/reimbursement.dart`). The Submit form's category dropdown lists ALL service types; picking the "Emergency" category switches the shown balance + validation to the emergency pool, otherwise the preventive pool — blocks amounts above the active pool ("Insufficient <pool> balance") and disables Submit when that pool is used up. The backend enforces the same on submit/resubmit/approve. **Deploy note:** the dev backend ran the OLD per-category `WalletOut{categories}` model until this change; `schemas.WalletPetOut` had to be defined (the single-pool commit left it undefined → `/wallet` would 500). **Grooming rule:** a grooming-category claim is limited to once per 90 days per pet, service-date based, enforced server-side in `backend/routers/reimbursements.py` (`REIMBURSEMENT_GROOMING_COOLDOWN_DAYS`, matches category names "grooming"/"full grooming") — the 409 detail surfaces via `ReimbursementSubmitFailure`. Shared UI: `core/widgets/paw_points_strip.dart`, `wallet_category_card.dart` (exports `WalletPetCard`; Benefits hub only), `scale_button.dart`. **Home pet card wallet summary (2026-07-13, extended 2026-07-16 to two pools):** since booking/sessions are on standby, the Home tab's tier-skinned pet card (`_DigitalIdCard` in `member_dashboard_screen.dart`) shows per-pet wallet summaries via `_WalletSummaryRow` (now pool-agnostic: takes `label` + `total`/`remaining` centavos — "₱X left of ₱Y" + progress bar, tier-skin colored). It renders TWO stacked meters — "Preventive Wellness" always, then "Emergency" only when `emergencyWalletCentavos > 0` — plus a one-line latest-claim status (`_ClaimStatusAndFileRow` — needs_info > in-review > approved > recently-paid priority, only rendered when something is actually live) and a quiet "File a claim" link. `_HomeTab` dispatches `ReimbursementsLoadRequested()` on `MemberLoaded` (alongside PawPoints/bookings) to source this — no new BLoC/endpoint. `_SessionProgressRow` was NOT deleted; the legacy session rows still render below the wallet block, gated on `bookingEnabled`, and reappear automatically when the flag flips back on.
+- **Direct-to-provider payments (2026-07-21, client decision — alternative to a rejected "cash advance to member" idea):** For SCHEDULED, non-emergency claims only (grooming, vaccination, check-up — never Emergency), a member can choose to have MetroPaws pay the clinic/groomer **directly** instead of reimbursing themselves, so they never front cash. This is a pre-authorization request filed BEFORE/AT the appointment, not an after-the-fact reimbursement — v1 stays fully manual on the money-out side (admin wires the provider, same as today's member payouts), no PayMongo disbursement integration. Gated behind `direct_provider_payment_enabled` in `app_settings` (same key/upsert pattern as `booking_enabled`, default OFF, exposed via `GET /settings/mobile-config` alongside `booking_enabled` — `ApiService.fetchMobileConfig()` returns both as a record, `MemberBloc._directProviderPaymentEnabled` caches the last value so screens pushed after the shell's initial fetch can read it synchronously via the `directProviderPaymentEnabled` getter). **New entity `ReimbursementProvider`** (`reimbursement_providers` table, `backend/models.py`) — deliberately NOT `ClinicPartner`: no linked login/User, just identity + payout fields (payout_method/account_name/account_number/bank_name mirroring `Member`'s own payout fields), admin-managed on the website's new **Providers** page (`/admin/providers`, full CRUD + active-toggle; `DELETE` blocked once a provider has any claims — deactivate instead). `Reimbursement` gained `payout_target` (`member` default | `provider`) + nullable `provider_id` FK — `provider_name` (free text) is UNCHANGED and still always populated; for provider-target claims the backend derives it server-side from the selected provider, ignoring client text. Eligibility: `reimbursement_utils.is_direct_pay_eligible_category()` = `not is_emergency_category()`. Service-date validation flips direction for this path (`_validate_service_date(..., allow_future=True)` in `backend/routers/reimbursements.py`) — today up to `REIMBURSEMENT_PROVIDER_MAX_FUTURE_DAYS` (default 60) ahead, vs. the member-target path's past/today-only rule — mobile's `_DateField` picker mirrors this range and MUST stay in sync with the backend env var if it changes. The member's own payout-method gate (`hasPayoutMethod`) is SKIPPED for provider-target claims — they're never the payee. Mobile: `reimbursement_screen.dart`'s Submit tab shows a "Reimburse me" / "Pay the provider directly" chooser only when the flag is on AND the picked category is non-emergency; picking "provider" swaps the free-text provider field for a picker sourced from `GET /members/reimbursement-providers` (brief/unauthenticated, active-only, never exposes payout details — `core/models/reimbursement_provider.dart`), relabels the Proof step ("quote/estimate/booking confirmation" not a paid receipt), and relaxes the date range. Resubmit does NOT allow changing payout_target/provider (matches the existing pet/category-not-editable-on-resubmit scope) — a wrong-target claim must be rejected and refiled. Website `reimbursements-table.tsx` branches its payout-destination display on `payout_target` (provider's on-file info vs. member's) via a shared `formatPayout()` helper, plus a small "Pay provider directly" row badge.
+- **Booking on standby / Events tab (2026-07-09, client decision):** There are no partner clinics yet, so the Book tab is HIDDEN behind a backend feature flag and replaced by the **Events** tab (`features/member/screens/events_screen.dart`, `EventsTab`) — club events + member promos from `GET /promos` (admin-managed on the website at `/admin/promos`; new `promos` table, auto-created). The flag is `booking_enabled` in `app_settings` (`GET /settings/mobile-config`, admin toggle on the website Settings page) — the shell (`_MemberShellState`) fetches it via `MobileConfigRequested` → `MobileConfigLoaded`; default/fetch-failure state is `false` (booking hidden = safe state), and flipping the DB row restores Book on next app open WITHOUT a Play Store release. Slot 2 of both `_MpNavBar._tabs` (now a getter, not a const) and the shell `IndexedStack` swap together — never change one without the other. The Home "Next visit" section and its `BookingsLoadRequested` fetch are gated on the same flag (they deep-link to tab index 1). Do NOT delete any booking code — it's standby, not dead: when partner clinics sign, flip the flag; the grooming 90-day return rule (anti look-alike-pet fraud) must be enforced when booking returns. Events UI: `Promo` model (`core/models/promo.dart`), `PromosLoadRequested` → `PromosLoading/Loaded/Failure` on `MemberBloc`, event times entered as Manila wall-clock on the admin form (stamped `+08:00` server-side) and shown via `.toLocal()`.
+- **Member profile photo:** The Account tab avatar (`_AccountView` in `member_dashboard_screen.dart`) is tappable via `ScaleButton` and uploads through `image_picker` → `ApiService.uploadMyPhoto()` → `POST /members/me/photo` (multipart field `photo`), mirroring the pet-photo upload pattern. Falls back to initials (navy/gold circle) when `member.photoUrl` is null. BLoC events/states: `ProfilePhotoUpdateRequested` → `ProfilePhotoSaving` / `ProfilePhotoSaveSuccess(member)` / `ProfilePhotoSaveFailure` (same shape as the payout-details save flow). Requires the backend `members.photo_url` column — added in `backend/migrate.py`; **must be run against each deployed DB** (dev + prod) since Render's `create_all` never adds columns to existing tables (see `backend/CLAUDE.md`). This was previously unimplemented — the Account screen used to be initials-only with no upload path at all, consistent with "Pet as Hero," until a member asked for it.
+
+---
+
+## BLoC Conventions
+
+- Events MUST be past-tense actions: `LoginSubmitted`, `PetLoaded`, `ServiceDeployed`
+- States MUST be descriptive: `AuthInitial`, `AuthLoading`, `AuthSuccess`, `AuthFailure`
+- Each BLoC file MUST export only its own events and states — no cross-feature BLoC dependencies
+- MUST use `BlocProvider` at the route level, not the widget tree root (unless state is shared across routes)
+- MUST use `BlocBuilder` for rebuilds, `BlocListener` for side effects (navigation, snackbars)
+
+---
+
+## API Conventions
+
+- MUST route all API calls through `core/services/api_service.dart` — NEVER call `http` directly from a BLoC or widget
+- `ApiService` injects the Bearer token automatically from `AuthStorage` — NEVER attach tokens manually
+- MUST parse the `detail` field from FastAPI error responses and surface it via `AuthFailure(message)` or equivalent failure state
+- Base URL MUST be configured in `core/constants/api_constants.dart` only — change it there and nowhere else
+
+---
+
+## Design & UI Guardrails
+
+> All design decisions — tokens, principles, responsive strategy, brand personality, and override rules — are documented in [`mobile/.impeccable.md`](.impeccable.md) (this directory). MUST read that file before generating any UI. Never use `website/.impeccable.md` or the root `.impeccable.md` as the design reference for this project.
+
+- MUST use `Theme.of(context)` from `theme.dart` — NEVER hardcode colors, font sizes, or spacing
+- MUST maintain 44×44px minimum touch targets on all interactive elements
+- MUST wrap all forms in `SingleChildScrollView` to handle keyboard avoidance
+- MUST apply `SafeArea` on all screens
+- MUST use `SnackBar` for transient feedback, `AlertDialog` for confirmations
+- MUST use `CircularProgressIndicator` with navy color for loading states
