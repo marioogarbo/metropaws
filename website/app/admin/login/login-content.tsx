@@ -194,10 +194,10 @@ export default function LoginContent() {
             </span>
           </div>
           <p className="font-(family-name:--font-baloo2) text-white font-extrabold text-2xl leading-snug">
-            Scan. Verify. Deploy.
+            Manage. Approve. Grow.
           </p>
           <p className="text-white/60 text-sm mt-2">
-            Fast, reliable clinic tools — built for busy front desks.
+            One dashboard for members, plans, reimbursements, and reservations.
           </p>
         </div>
       </div>

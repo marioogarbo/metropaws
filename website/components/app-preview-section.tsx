@@ -91,14 +91,14 @@ export function AppPreviewSection() {
               </div>
             </div>
 
-            {/* Phone 3 — booking screen (shown xl+ only) */}
+            {/* Phone 3 — add-pet screen (shown xl+ only) */}
             <div
               aria-hidden="true"
               className="relative shrink-0 hidden xl:block w-48 translate-y-6 xl:translate-y-10 opacity-55"
             >
               <PhoneFrame>
                 <Image
-                  src="/mobile-app-book-screen.jpg"
+                  src="/mobile-app-add-pet-screen.jpg"
                   alt=""
                   fill
                   sizes="192px"

@@ -9,7 +9,7 @@ const offerings = [
     id: "02",
     name: "Routine Wellness Packages",
     description:
-      'Guaranteed access to professional grooming and essential vaccinations, tracked easily via our digital app or physical "Bone" punch-card.',
+      "Guaranteed access to professional grooming and essential vaccinations, tracked to the peso in your Benefit Wallet inside the app.",
   },
   {
     id: "03",
@@ -27,7 +27,7 @@ const offerings = [
     id: "05",
     name: "The \u201cOffline\u201d Guarantee",
     description:
-      'A fail-safe system ensuring your benefits are honored via physical cards and our "Partner Whitelist" even during internet outages or after-hours.',
+      "Your QR Pet ID is cached on your phone, so you can check in and prove your membership at the clinic even on a weak signal or after hours.",
   },
 ];
 
