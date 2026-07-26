@@ -1,21 +1,21 @@
 const offerings = [
   {
     id: "01",
-    name: "The 5K Shield",
+    name: "The Preventive Wellness Wallet",
     description:
-      "Our signature emergency protection providing an annual coverage limit of ₱5,000.",
+      "An annual fund for grooming, vaccinations, and check-ups — from ₱2,000 on Standard up to ₱7,000 on Premium — tracked to the peso inside the app.",
   },
   {
     id: "02",
-    name: "Routine Wellness Packages",
+    name: "The Emergency Wallet",
     description:
-      "Guaranteed access to professional grooming and essential vaccinations, tracked to the peso in your Benefit Wallet inside the app.",
+      "A separate fund set aside for urgent visits — from ₱300 up to ₱1,500 a year — so an emergency never catches you flat-footed.",
   },
   {
     id: "03",
-    name: "The 10% Excess Benefit",
+    name: "Use Any Provider",
     description:
-      "For emergency bills exceeding the ₱5,000 outright cap, members receive an exclusive 10% discount on the remaining balance not exceeding 15K at partner clinics.",
+      "Stay with the vet or groomer your pet already trusts. Request a scheduled visit and we pay the provider directly, or pay yourself and get reimbursed to GCash or bank.",
   },
   {
     id: "04",
