@@ -25,9 +25,9 @@ const offerings = [
   },
   {
     id: "05",
-    name: "The \u201cOffline\u201d Guarantee",
+    name: "The Digital Pet Passport",
     description:
-      "Your QR Pet ID is cached on your phone, so you can check in and prove your membership at the clinic even on a weak signal or after hours.",
+      "Every pet's QR ID, profile, vaccination records, and visit history in one app \u2014 ready to show at any partner clinic check-in.",
   },
 ];
 

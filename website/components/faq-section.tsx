@@ -49,9 +49,9 @@ const FALLBACK_FAQS: Faq[] = [
   },
   {
     id: "fallback-6",
-    question: "Does my QR Pet ID work without internet?",
+    question: "How do I show my membership at the clinic?",
     answer:
-      "Yes. Your QR Pet ID is cached on your phone, so you can show it at the clinic even on a weak signal. You only need a connection to sync new records or submit a claim.",
+      "Open the MetroPaws app and show your pet's QR Pet ID at check-in. It loads from your account in a few seconds, so keep a mobile-data or Wi-Fi connection handy when you arrive.",
     sort_order: 5,
     is_published: true,
   },
