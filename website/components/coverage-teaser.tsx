@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ShieldCheck, ReceiptText, Users } from "lucide-react";
+import { Wallet, ReceiptText, Users } from "lucide-react";
 
 const pillars = [
   {
-    icon: ShieldCheck,
-    label: "Emergency Support",
+    icon: Wallet,
+    label: "Emergency Wallet",
     detail:
-      "Help when it counts, from a discounted gate fee up to a ₱5,000 Emergency Bridge on Premium.",
+      "A dedicated emergency fund every year — from ₱300 on Standard up to ₱1,500 on Premium — for when an urgent visit can't wait.",
   },
   {
     icon: ReceiptText,
@@ -37,7 +37,7 @@ export function CoverageTeaser() {
               more as you upgrade.
             </p>
             <Link
-              href="/about"
+              href="/#pricing"
               className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-(--color-navy) hover:text-(--color-gold) transition-colors"
             >
               Full benefit details →
