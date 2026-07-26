@@ -146,7 +146,7 @@ Subscription payments use PayMongo's **hosted Checkout Session API** (`POST /v1/
 - The `cs_...` session id lives in `provider_source_id` (reused to avoid a schema migration). The webhook matches the paid session back to its `Payment` row by this id — never change that mapping without a migration.
 - Webhook signature is verified (`paymongo.verify_webhook_signature`) before any DB write — keep it.
 - `success_url`/`cancel_url` MUST be `http(s)` (PayMongo rejects custom schemes). The custom-scheme deep link happens only inside the return pages.
-- The PayMongo dashboard webhook must be subscribed to **`checkout_session.payment.paid`**. To add payment methods, extend `payment_method_types` in `paymongo.create_checkout_session` (currently `["gcash"]`).
+- The PayMongo dashboard webhook must be subscribed to **`checkout_session.payment.paid`**. To add payment methods, extend `payment_method_types` in `paymongo.create_checkout_session` (currently `["card", "gcash", "qrph"]`) — but the method must also be activated/approved in the PayMongo dashboard or it stays hidden.
 - When payments are disabled (`/settings/payments-enabled` → false), `/payments/checkout` returns 400; plans are granted in person by admins instead.
 
 PayMongo env vars: `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `PAYMONGO_SUCCESS_REDIRECT`, `PAYMONGO_FAILURE_REDIRECT` (the last two are the `http(s)` return-page URLs).
