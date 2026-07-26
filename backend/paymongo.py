@@ -61,7 +61,13 @@ async def create_checkout_session(
                 # PH bank app). "card" = Visa/Mastercard/JCB; it only shows once
                 # card processing is approved on the live account. Add
                 # "paymaya"/"grab_pay"/"dob" the same way when needed.
-                "payment_method_types": ["card", "gcash", "qrph"],
+                "payment_method_types": [
+                    "card",
+                    "gcash",
+                    "grab_pay",
+                    "paymaya",
+                    "qrph",
+                ],
                 "success_url": success_url,
                 "cancel_url": cancel_url,
                 "description": line_item_name,
