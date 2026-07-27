@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
 import models, schemas, auth as auth_utils
+import plan_term_utils
 import storage
 import reimbursement_utils as rutils
 from routers import settings as settings_router
@@ -178,6 +179,17 @@ def submit_reimbursement(
             status_code=400,
             detail="This pet doesn't have an active plan yet. Activate a plan before submitting a claim.",
         )
+    # Plan expiry gate (2026-07-27): the benefit year ends 365 days after
+    # activation — after that, new claims wait for a renewal. Resubmits of
+    # in-term claims are deliberately NOT gated (see resubmit endpoint).
+    if plan_term_utils.plan_status(pet) == "expired":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{pet.name}'s plan year has ended — renew the plan to keep "
+                "using benefits."
+            ),
+        )
 
     service_type = (
         db.query(models.ServiceType).filter(models.ServiceType.id == service_type_id).first()
@@ -208,6 +220,19 @@ def submit_reimbursement(
 
     _validate_amount(claimed_amount_centavos)
     _validate_service_date(service_date, allow_future=is_provider_target)
+
+    # A provider-target claim books a FUTURE appointment — it can't be scheduled
+    # past the plan year's end (the benefit funding it would have expired).
+    if is_provider_target:
+        term = plan_term_utils.plan_term(pet)
+        if term is not None and service_date > term[1].date():
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "That appointment date is after the plan year ends — renew "
+                    "the plan first, or pick an earlier date."
+                ),
+            )
 
     # Insufficient balance: the claim (plus claims still awaiting a decision) in
     # the SAME pool can't exceed what's left in that pool this plan year.
@@ -456,6 +481,7 @@ def get_wallet(
         if wallet <= 0 and emergency_wallet <= 0:
             continue
         prev_used, prev_pending, emg_used, emg_pending = rutils.wallet_usage(db, pet)
+        term = plan_term_utils.plan_term(pet)
         wallet_pets.append(
             schemas.WalletPetOut(
                 pet_id=pet.id,
@@ -468,6 +494,8 @@ def get_wallet(
                 emergency_pending_centavos=emg_pending,
                 emergency_used_centavos=emg_used,
                 emergency_remaining_centavos=max(0, emergency_wallet - emg_used - emg_pending),
+                plan_status=plan_term_utils.plan_status(pet),
+                plan_expires_at=term[1] if term else None,
             )
         )
 

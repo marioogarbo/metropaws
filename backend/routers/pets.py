@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from database import get_db
 import models, schemas, auth as auth_utils
+import plan_term_utils
 import storage
 from plan_utils import grant_plan_to_pet
 from routers.settings import get_payments_enabled
@@ -284,6 +285,14 @@ def activate_plan(
         raise HTTPException(
             status_code=402,
             detail="Payment is required. Use POST /payments/checkout with pet_id to start checkout.",
+        )
+
+    # Same upgrade/renewal gate as the paid checkout — the payments-disabled
+    # path must not become a side door around the eligibility rules.
+    allowed, code = plan_term_utils.purchase_eligibility(db, pet, plan)
+    if not allowed:
+        raise HTTPException(
+            status_code=409, detail=plan_term_utils.eligibility_message(code)
         )
 
     grant_plan_to_pet(db, pet, plan, member)

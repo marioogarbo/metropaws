@@ -530,13 +530,21 @@ class CheckoutResponse(BaseModel):
 
 class PlanQuoteOut(BaseModel):
     """Member-specific price for one plan (whole pesos). discount_php > 0 only
-    when the Pack Discount applies; final_php is what checkout will charge."""
+    when the Pack Discount applies; final_php is what checkout will charge.
+
+    eligibility mirrors plan_term_utils.purchase_eligibility for the pet_id
+    passed to /payments/quotes: allowed codes 'new'/'upgrade'/'renewal',
+    blocked codes 'current_plan'/'lower_plan'/'benefits_used'. The app uses it
+    for display only — checkout re-validates server-side."""
 
     plan_id: str
     full_php: int
     discount_php: int
     final_php: int
     discount_percent: int
+    eligible: bool = True
+    eligibility: str = "new"
+    is_current: bool = False
 
 
 class PaymentOut(BaseModel):
@@ -910,6 +918,11 @@ class WalletPetOut(BaseModel):
     emergency_pending_centavos: int = 0
     emergency_used_centavos: int = 0
     emergency_remaining_centavos: int = 0
+    # Plan term (plan_term_utils): 'active' | 'renewal_window' | 'expired';
+    # expired pets can't file new claims until renewed. plan_expires_at is None
+    # for legacy plans with no activation date (they never expire).
+    plan_status: str = "active"
+    plan_expires_at: Optional[datetime] = None
 
 
 class WalletOut(BaseModel):

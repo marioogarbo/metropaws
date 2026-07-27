@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 import auth as auth_utils
 import models
 import paymongo
+import plan_term_utils
 import pricing_utils
 import schemas
 from database import get_db
@@ -63,6 +64,16 @@ async def create_checkout(
     )
     if not pet:
         raise HTTPException(status_code=404, detail="Pet not found")
+
+    # Upgrade/renewal rules (plan_term_utils): mid-term only a strictly higher
+    # plan with untouched benefits; same/lower plans wait for the renewal
+    # window. Enforced server-side — the app mirrors this state but the 409
+    # here is the authority (its detail is shown verbatim in-app).
+    allowed, code = plan_term_utils.purchase_eligibility(db, pet, plan)
+    if not allowed:
+        raise HTTPException(
+            status_code=409, detail=plan_term_utils.eligibility_message(code)
+        )
 
     # Server-authoritative price: the Pack Discount (2nd/3rd pet on a lower
     # plan) is computed here and snapshotted on the Payment row — the client
@@ -126,20 +137,23 @@ def get_plan_quotes(
     db: Session = Depends(get_db),
 ):
     """Member-specific prices for every active plan, with the Pack Discount
-    applied where eligible. The app displays these instead of computing any
-    price client-side. `pet_id` = the pet being (re)activated, excluded from
-    the anchor set; omit it for a pet not yet created (Add-a-Pet flow)."""
+    applied where eligible, plus upgrade/renewal eligibility for the given pet.
+    The app displays these instead of computing any price or rule client-side.
+    `pet_id` = the pet being (re)activated (excluded from the discount's anchor
+    set; eligibility is computed against its current plan); omit it for a pet
+    not yet created (Add-a-Pet flow — everything is 'new')."""
     member = current_user.member
     if not member:
         raise HTTPException(status_code=400, detail="Member profile not found")
 
+    pet = None
     if pet_id:
-        owned = (
-            db.query(models.Pet.id)
+        pet = (
+            db.query(models.Pet)
             .filter(models.Pet.id == pet_id, models.Pet.member_id == member.id)
             .first()
         )
-        if not owned:
+        if not pet:
             raise HTTPException(status_code=404, detail="Pet not found")
 
     plans = (
@@ -148,13 +162,24 @@ def get_plan_quotes(
         .order_by(models.Plan.sort_order)
         .all()
     )
-    return [
-        schemas.PlanQuoteOut(
-            plan_id=plan.id,
-            **pricing_utils.pack_discount_quote(db, member, plan, exclude_pet_id=pet_id),
+    quotes: list[schemas.PlanQuoteOut] = []
+    for plan in plans:
+        if pet is not None:
+            allowed, code = plan_term_utils.purchase_eligibility(db, pet, plan)
+        else:
+            allowed, code = True, "new"
+        quotes.append(
+            schemas.PlanQuoteOut(
+                plan_id=plan.id,
+                eligible=allowed,
+                eligibility=code,
+                is_current=bool(pet is not None and pet.plan_id == plan.id),
+                **pricing_utils.pack_discount_quote(
+                    db, member, plan, exclude_pet_id=pet_id
+                ),
+            )
         )
-        for plan in plans
-    ]
+    return quotes
 
 
 @router.get("/{payment_id}", response_model=schemas.PaymentOut)

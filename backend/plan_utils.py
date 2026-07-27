@@ -14,7 +14,14 @@ _PREMIUM_TIERS = {"Deluxe", "Premium"}
 
 
 def grant_plan_to_pet(db: Session, pet: models.Pet, plan: models.Plan, member: models.Member) -> None:
-    """Assign a plan to a pet and create/top-up PetService records with a 1-year expiry.
+    """Assign a plan to a pet, REPLACING any previous benefits (client decision
+    2026-07-27, upgrade/renewal rules): every grant — first activation, upgrade,
+    or renewal — resets the pet to exactly the new plan's sessions with a fresh
+    1-year expiry. Nothing tops up or rolls over; unused sessions from the old
+    term are forfeited ("no more, no less" than the plan). Wallets reset the
+    same way because reimbursement_utils.wallet_usage windows claims on the
+    plan_activated_at stamped here. ServiceLog rows are untouched — they remain
+    the historical audit of past terms.
 
     Also tracks the member's previous_plan_tier for 10% discount eligibility:
     if a member has ever had Deluxe or Premium on any pet, they qualify for 10% off
@@ -27,6 +34,14 @@ def grant_plan_to_pet(db: Session, pet: models.Pet, plan: models.Plan, member: m
     pet.plan_type = plan.name
     pet.plan_activated_at = datetime.now(timezone.utc)
 
+    # Replace semantics: wipe the old benefit rows, then rebuild from the plan.
+    # The flush respects uq_pet_service before the fresh inserts below; the
+    # expire drops the now-stale pet.pet_services collection from the session
+    # (bulk delete does not sync loaded relationships).
+    db.query(models.PetService).filter(models.PetService.pet_id == pet.id).delete()
+    db.flush()
+    db.expire(pet, ["pet_services"])
+
     expires_at = datetime.now(timezone.utc) + timedelta(days=365)
     plan_services = (
         db.query(models.PlanService)
@@ -36,27 +51,14 @@ def grant_plan_to_pet(db: Session, pet: models.Pet, plan: models.Plan, member: m
     for ps in plan_services:
         if ps.sessions <= 0:
             continue
-        existing = (
-            db.query(models.PetService)
-            .filter(
-                models.PetService.pet_id == pet.id,
-                models.PetService.service_type_id == ps.service_type_id,
+        db.add(
+            models.PetService(
+                pet_id=pet.id,
+                service_type_id=ps.service_type_id,
+                total_sessions=ps.sessions,
+                expires_at=expires_at,
             )
-            .first()
         )
-        if existing:
-            existing.total_sessions += ps.sessions
-            if not existing.expires_at or existing.expires_at < expires_at:
-                existing.expires_at = expires_at
-        else:
-            db.add(
-                models.PetService(
-                    pet_id=pet.id,
-                    service_type_id=ps.service_type_id,
-                    total_sessions=ps.sessions,
-                    expires_at=expires_at,
-                )
-            )
 
     # Flush so the founding-bonus loop below can find the records just added above.
     # The session uses autoflush=False, so without this explicit flush the bonus

@@ -136,6 +136,8 @@ $renderEnvKeys = @(
     "REIMBURSEMENT_MAX_CLAIM_PHP",
     # Pack Discount tunables (pricing_utils.py) — defaults 15 / 3 in code.
     "PACK_DISCOUNT_PERCENT", "PACK_DISCOUNT_MAX_PLAN_PETS",
+    # Renewal window (plan_term_utils.py) — default 30 in code.
+    "RENEWAL_WINDOW_DAYS",
     "PAYMONGO_SECRET_KEY", "PAYMONGO_WEBHOOK_SECRET",
     "PAYMONGO_SUCCESS_REDIRECT", "PAYMONGO_FAILURE_REDIRECT",
     # Payment receipt (invoice) seller / tax identity — see invoice_utils.py.
