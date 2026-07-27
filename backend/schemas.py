@@ -528,10 +528,22 @@ class CheckoutResponse(BaseModel):
     checkout_url: str
 
 
+class PlanQuoteOut(BaseModel):
+    """Member-specific price for one plan (whole pesos). discount_php > 0 only
+    when the Pack Discount applies; final_php is what checkout will charge."""
+
+    plan_id: str
+    full_php: int
+    discount_php: int
+    final_php: int
+    discount_percent: int
+
+
 class PaymentOut(BaseModel):
     id: str
     plan_id: str
     amount_php: int
+    discount_php: int = 0
     currency: str
     status: str
     checkout_url: Optional[str]

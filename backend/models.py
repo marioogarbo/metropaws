@@ -322,6 +322,11 @@ class Payment(Base):
     plan_id = Column(String, ForeignKey("plans.id"), nullable=False)
     pet_id = Column(String, ForeignKey("pets.id"), nullable=True)
     amount_php = Column(Integer, nullable=False)
+    # Pack Discount applied at checkout (whole pesos, 0 = none). amount_php is
+    # the FINAL charged amount; full price = amount_php + discount_php. Kept on
+    # the row so receipts/audits can reconstruct the price without re-running
+    # the eligibility rule against state that has since changed.
+    discount_php = Column(Integer, nullable=False, default=0, server_default="0")
     currency = Column(String, nullable=False, default="PHP")
     provider = Column(String, nullable=False, default="paymongo")
     provider_source_id = Column(String, nullable=True, index=True)

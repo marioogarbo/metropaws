@@ -348,4 +348,15 @@ with engine.connect() as conn:
     """))
     conn.commit()
 
+# Migration: Pack Discount audit trail (2026-07-27). payments.discount_php
+# records the multi-pet discount applied at checkout (whole pesos, 0 = none);
+# amount_php stays the FINAL charged amount. Existing table, so create_all
+# won't add it — explicit ALTER required on each deployed DB (dev + prod).
+with engine.connect() as conn:
+    conn.execute(text("""
+        ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS discount_php INTEGER NOT NULL DEFAULT 0
+    """))
+    conn.commit()
+
 print("Migration complete.")

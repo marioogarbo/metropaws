@@ -311,7 +311,11 @@ def _method_label(payment: models.Payment) -> str:
     return "Online payment"
 
 
-def _line_items(pdf, plan: models.Plan, pet, amount_php) -> None:
+def _line_items(pdf, plan: models.Plan, pet, payment: models.Payment) -> None:
+    # The plan line shows the FULL price; any Pack Discount is broken out in
+    # the totals block so the math on the document reconstructs itself.
+    discount = getattr(payment, "discount_php", 0) or 0
+    amount_php = (payment.amount_php or 0) + discount
     desc_w = _CONTENT_W * 0.62
     qty_w = _CONTENT_W * 0.12
     amt_w = _CONTENT_W * 0.26
@@ -364,8 +368,9 @@ def _line_items(pdf, plan: models.Plan, pet, amount_php) -> None:
     pdf.set_y(row_end + 4)
 
 
-def _totals(pdf, biz: dict, amount_php) -> None:
-    total = float(amount_php or 0)
+def _totals(pdf, biz: dict, payment: models.Payment) -> None:
+    total = float(payment.amount_php or 0)
+    discount = float(getattr(payment, "discount_php", 0) or 0)
     block_w = 74.0
     x = _PAGE_W - _MARGIN - block_w
 
@@ -377,6 +382,12 @@ def _totals(pdf, biz: dict, amount_php) -> None:
         pdf.set_font("MontserratSemi", "", 8.8)
         pdf.set_text_color(*_BODY)
         pdf.cell(block_w * 0.5, 6, value, align="R", new_x="LMARGIN", new_y="NEXT")
+
+    if discount > 0:
+        # Reconstructable math: Subtotal - Pack Discount = Total Paid. VAT
+        # (below) stays computed on the actual consideration paid.
+        row("Subtotal", _php(total + discount))
+        row("Pack Discount", f"-{_php(discount)}")
 
     vat_pct = biz["vat_percent"]
     if vat_pct and vat_pct > 0:
@@ -434,8 +445,8 @@ def render_invoice_pdf(payment: models.Payment, member: models.Member, plan, pet
     _header(pdf, biz)
     _title_block(pdf, biz, inv_no, payment)
     _parties_block(pdf, member, payment)
-    _line_items(pdf, plan, pet, payment.amount_php)
-    _totals(pdf, biz, payment.amount_php)
+    _line_items(pdf, plan, pet, payment)
+    _totals(pdf, biz, payment)
     _footer_note(pdf, biz)
 
     out = pdf.output()  # fpdf2 2.8 returns a bytearray

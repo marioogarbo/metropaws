@@ -134,6 +134,8 @@ $renderEnvKeys = @(
     "MAX_FILE_BYTES", "SEED_ADMIN_PASSWORD",
     "SUPABASE_URL", "SUPABASE_SERVICE_KEY", "SUPABASE_BUCKET",
     "REIMBURSEMENT_MAX_CLAIM_PHP",
+    # Pack Discount tunables (pricing_utils.py) — defaults 15 / 3 in code.
+    "PACK_DISCOUNT_PERCENT", "PACK_DISCOUNT_MAX_PLAN_PETS",
     "PAYMONGO_SECRET_KEY", "PAYMONGO_WEBHOOK_SECRET",
     "PAYMONGO_SUCCESS_REDIRECT", "PAYMONGO_FAILURE_REDIRECT",
     # Payment receipt (invoice) seller / tax identity — see invoice_utils.py.

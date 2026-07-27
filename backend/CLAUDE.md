@@ -29,6 +29,7 @@ HTTP Request → FastAPI Router → Depends(auth) → Business Logic → SQLAlch
 | `invoice_utils.py` | **Payment receipt PDF generation + send** (fpdf2, branded, `assets/metropaws-logo.png` + bundled Montserrat). `notify_payment_receipt` = best-effort/never-raises (auto path); `generate_and_send` = raises (admin resend). |
 | `storage.py` | **Canonical file-upload helper (`save_upload`)** — writes to Supabase Storage when configured, else local disk. Use this for new uploads. |
 | `reimbursement_utils.py` | Shared reimbursement math (per-plan cap, category usage/remaining) + best-effort status email |
+| `pricing_utils.py` | Plan pricing rules — the multi-pet **Pack Discount** (`pack_discount_quote`). The ONLY place plan prices are adjusted; checkout and `GET /payments/quotes` both call it. |
 | `seed.py` | One-time script to create default `ServiceType` rows and the admin user — not part of the app lifecycle |
 | `routers/auth.py` | Registration, login, `/me`, forgot/reset password |
 | `routers/members.py` | Member profile CRUD + in-app notifications (list / unread-count / mark-read) |
@@ -148,6 +149,7 @@ Subscription payments use PayMongo's **hosted Checkout Session API** (`POST /v1/
 - `success_url`/`cancel_url` MUST be `http(s)` (PayMongo rejects custom schemes). The custom-scheme deep link happens only inside the return pages.
 - The PayMongo dashboard webhook must be subscribed to **`checkout_session.payment.paid`**. To add payment methods, extend `payment_method_types` in `paymongo.create_checkout_session` (currently `["card", "gcash", "qrph"]`) — but the method must also be activated/approved in the PayMongo dashboard or it stays hidden.
 - When payments are disabled (`/settings/payments-enabled` → false), `/payments/checkout` returns 400; plans are granted in person by admins instead.
+- **Pack Discount (2026-07-27, published in the website FAQ):** 15% off the annual plan for a member's 2nd and 3rd pet, only when the new plan is **strictly cheaper** than the member's best still-active pet plan (equal tier = no discount; 4th+ pet = full price; anchor plans count while `plan_activated_at` is within 365 days, legacy null counts as active). Implemented in `pricing_utils.pack_discount_quote`, applied **server-side only** at `/payments/checkout` (snapshotted to `Payment.discount_php`; `amount_php` stays the FINAL charged amount) and re-evaluated on every checkout, so a secondary pet's renewal keeps the discount only while the primary is still active. Rounding favors the member: `final = price * 85 // 100` (₱2,999→₱2,549). The app shows prices from `GET /payments/quotes?pet_id=` (declared BEFORE `/{payment_id}` — route order matters) and never computes them. The receipt PDF prints Subtotal − Pack Discount = Total Paid when discounted. `payments.discount_php` is added by `migrate.py` — **must be run on dev + prod DBs**. Tunables: `PACK_DISCOUNT_PERCENT` (0 disables), `PACK_DISCOUNT_MAX_PLAN_PETS`.
 
 PayMongo env vars: `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `PAYMONGO_SUCCESS_REDIRECT`, `PAYMONGO_FAILURE_REDIRECT` (the last two are the `http(s)` return-page URLs).
 
@@ -186,6 +188,8 @@ All config is loaded from `.env` via `python-dotenv`. Never hardcode values.
 | `REIMBURSEMENT_MAX_CLAIM_PHP` | No | `20000` | Per-claim ceiling in pesos (compared in centavos) |
 | `REIMBURSEMENT_MAX_PER_DAY` | No | `20` | Max claims a member can submit per rolling 24h (anti-spam) |
 | `REIMBURSEMENT_ENFORCE_DUAL_CONTROL` | No | `false` | When `true`, the admin who approved a claim can't also mark it paid (needs ≥2 admins) |
+| `PACK_DISCOUNT_PERCENT` | No | `15` | Multi-pet Pack Discount %. `0` disables the discount entirely |
+| `PACK_DISCOUNT_MAX_PLAN_PETS` | No | `3` | Max pets with plans before new activations stop qualifying (3 = pets #2–#3 discounted) |
 | `ZEPTOMAIL_TOKEN` | Yes (prod email) | — | ZeptoMail "Send Mail Token". When set, ALL email goes via ZeptoMail's HTTPS API — required in prod because Render's free tier blocks outbound SMTP ports (25/465/587). Accepted with or without the `Zoho-enczapikey ` prefix. |
 | `ZEPTOMAIL_API_URL` | No | `https://api.zeptomail.com/v1.1/email` | Override for non-.com ZeptoMail data centers |
 | `SMTP_HOST` | Yes (dev email) | — | SMTP fallback used only when `ZEPTOMAIL_TOKEN` is unset (local dev) |
