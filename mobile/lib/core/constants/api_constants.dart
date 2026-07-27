@@ -82,6 +82,7 @@ class ApiConstants {
   static const plans = '/plans';
 
   static const paymentsCheckout = '/payments/checkout';
+  static const paymentsQuotes = '/payments/quotes';
   static String paymentStatus(String id) => '/payments/$id';
 
   static String clinicScan(String token) => '/clinic/scan/$token';

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/plan.dart';
+import '../../../core/models/plan_quote.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/widgets/agreement_checkbox.dart';
 import '../../../core/widgets/mp_button.dart';
@@ -75,6 +76,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
 
   // Plan selection
   List<Plan> _plans = [];
+  Map<String, PlanQuote> _quotes = {};
   bool _plansLoading = true;
   String? _selectedPlanId;
   bool _agreementAccepted = false;
@@ -111,8 +113,24 @@ class _AddPetScreenState extends State<AddPetScreen> {
 
   Future<void> _loadPlans() async {
     try {
-      final plans = await ApiService.fetchPlans();
-      if (mounted) setState(() { _plans = plans; _plansLoading = false; });
+      final results = await Future.wait([
+        ApiService.fetchPlans(),
+        // Pack Discount quotes (no petId — this pet doesn't exist yet, so
+        // every current pet anchors). Enhancement only: on failure plans
+        // render at full price and the backend still discounts at checkout.
+        ApiService.fetchPlanQuotes()
+            .then<List<PlanQuote>>((q) => q)
+            .catchError((_) => <PlanQuote>[]),
+      ]);
+      if (mounted) {
+        setState(() {
+          _plans = results[0] as List<Plan>;
+          _quotes = {
+            for (final q in results[1] as List<PlanQuote>) q.planId: q,
+          };
+          _plansLoading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _plansLoading = false);
     }
@@ -371,6 +389,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
                   ),
                   _PlanStep(
                     plans: _plans,
+                    quotes: _quotes,
                     plansLoading: _plansLoading,
                     selectedPlanId: _selectedPlanId,
                     onPlanSelected: (id) => setState(() => _selectedPlanId = id),
@@ -870,6 +889,7 @@ class _HealthCardStep extends StatelessWidget {
 
 class _PlanStep extends StatelessWidget {
   final List<Plan> plans;
+  final Map<String, PlanQuote> quotes;
   final bool plansLoading;
   final String? selectedPlanId;
   final void Function(String?) onPlanSelected;
@@ -882,6 +902,7 @@ class _PlanStep extends StatelessWidget {
 
   const _PlanStep({
     required this.plans,
+    required this.quotes,
     required this.plansLoading,
     required this.selectedPlanId,
     required this.onPlanSelected,
@@ -922,6 +943,7 @@ class _PlanStep extends StatelessWidget {
         else
           ...plans.map((plan) => _PlanCard(
             plan: plan,
+            quote: quotes[plan.id],
             isSelected: plan.id == selectedPlanId,
             onTap: () => onPlanSelected(plan.id),
           )),
@@ -955,10 +977,21 @@ class _PlanStep extends StatelessWidget {
 
 class _PlanCard extends StatelessWidget {
   final Plan plan;
+
+  /// Server-computed Pack Discount quote; null = full price.
+  final PlanQuote? quote;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _PlanCard({required this.plan, required this.isSelected, required this.onTap});
+  const _PlanCard({
+    required this.plan,
+    required this.quote,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  static String _comma(int n) => n.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
   @override
   Widget build(BuildContext context) {
@@ -1018,13 +1051,43 @@ class _PlanCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '₱${plan.price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} /year',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: isSelected ? AppColors.gold : cs.onSurface,
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          // Pack Discount: struck-through full price ahead of
+                          // the server-quoted final. Never computed on-device.
+                          if (quote?.hasDiscount ?? false)
+                            TextSpan(
+                              text: '₱${_comma(quote!.fullPhp)}  ',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          TextSpan(
+                            text: '₱${_comma(quote?.finalPhp ?? plan.price)} /year',
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: isSelected ? AppColors.gold : cs.onSurface,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    if (quote?.hasDiscount ?? false) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${quote!.discountPercent}% Pack Discount · save ₱${_comma(quote!.discountPhp)}',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          // goldDark is only contrast-safe on light surfaces;
+                          // use gold on dark mode's dark card background.
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.gold
+                              : AppColors.goldDark,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                     if (plan.tagline != null) ...[
                       const SizedBox(height: 2),
                       Text(

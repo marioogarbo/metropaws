@@ -10,6 +10,7 @@ import '../models/service_type.dart';
 import '../models/booking.dart';
 import '../models/clinic_partner.dart';
 import '../models/plan.dart';
+import '../models/plan_quote.dart';
 import '../models/payment.dart';
 import '../models/clinic_scan_result.dart';
 import '../models/clinic_booking.dart';
@@ -527,6 +528,21 @@ class ApiService {
       res,
       (j) => (j as List<dynamic>)
           .map((e) => Plan.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  /// Member-specific plan prices with the Pack Discount applied server-side.
+  /// [petId] = the pet being (re)activated (excluded from the discount's
+  /// anchor set); omit for a pet not yet created (Add-a-Pet flow).
+  static Future<List<PlanQuote>> fetchPlanQuotes({String? petId}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.paymentsQuotes}')
+        .replace(queryParameters: petId == null ? null : {'pet_id': petId});
+    final res = await _client.get(uri, headers: await _headers());
+    return _decode(
+      res,
+      (j) => (j as List<dynamic>)
+          .map((e) => PlanQuote.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }

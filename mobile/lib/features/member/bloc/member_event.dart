@@ -71,7 +71,12 @@ class PawPointsLoadRequested extends MemberEvent {}
 
 class PawPointsBalanceLoadRequested extends MemberEvent {}
 
-class PlansLoadRequested extends MemberEvent {}
+/// [petId] = the pet being (re)activated, so the backend can exclude it from
+/// the Pack Discount anchor set; null when the pet doesn't exist yet.
+class PlansLoadRequested extends MemberEvent {
+  final String? petId;
+  PlansLoadRequested({this.petId});
+}
 
 class CheckoutRequested extends MemberEvent {
   final String planId;

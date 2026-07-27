@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/pet.dart';
 import '../../../core/models/plan.dart';
+import '../../../core/models/plan_quote.dart';
 import '../../../core/widgets/agreement_checkbox.dart';
 import '../../../theme.dart';
 import '../bloc/member_bloc.dart';
@@ -28,6 +29,7 @@ class PlanSelectionScreen extends StatefulWidget {
 class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
   _ScreenState _screenState = _ScreenState.loading;
   List<Plan> _plans = [];
+  Map<String, PlanQuote> _quotes = {};
   bool _paymentsEnabled = true;
   bool _isCheckoutLoading = false;
   Plan? _selectedPlan;
@@ -38,7 +40,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<MemberBloc>().add(PlansLoadRequested());
+    context.read<MemberBloc>().add(PlansLoadRequested(petId: widget.pet.id));
     _listenDeepLinks();
   }
 
@@ -94,6 +96,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => _PlanConfirmSheet(
         plan: plan,
+        quote: _quotes[plan.id],
         petName: widget.pet.name,
         onConfirm: () {
           Navigator.pop(ctx);
@@ -115,6 +118,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
         if (state is PlansLoaded) {
           setState(() {
             _plans = state.plans;
+            _quotes = state.quotes;
             _paymentsEnabled = state.paymentsEnabled;
             _screenState = _ScreenState.plans;
           });
@@ -169,6 +173,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
           children: [
             _PlansBody(
               plans: _plans,
+              quotes: _quotes,
               paymentsEnabled: _paymentsEnabled && !_isCheckoutLoading,
               onSelect: _onSelectPlan,
             ),
@@ -217,11 +222,13 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
 
 class _PlansBody extends StatelessWidget {
   final List<Plan> plans;
+  final Map<String, PlanQuote> quotes;
   final bool paymentsEnabled;
   final void Function(Plan) onSelect;
 
   const _PlansBody({
     required this.plans,
+    required this.quotes,
     required this.paymentsEnabled,
     required this.onSelect,
   });
@@ -276,6 +283,7 @@ class _PlansBody extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 16),
               child: _PlanCard(
                 plan: plan,
+                quote: quotes[plan.id],
                 paymentsEnabled: paymentsEnabled,
                 onSelect: () => onSelect(plan),
               ),
@@ -300,11 +308,16 @@ class _PlansBody extends StatelessWidget {
 
 class _PlanCard extends StatelessWidget {
   final Plan plan;
+
+  /// Server-computed Pack Discount quote for this plan; null = full price
+  /// (no discount, or the quote fetch failed and we fall back gracefully).
+  final PlanQuote? quote;
   final bool paymentsEnabled;
   final VoidCallback onSelect;
 
   const _PlanCard({
     required this.plan,
+    required this.quote,
     required this.paymentsEnabled,
     required this.onSelect,
   });
@@ -363,8 +376,18 @@ class _PlanCard extends StatelessWidget {
                 RichText(
                   text: TextSpan(
                     children: [
+                      // Pack Discount: struck-through full price ahead of the
+                      // server-quoted final price. Never computed client-side.
+                      if (quote?.hasDiscount ?? false)
+                        TextSpan(
+                          text: '₱${quote!.fullPhp}  ',
+                          style: tt.titleMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
                       TextSpan(
-                        text: '₱${plan.price}',
+                        text: '₱${quote?.finalPhp ?? plan.price}',
                         style: tt.displaySmall?.copyWith(
                           color: isFeatured ? AppColors.gold : cs.primary,
                           fontWeight: FontWeight.w800,
@@ -378,6 +401,24 @@ class _PlanCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (quote?.hasDiscount ?? false) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${quote!.discountPercent}% Pack Discount · save ₱${quote!.discountPhp}',
+                      style: tt.labelSmall?.copyWith(
+                        color: isDark ? AppColors.gold : AppColors.goldDark,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
                 if (plan.tagline != null) ...[
                   const SizedBox(height: 6),
                   Text(
@@ -442,11 +483,15 @@ class _PlanCard extends StatelessWidget {
 
 class _PlanConfirmSheet extends StatefulWidget {
   final Plan plan;
+
+  /// Server-computed Pack Discount quote; null = full price.
+  final PlanQuote? quote;
   final String petName;
   final VoidCallback onConfirm;
 
   const _PlanConfirmSheet({
     required this.plan,
+    required this.quote,
     required this.petName,
     required this.onConfirm,
   });
@@ -462,6 +507,8 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
   @override
   Widget build(BuildContext context) {
     final plan = widget.plan;
+    final quote = widget.quote;
+    final payPhp = quote?.finalPhp ?? plan.price;
     final petName = widget.petName;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
@@ -503,8 +550,16 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
                   RichText(
                     text: TextSpan(
                       children: [
+                        if (quote?.hasDiscount ?? false)
+                          TextSpan(
+                            text: '₱${quote!.fullPhp}  ',
+                            style: tt.titleSmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
                         TextSpan(
-                          text: '₱${plan.price}',
+                          text: '₱$payPhp',
                           style: tt.headlineSmall?.copyWith(
                             color: AppColors.gold,
                             fontWeight: FontWeight.w800,
@@ -517,6 +572,16 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
                       ],
                     ),
                   ),
+                  if (quote?.hasDiscount ?? false) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '${quote!.discountPercent}% Pack Discount applied — you save ₱${quote.discountPhp}.',
+                      style: tt.bodySmall?.copyWith(
+                        color: isDark ? AppColors.gold : AppColors.goldDark,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   if (plan.features.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     ...plan.features.take(4).map((f) => Padding(
@@ -564,7 +629,7 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
                       label: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'Pay ₱${plan.price}',
+                          'Pay ₱$payPhp',
                           maxLines: 1,
                           style: tt.labelLarge?.copyWith(
                             color: AppColors.text,

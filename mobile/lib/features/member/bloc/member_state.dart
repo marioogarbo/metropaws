@@ -2,6 +2,7 @@ import '../../../core/models/member.dart';
 import '../../../core/models/booking.dart';
 import '../../../core/models/paw_points.dart';
 import '../../../core/models/plan.dart';
+import '../../../core/models/plan_quote.dart';
 import '../../../core/models/reimbursement.dart';
 import '../../../core/models/reimbursement_provider.dart';
 import '../../../core/models/app_notification.dart';
@@ -79,7 +80,17 @@ class PawPointsFailure extends MemberState {
 class PlansLoaded extends MemberState {
   final List<Plan> plans;
   final bool paymentsEnabled;
-  PlansLoaded({required this.plans, required this.paymentsEnabled});
+
+  /// Server-computed Pack Discount quotes keyed by plan id. Empty when the
+  /// quote fetch failed — plans then render at full price (the backend still
+  /// applies any discount at checkout, so the charge is never wrong).
+  final Map<String, PlanQuote> quotes;
+
+  PlansLoaded({
+    required this.plans,
+    required this.paymentsEnabled,
+    this.quotes = const {},
+  });
 }
 
 class CheckoutLoading extends MemberState {}

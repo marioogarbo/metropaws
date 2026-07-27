@@ -5,6 +5,7 @@ import '../../../core/models/app_notification.dart';
 import '../../../core/models/member.dart';
 import '../../../core/models/paw_points.dart';
 import '../../../core/models/plan.dart';
+import '../../../core/models/plan_quote.dart';
 import '../../../core/models/reimbursement.dart';
 import '../../../core/models/reimbursement_provider.dart';
 import '../../../core/services/api_service.dart';
@@ -228,10 +229,20 @@ class MemberBloc extends Bloc<MemberEvent, MemberState> {
       final results = await Future.wait([
         ApiService.fetchPlans(),
         ApiService.fetchPaymentsEnabled(),
+        // Pack Discount quotes are an enhancement — if the fetch fails, plans
+        // still render at full price and the backend applies any discount at
+        // checkout anyway, so the member is never overcharged.
+        ApiService.fetchPlanQuotes(petId: event.petId)
+            .then<List<PlanQuote>>((q) => q)
+            .catchError((_) => <PlanQuote>[]),
       ]);
+      final quotes = {
+        for (final q in results[2] as List<PlanQuote>) q.planId: q,
+      };
       emit(PlansLoaded(
         plans: results[0] as List<Plan>,
         paymentsEnabled: results[1] as bool,
+        quotes: quotes,
       ));
     } catch (_) {
       emit(MemberFailure('Could not load plans.'));
