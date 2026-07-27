@@ -31,6 +31,10 @@ class WalletPet {
   final int emergencyPendingCentavos;
   final int emergencyUsedCentavos;
   final int emergencyRemainingCentavos;
+  // Plan term: 'active' | 'renewal_window' | 'expired'. Expired pets can't
+  // file new claims until renewed (server 400s; the app gates the Submit tab).
+  final String planStatus;
+  final DateTime? planExpiresAt;
 
   const WalletPet({
     required this.petId,
@@ -43,7 +47,11 @@ class WalletPet {
     this.emergencyPendingCentavos = 0,
     this.emergencyUsedCentavos = 0,
     this.emergencyRemainingCentavos = 0,
+    this.planStatus = 'active',
+    this.planExpiresAt,
   });
+
+  bool get planExpired => planStatus == 'expired';
 
   factory WalletPet.fromJson(Map<String, dynamic> json) => WalletPet(
         petId: json['pet_id'] as String,
@@ -57,6 +65,10 @@ class WalletPet {
         emergencyUsedCentavos: json['emergency_used_centavos'] as int? ?? 0,
         emergencyRemainingCentavos:
             json['emergency_remaining_centavos'] as int? ?? 0,
+        planStatus: json['plan_status'] as String? ?? 'active',
+        planExpiresAt: json['plan_expires_at'] != null
+            ? DateTime.tryParse(json['plan_expires_at'] as String)
+            : null,
       );
 }
 

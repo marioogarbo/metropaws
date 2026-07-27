@@ -1470,8 +1470,83 @@ class _DigitalIdCard extends StatelessWidget {
                 ),
               ),
             ),
+            // Upgrade/renew entry — the only path to plan selection for a pet
+            // that already has a plan. Copy is status-aware from the local
+            // activation date (display only; the server enforces eligibility).
+            if (onSubscribe != null)
+              _PlanActionLink(
+                activatedAt: pet?.planActivatedAt,
+                onCardMuted: onCardMuted,
+                onTap: onSubscribe!,
+              ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Upgrade / renew link (pet card, active plans) ─────────────────────────
+
+/// Quiet status-aware plan action under the QR CTA: "Upgrade plan" while the
+/// plan is comfortably active, "Renew now" in the final 30 days, and a louder
+/// "Plan expired — Renew" once the year has ended. Mirrors the server's
+/// plan_status thresholds for display; eligibility itself is server-enforced.
+class _PlanActionLink extends StatelessWidget {
+  final DateTime? activatedAt;
+  final Color onCardMuted;
+  final VoidCallback onTap;
+
+  const _PlanActionLink({
+    required this.activatedAt,
+    required this.onCardMuted,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Legacy plans without an activation date never expire — plain upgrade.
+    String label = 'Upgrade plan';
+    bool urgent = false;
+    if (activatedAt != null) {
+      final expires = activatedAt!.add(const Duration(days: 365));
+      final now = DateTime.now();
+      if (now.isAfter(expires)) {
+        label = 'Plan expired — Renew';
+        urgent = true;
+      } else if (now.isAfter(expires.subtract(const Duration(days: 30)))) {
+        label = 'Plan ends soon — Renew now';
+        urgent = true;
+      }
+    }
+
+    return _ScaleButton(
+      onTap: onTap,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                urgent ? Icons.autorenew_rounded : Icons.trending_up_rounded,
+                size: 15,
+                color: urgent ? AppColors.gold : onCardMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: urgent ? AppColors.gold : onCardMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

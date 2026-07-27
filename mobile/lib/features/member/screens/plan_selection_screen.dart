@@ -16,6 +16,13 @@ import '../bloc/member_state.dart';
 
 String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
+const _kMonths = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+String _fmtDate(DateTime d) => '${_kMonths[d.month - 1]} ${d.day}, ${d.year}';
+
 enum _ScreenState { loading, plans, polling, success, failure }
 
 class PlanSelectionScreen extends StatefulWidget {
@@ -174,6 +181,9 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
             _PlansBody(
               plans: _plans,
               quotes: _quotes,
+              currentPlanType: widget.pet.planType,
+              activeUntil: widget.pet.planActivatedAt
+                  ?.add(const Duration(days: 365)),
               paymentsEnabled: _paymentsEnabled && !_isCheckoutLoading,
               onSelect: _onSelectPlan,
             ),
@@ -223,12 +233,20 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
 class _PlansBody extends StatelessWidget {
   final List<Plan> plans;
   final Map<String, PlanQuote> quotes;
+
+  /// The pet's current plan name + computed term end (activated + 365d);
+  /// both null for a plan-less pet. Display-only — eligibility comes from
+  /// the server via each PlanQuote.
+  final String? currentPlanType;
+  final DateTime? activeUntil;
   final bool paymentsEnabled;
   final void Function(Plan) onSelect;
 
   const _PlansBody({
     required this.plans,
     required this.quotes,
+    required this.currentPlanType,
+    required this.activeUntil,
     required this.paymentsEnabled,
     required this.onSelect,
   });
@@ -262,6 +280,44 @@ class _PlansBody extends StatelessWidget {
                     child: Text(
                       'Online payments are temporarily unavailable. Ask clinic staff to activate your plan in person.',
                       style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (currentPlanType != null)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outline),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.verified_outlined, size: 18, color: AppColors.gold),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                        children: [
+                          const TextSpan(text: 'Current plan: '),
+                          TextSpan(
+                            text: currentPlanType,
+                            style: tt.bodyMedium?.copyWith(
+                              color: cs.onSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (activeUntil != null)
+                            TextSpan(
+                              text: ' · active until ${_fmtDate(activeUntil!)}',
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -322,12 +378,39 @@ class _PlanCard extends StatelessWidget {
     required this.onSelect,
   });
 
+  /// CTA copy per upgrade/renewal state. Disabled states get an explanatory
+  /// label so the member knows WHY, not just that they can't.
+  String _ctaLabel() {
+    if (!paymentsEnabled) return 'Unavailable';
+    switch (quote?.eligibility ?? 'new') {
+      case 'upgrade':
+        return 'Upgrade to ${plan.name}';
+      case 'renewal':
+        return (quote?.isCurrent ?? false)
+            ? 'Renew ${plan.name}'
+            : 'Switch to ${plan.name}';
+      case 'current_plan':
+        return 'Current plan';
+      case 'lower_plan':
+      case 'benefits_used':
+        return 'Available at renewal';
+      default:
+        return 'Select ${plan.name}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final isFeatured = plan.isFeatured;
+
+    // Upgrade/renewal state, mirrored from the server quote (display only —
+    // checkout re-validates and 409s with a human message).
+    final eligibility = quote?.eligibility ?? 'new';
+    final isCurrent = quote?.isCurrent ?? false;
+    final selectable = quote?.eligible ?? true;
 
     final cardBg = isFeatured
         ? (isDark ? AppDarkColors.goldBg : AppColors.goldLight)
@@ -354,7 +437,25 @@ class _PlanCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(child: Text(plan.name, style: tt.headlineSmall)),
-                    if (isFeatured)
+                    // "Current plan" outranks "Popular" — a member looking at
+                    // their own plan cares about that, not marketing.
+                    if (isCurrent)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.gold, width: 1.5),
+                        ),
+                        child: Text(
+                          'Current plan',
+                          style: tt.labelSmall?.copyWith(
+                            color: isDark ? AppColors.gold : AppColors.goldDark,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                          ),
+                        ),
+                      )
+                    else if (isFeatured)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -450,27 +551,41 @@ class _PlanCard extends StatelessWidget {
           Divider(height: 1, color: isDark ? AppDarkColors.border : AppColors.greyLight),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: paymentsEnabled ? onSelect : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isFeatured ? AppColors.gold : AppColors.navy,
-                  foregroundColor: isFeatured ? AppColors.text : AppColors.white,
-                  minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                  disabledBackgroundColor: cs.outline,
-                ),
-                child: Text(
-                  paymentsEnabled ? 'Select ${plan.name}' : 'Unavailable',
-                  style: tt.labelLarge?.copyWith(
-                    color: isFeatured ? AppColors.text : AppColors.white,
-                    fontWeight: FontWeight.w600,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (eligibility == 'benefits_used') ...[
+                  Text(
+                    'Upgrades unlock at renewal — benefits already used this year.',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: (paymentsEnabled && selectable) ? onSelect : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isFeatured ? AppColors.gold : AppColors.navy,
+                      foregroundColor: isFeatured ? AppColors.text : AppColors.white,
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                      disabledBackgroundColor: cs.outline,
+                    ),
+                    child: Text(
+                      _ctaLabel(),
+                      style: tt.labelLarge?.copyWith(
+                        color: (paymentsEnabled && selectable)
+                            ? (isFeatured ? AppColors.text : AppColors.white)
+                            : cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
@@ -579,6 +694,30 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
                       style: tt.bodySmall?.copyWith(
                         color: isDark ? AppColors.gold : AppColors.goldDark,
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  // Replacement transparency: an upgrade/renewal wipes the old
+                  // benefits ("no more, no less" than the new plan) — say so
+                  // BEFORE money moves, not after.
+                  if (quote?.eligibility == 'upgrade' ||
+                      quote?.eligibility == 'renewal') ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${_cap(petName)}’s current benefits will be '
+                        'replaced by this plan — the new plan year starts '
+                        'today.',
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ],

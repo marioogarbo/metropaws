@@ -59,6 +59,26 @@ class WalletPetCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (c.planExpired) ...[
+                  const SizedBox(width: 8),
+                  // Plan year over: claims are blocked until renewal, so the
+                  // wallet balances shown below are dormant — flag it here.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: cs.errorContainer.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Expired — renew',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: cs.error,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
                 if (planType != null && planType!.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   TierBadge(planType: planType!, small: true),

@@ -593,6 +593,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
             ? selectedWallet.emergencyRemainingCentavos
             : selectedWallet.remainingCentavos);
     final walletExhausted = selectedWallet != null && remaining <= 0;
+    // Expired plan: the server 400s new claims; gate here too so the member
+    // sees why instead of a failed round-trip.
+    final planExpired = selectedWallet?.planExpired ?? false;
     final isDark = theme.brightness == Brightness.dark;
     final walletGold = isDark ? AppColors.gold : AppColors.goldDark;
 
@@ -653,6 +656,34 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                       when plan.isNotEmpty)
                     TierBadge(planType: plan, small: true),
                 ],
+              ),
+            ],
+            if (planExpired) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: cs.errorContainer.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cs.error.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.event_busy_rounded, size: 18, color: cs.error),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "${selectedWallet!.petName}'s plan year has ended — "
+                        'renew the plan from the Home tab to keep claiming.',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: cs.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 16),
@@ -918,6 +949,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               onPressed: (_submitting ||
                       loading ||
                       walletExhausted ||
+                      planExpired ||
                       memberNeedsPayoutMethod)
                   ? null
                   : _submit,
