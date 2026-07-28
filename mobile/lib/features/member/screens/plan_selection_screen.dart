@@ -251,6 +251,18 @@ class _PlansBody extends StatelessWidget {
     required this.onSelect,
   });
 
+  /// Plans worth showing a card for: purchasable right now (eligible) or the
+  /// pet's own current plan (shown for reference even though it's not
+  /// re-buyable mid-term). Same/lower plans and usage-blocked upgrades are
+  /// hidden rather than shown disabled — no quote (fetch failure) fails open.
+  List<Plan> get _visiblePlans => plans.where((p) {
+        final q = quotes[p.id];
+        return q == null || q.eligible || q.isCurrent;
+      }).toList();
+
+  bool get _hiddenForBenefitsUsed =>
+      plans.any((p) => quotes[p.id]?.eligibility == 'benefits_used');
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -334,16 +346,42 @@ class _PlansBody extends StatelessWidget {
                 ),
               ),
             )
-          else
-            ...plans.map((plan) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _PlanCard(
-                plan: plan,
-                quote: quotes[plan.id],
-                paymentsEnabled: paymentsEnabled,
-                onSelect: () => onSelect(plan),
+          else ...[
+            // Ineligible plans (same/lower plan mid-term, or upgrade blocked
+            // because this term's benefits are already in use) are hidden
+            // entirely rather than shown disabled — the current plan's own
+            // card always stays so the member can see what they have.
+            if (_hiddenForBenefitsUsed)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  "This pet's benefits have already been used this year — "
+                  'other plans become available again at renewal.',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
               ),
-            )),
+            if (_visiblePlans.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Text(
+                    'No other plans available right now.',
+                    style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            else
+              ..._visiblePlans.map((plan) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _PlanCard(
+                  plan: plan,
+                  quote: quotes[plan.id],
+                  paymentsEnabled: paymentsEnabled,
+                  onSelect: () => onSelect(plan),
+                ),
+              )),
+          ],
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -378,8 +416,9 @@ class _PlanCard extends StatelessWidget {
     required this.onSelect,
   });
 
-  /// CTA copy per upgrade/renewal state. Disabled states get an explanatory
-  /// label so the member knows WHY, not just that they can't.
+  /// CTA copy per upgrade/renewal state. 'lower_plan'/'benefits_used' never
+  /// reach this card — _PlansBody hides those entirely rather than showing
+  /// them disabled.
   String _ctaLabel() {
     if (!paymentsEnabled) return 'Unavailable';
     switch (quote?.eligibility ?? 'new') {
@@ -391,9 +430,6 @@ class _PlanCard extends StatelessWidget {
             : 'Switch to ${plan.name}';
       case 'current_plan':
         return 'Current plan';
-      case 'lower_plan':
-      case 'benefits_used':
-        return 'Available at renewal';
       default:
         return 'Select ${plan.name}';
     }
@@ -408,7 +444,6 @@ class _PlanCard extends StatelessWidget {
 
     // Upgrade/renewal state, mirrored from the server quote (display only —
     // checkout re-validates and 409s with a human message).
-    final eligibility = quote?.eligibility ?? 'new';
     final isCurrent = quote?.isCurrent ?? false;
     final selectable = quote?.eligible ?? true;
 
@@ -554,13 +589,6 @@ class _PlanCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (eligibility == 'benefits_used') ...[
-                  Text(
-                    'Upgrades unlock at renewal — benefits already used this year.',
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 10),
-                ],
                 SizedBox(
                   width: double.infinity,
                   height: 44,
