@@ -22,6 +22,8 @@ export interface AppSettings {
   founding_claimed: number;
   booking_enabled: boolean;
   direct_provider_payment_enabled: boolean;
+  pack_discount_enabled: boolean;
+  pack_discount_percent: number;
 }
 
 const SETTINGS_DEFAULTS: AppSettings = {
@@ -31,6 +33,8 @@ const SETTINGS_DEFAULTS: AppSettings = {
   founding_claimed: 0,
   booking_enabled: false,
   direct_provider_payment_enabled: false,
+  pack_discount_enabled: true,
+  pack_discount_percent: 15,
 };
 
 export async function fetchSettingsAction(): Promise<AppSettings> {
@@ -38,7 +42,7 @@ export async function fetchSettingsAction(): Promise<AppSettings> {
   if (!token) return SETTINGS_DEFAULTS;
 
   try {
-    const [paymentsRes, foundingRes, mobileConfigRes] = await Promise.all([
+    const [paymentsRes, foundingRes, mobileConfigRes, packDiscountRes] = await Promise.all([
       fetch(`${BACKEND_URL}/settings/payments-enabled`, {
         headers: authHeader(token),
         cache: "no-store",
@@ -48,6 +52,10 @@ export async function fetchSettingsAction(): Promise<AppSettings> {
         cache: "no-store",
       }),
       fetch(`${BACKEND_URL}/settings/mobile-config`, {
+        headers: authHeader(token),
+        cache: "no-store",
+      }),
+      fetch(`${BACKEND_URL}/settings/pack-discount`, {
         headers: authHeader(token),
         cache: "no-store",
       }),
@@ -68,6 +76,10 @@ export async function fetchSettingsAction(): Promise<AppSettings> {
         })
       : null;
 
+    const packDiscountData = packDiscountRes.ok
+      ? ((await packDiscountRes.json()) as { enabled: boolean; percent: number })
+      : null;
+
     return {
       require_payment: paymentsData?.payments_enabled ?? SETTINGS_DEFAULTS.require_payment,
       founding_enrollment_active:
@@ -79,6 +91,10 @@ export async function fetchSettingsAction(): Promise<AppSettings> {
       direct_provider_payment_enabled:
         mobileConfigData?.direct_provider_payment_enabled ??
         SETTINGS_DEFAULTS.direct_provider_payment_enabled,
+      pack_discount_enabled:
+        packDiscountData?.enabled ?? SETTINGS_DEFAULTS.pack_discount_enabled,
+      pack_discount_percent:
+        packDiscountData?.percent ?? SETTINGS_DEFAULTS.pack_discount_percent,
     };
   } catch {
     return SETTINGS_DEFAULTS;
@@ -137,6 +153,33 @@ export async function updateDirectProviderPaymentAction(
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
     body: JSON.stringify({ direct_provider_payment_enabled: enabled }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { error: (err as { detail?: string })?.detail ?? "Failed to save." };
+  }
+
+  revalidatePath("/admin/settings");
+  return { error: null };
+}
+
+export async function updatePackDiscountAction(
+  patch: { enabled?: boolean; percent?: number },
+  current: AppSettings,
+): Promise<{ error: string | null }> {
+  const token = await getToken();
+  if (!token) return { error: "Not authenticated." };
+
+  const payload = {
+    enabled: patch.enabled ?? current.pack_discount_enabled,
+    percent: patch.percent ?? current.pack_discount_percent,
+  };
+
+  const res = await fetch(`${BACKEND_URL}/admin/settings/pack-discount`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader(token) },
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {

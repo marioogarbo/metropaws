@@ -5,6 +5,11 @@ import auth as auth_utils
 import models
 import schemas
 from database import get_db
+from pricing_utils import (
+    PACK_DISCOUNT_ENABLED_KEY,
+    PACK_DISCOUNT_PERCENT_KEY,
+    pack_discount_settings,
+)
 
 router = APIRouter(tags=["settings"])
 
@@ -151,6 +156,34 @@ def read_founding_50(db: Session = Depends(get_db)):
         limit=get_founding_50_limit(db),
         claimed=get_founding_50_claimed(db),
     )
+
+
+@router.get("/settings/pack-discount", response_model=schemas.PackDiscountOut)
+def read_pack_discount(db: Session = Depends(get_db)):
+    """Current multi-pet Pack Discount settings (see pricing_utils.py — the
+    ONLY place the discount rule and its price math live). Public: the same
+    information is already implied by /payments/quotes and the marketing FAQ."""
+    enabled, percent = pack_discount_settings(db)
+    return {"enabled": enabled, "percent": percent}
+
+
+@router.put("/admin/settings/pack-discount", response_model=schemas.PackDiscountOut)
+def update_pack_discount(
+    payload: schemas.PackDiscountUpdate,
+    current_user: models.User = Depends(auth_utils.require_admin),
+    db: Session = Depends(get_db),
+):
+    for key, val in [
+        (PACK_DISCOUNT_ENABLED_KEY, "true" if payload.enabled else "false"),
+        (PACK_DISCOUNT_PERCENT_KEY, str(payload.percent)),
+    ]:
+        row = db.query(models.AppSetting).filter(models.AppSetting.key == key).first()
+        if row:
+            row.value = val
+        else:
+            db.add(models.AppSetting(key=key, value=val))
+    db.commit()
+    return {"enabled": payload.enabled, "percent": payload.percent}
 
 
 @router.put("/admin/settings/founding-50", response_model=schemas.Founding50Out)

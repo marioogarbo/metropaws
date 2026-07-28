@@ -733,6 +733,16 @@ class DirectProviderPaymentUpdate(BaseModel):
     direct_provider_payment_enabled: bool
 
 
+class PackDiscountOut(BaseModel):
+    enabled: bool
+    percent: int
+
+
+class PackDiscountUpdate(BaseModel):
+    enabled: bool
+    percent: int = Field(ge=0, le=100)
+
+
 # --- Founding 50 Reservations ---
 
 class FoundingReservationCreate(BaseModel):

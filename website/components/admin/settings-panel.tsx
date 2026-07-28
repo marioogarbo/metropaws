@@ -9,6 +9,7 @@ import {
   updateFounding50Action,
   updateBookingEnabledAction,
   updateDirectProviderPaymentAction,
+  updatePackDiscountAction,
   type AppSettings,
 } from "@/app/admin/(protected)/settings/actions";
 
@@ -111,6 +112,9 @@ export function SettingsPanel({ initialSettings }: SettingsPanelProps) {
   const [memberLimitInput, setMemberLimitInput] = useState(
     String(initialSettings.member_limit),
   );
+  const [packDiscountPercentInput, setPackDiscountPercentInput] = useState(
+    String(initialSettings.pack_discount_percent),
+  );
   const [pendingKey, setPendingKey] = useState<PendingKey>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -182,6 +186,46 @@ export function SettingsPanel({ initialSettings }: SettingsPanelProps) {
     });
   }
 
+  function savePackDiscountEnabled(value: boolean) {
+    const previous = settings;
+    setSettings((s) => ({ ...s, pack_discount_enabled: value }));
+    setPendingKey("pack_discount_enabled");
+
+    startTransition(async () => {
+      const result = await updatePackDiscountAction({ enabled: value }, previous);
+      setPendingKey(null);
+      if (result.error) {
+        setSettings(previous);
+        toast.error(result.error);
+      } else {
+        toast.success("Setting saved.");
+      }
+    });
+  }
+
+  function savePackDiscountPercent() {
+    const parsed = parseInt(packDiscountPercentInput, 10);
+    if (isNaN(parsed) || parsed < 0 || parsed > 100) {
+      toast.error("Discount percent must be between 0 and 100.");
+      return;
+    }
+
+    const previous = settings;
+    setPendingKey("pack_discount_percent");
+
+    startTransition(async () => {
+      const result = await updatePackDiscountAction({ percent: parsed }, previous);
+      setPendingKey(null);
+      if (result.error) {
+        setPackDiscountPercentInput(String(previous.pack_discount_percent));
+        toast.error(result.error);
+      } else {
+        setSettings((s) => ({ ...s, pack_discount_percent: parsed }));
+        toast.success("Pack Discount percent saved.");
+      }
+    });
+  }
+
   function saveMemberLimit() {
     const parsed = parseInt(memberLimitInput, 10);
     if (isNaN(parsed) || parsed < 1) {
@@ -206,6 +250,8 @@ export function SettingsPanel({ initialSettings }: SettingsPanelProps) {
   }
 
   const memberLimitChanged = memberLimitInput !== String(settings.member_limit);
+  const packDiscountPercentChanged =
+    packDiscountPercentInput !== String(settings.pack_discount_percent);
 
   return (
     <div className="flex flex-col gap-8">
@@ -303,6 +349,77 @@ export function SettingsPanel({ initialSettings }: SettingsPanelProps) {
               onChange={saveDirectProviderPayment}
               disabled={isPending}
               label="Direct-to-Provider Payments"
+            />
+          </div>
+        </SettingRow>
+      </Section>
+
+      <Section title="Pricing">
+        <SettingRow
+          label="Pack Discount (Multi-Pet)"
+          description="When ON, a member's 2nd and 3rd pet gets this percent off any plan strictly cheaper than their best active plan. Takes effect on the next checkout — no app release needed."
+          last
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={packDiscountPercentInput}
+                onChange={(e) => setPackDiscountPercentInput(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
+                  packDiscountPercentChanged &&
+                  savePackDiscountPercent()
+                }
+                disabled={isPending || !settings.pack_discount_enabled}
+                className={cn(
+                  "w-16 rounded-lg border bg-[oklch(0.97_0.010_80)] px-3 py-1.5",
+                  "text-sm text-[oklch(0.24_0.055_258)] font-medium text-center",
+                  "transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[oklch(0.72_0.115_82)] focus:border-[oklch(0.72_0.115_82)]",
+                  "disabled:cursor-not-allowed disabled:opacity-40",
+                  "border-[oklch(0.91_0.008_258)]",
+                )}
+              />
+              <span className="text-sm text-[oklch(0.48_0.020_258)]">%</span>
+            </div>
+            <button
+              type="button"
+              onClick={savePackDiscountPercent}
+              disabled={
+                isPending ||
+                !settings.pack_discount_enabled ||
+                !packDiscountPercentChanged
+              }
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors duration-150",
+                "bg-[oklch(0.24_0.055_258)] text-[oklch(0.97_0.010_80)]",
+                "hover:bg-[oklch(0.32_0.050_258)] active:bg-[oklch(0.20_0.045_258)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.72_0.115_82)] focus-visible:ring-offset-1",
+                "disabled:opacity-40 disabled:cursor-not-allowed",
+                "flex items-center justify-center min-w-12",
+              )}
+            >
+              {pendingKey === "pack_discount_percent" ? (
+                <Loader2 size={11} className="animate-spin" />
+              ) : (
+                "Save"
+              )}
+            </button>
+            <div className="w-4 flex items-center justify-center">
+              {pendingKey === "pack_discount_enabled" && (
+                <Loader2
+                  size={12}
+                  className="animate-spin text-[oklch(0.48_0.020_258)]"
+                />
+              )}
+            </div>
+            <Toggle
+              checked={settings.pack_discount_enabled}
+              onChange={savePackDiscountEnabled}
+              disabled={isPending}
+              label="Pack Discount (Multi-Pet)"
             />
           </div>
         </SettingRow>

@@ -14,6 +14,12 @@ quotes from GET /payments/quotes.
 All amounts here are whole pesos (the legacy Payment.amount_php unit — NOT the
 centavos used by reimbursements). The discount is rounded UP to the next whole
 peso in the member's favor: final = price * (100 - pct) // 100.
+
+ADMIN-CONTROLLED (2026-07-28): whether the discount is on and what percent it
+uses are live settings, editable from the website Settings page with no
+redeploy — see pack_discount_settings() and routers/settings.py's
+GET/PUT /settings/pack-discount. PACK_DISCOUNT_PERCENT (env) is consulted only
+as the fresh-install default, before an admin has ever saved a value.
 """
 import os
 from datetime import datetime, timedelta, timezone
@@ -22,11 +28,14 @@ from sqlalchemy.orm import Session
 
 import models
 
-# Tunables (env-overridable, sane defaults). PACK_DISCOUNT_PERCENT=0 disables
-# the discount entirely. PACK_DISCOUNT_MAX_PLAN_PETS caps how many pets can
-# hold a plan before new activations stop qualifying (3 = pets #2 and #3 get
-# the discount, per the published FAQ).
+PACK_DISCOUNT_ENABLED_KEY = "pack_discount_enabled"
+PACK_DISCOUNT_PERCENT_KEY = "pack_discount_percent"
+
+# Env-only fallback default (fresh install, admin hasn't saved a value yet).
 _DEF_PERCENT = 15
+# Not admin-exposed (no client request for it) — caps how many pets can hold a
+# plan before new activations stop qualifying (3 = pets #2 and #3 get the
+# discount, per the published FAQ).
 _DEF_MAX_PLAN_PETS = 3
 
 # A pet's plan anchors the discount only while it is still active. Plans run
@@ -37,7 +46,7 @@ _DEF_MAX_PLAN_PETS = 3
 _ACTIVE_WINDOW_DAYS = 365
 
 
-def _percent() -> int:
+def _default_percent_from_env() -> int:
     try:
         return int(os.getenv("PACK_DISCOUNT_PERCENT", str(_DEF_PERCENT)))
     except ValueError:
@@ -49,6 +58,29 @@ def _max_plan_pets() -> int:
         return int(os.getenv("PACK_DISCOUNT_MAX_PLAN_PETS", str(_DEF_MAX_PLAN_PETS)))
     except ValueError:
         return _DEF_MAX_PLAN_PETS
+
+
+def pack_discount_settings(db: Session) -> tuple[bool, int]:
+    """Effective (enabled, percent) — the ONLY function pack_discount_quote
+    consults for whether/how much to discount. Backed by the same AppSetting
+    key/value table as booking_enabled etc.; falls back to the env default
+    for whichever field the admin hasn't saved yet."""
+    enabled_row = (
+        db.query(models.AppSetting)
+        .filter(models.AppSetting.key == PACK_DISCOUNT_ENABLED_KEY)
+        .first()
+    )
+    percent_row = (
+        db.query(models.AppSetting)
+        .filter(models.AppSetting.key == PACK_DISCOUNT_PERCENT_KEY)
+        .first()
+    )
+    enabled = (enabled_row.value == "true") if enabled_row else True
+    try:
+        percent = int(percent_row.value) if percent_row else _default_percent_from_env()
+    except ValueError:
+        percent = _default_percent_from_env()
+    return enabled, percent
 
 
 def pack_discount_quote(
@@ -74,8 +106,8 @@ def pack_discount_quote(
         "discount_percent": 0,
     }
 
-    pct = _percent()
-    if pct <= 0:
+    enabled, pct = pack_discount_settings(db)
+    if not enabled or pct <= 0:
         return no_discount
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=_ACTIVE_WINDOW_DAYS)
