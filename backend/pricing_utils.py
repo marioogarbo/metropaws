@@ -11,6 +11,12 @@ checkout (so a secondary pet's renewal keeps the discount only while the
 primary plan is still active). The client never computes prices — it displays
 quotes from GET /payments/quotes.
 
+NOT FOR UPGRADES (client decision 2026-07-29): the discount rewards ADDING a
+pet to the household, so it applies only to a pet's first plan activation and
+to renewals of an already-discounted pet — never to a mid-term upgrade of a pet
+that already has a plan. Callers pass the plan_term_utils eligibility code as
+``purchase_code``; see _DISCOUNT_ELIGIBLE_CODES.
+
 All amounts here are whole pesos (the legacy Payment.amount_php unit — NOT the
 centavos used by reimbursements). The discount is rounded UP to the next whole
 peso in the member's favor: final = price * (100 - pct) // 100.
@@ -30,6 +36,13 @@ import models
 
 PACK_DISCOUNT_ENABLED_KEY = "pack_discount_enabled"
 PACK_DISCOUNT_PERCENT_KEY = "pack_discount_percent"
+
+# plan_term_utils.purchase_eligibility codes that may carry the Pack Discount:
+# 'new'     — this pet's first plan (the Add-a-Pet / register-a-pet case)
+# 'renewal' — renewing a pet that already qualified; dropping the discount here
+#             would raise the member's price year over year for the same thing
+# 'upgrade' is deliberately EXCLUDED — see the module docstring.
+_DISCOUNT_ELIGIBLE_CODES = {"new", "renewal"}
 
 # Env-only fallback default (fresh install, admin hasn't saved a value yet).
 _DEF_PERCENT = 15
@@ -88,12 +101,18 @@ def pack_discount_quote(
     member: models.Member,
     plan: models.Plan,
     exclude_pet_id: str | None = None,
+    purchase_code: str | None = None,
 ) -> dict:
     """Price `plan` for `member`, applying the Pack Discount when eligible.
 
     `exclude_pet_id` is the pet being paid for (exclude it from the anchor
     set so a renewal doesn't anchor on itself); pass None when quoting for a
     pet that doesn't exist yet (Add-a-Pet flow).
+
+    `purchase_code` is the plan_term_utils.purchase_eligibility code for this
+    (pet, plan) pair. Only _DISCOUNT_ELIGIBLE_CODES carry the discount — an
+    'upgrade' pays full price. None means "no purchase context" and keeps the
+    discount, so a caller that doesn't know the code can't silently lose it.
 
     Returns whole-peso ints: {full_php, discount_php, final_php,
     discount_percent} — discount_php is 0 when not eligible.
@@ -105,6 +124,9 @@ def pack_discount_quote(
         "final_php": full,
         "discount_percent": 0,
     }
+
+    if purchase_code is not None and purchase_code not in _DISCOUNT_ELIGIBLE_CODES:
+        return no_discount
 
     enabled, pct = pack_discount_settings(db)
     if not enabled or pct <= 0:
