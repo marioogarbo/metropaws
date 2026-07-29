@@ -6,15 +6,15 @@ discount applies only to plans STRICTLY CHEAPER than the best active plan the
 member already pays for. The 4th+ pet pays full price. An equal-tier second
 plan (e.g. Premium + Premium) is NOT discounted — "succeeding LOWER plans".
 
-The rule is evaluated server-side at checkout time and re-evaluated on every
-checkout (so a secondary pet's renewal keeps the discount only while the
-primary plan is still active). The client never computes prices — it displays
+The rule is evaluated server-side at checkout time, against the member's other
+pets as they stand right then. The client never computes prices — it displays
 quotes from GET /payments/quotes.
 
-NOT FOR UPGRADES (client decision 2026-07-29): the discount rewards ADDING a
-pet to the household, so it applies only to a pet's first plan activation and
-to renewals of an already-discounted pet — never to a mid-term upgrade of a pet
-that already has a plan. Callers pass the plan_term_utils eligibility code as
+FIRST ACTIVATION ONLY (client decision 2026-07-29): the discount is a joining
+incentive for ADDING a pet, so it applies only to a pet's FIRST plan
+activation. Mid-term upgrades and renewals both pay full price. A different
+renewal-time discount may be introduced later — that would be its own rule, not
+this one. Callers pass the plan_term_utils eligibility code as
 ``purchase_code``; see _DISCOUNT_ELIGIBLE_CODES.
 
 All amounts here are whole pesos (the legacy Payment.amount_php unit — NOT the
@@ -37,12 +37,13 @@ import models
 PACK_DISCOUNT_ENABLED_KEY = "pack_discount_enabled"
 PACK_DISCOUNT_PERCENT_KEY = "pack_discount_percent"
 
-# plan_term_utils.purchase_eligibility codes that may carry the Pack Discount:
-# 'new'     — this pet's first plan (the Add-a-Pet / register-a-pet case)
-# 'renewal' — renewing a pet that already qualified; dropping the discount here
-#             would raise the member's price year over year for the same thing
-# 'upgrade' is deliberately EXCLUDED — see the module docstring.
-_DISCOUNT_ELIGIBLE_CODES = {"new", "renewal"}
+# plan_term_utils.purchase_eligibility codes that may carry the Pack Discount.
+# ONLY 'new' — this pet's first plan (the Add-a-Pet / register-a-pet case).
+# 'upgrade' and 'renewal' are both deliberately excluded: the discount is a
+# joining incentive for adding a pet, not a standing multi-pet rate. If a
+# renewal incentive is wanted later, add it as its own rule/percent rather than
+# widening this set.
+_DISCOUNT_ELIGIBLE_CODES = {"new"}
 
 # Env-only fallback default (fresh install, admin hasn't saved a value yet).
 _DEF_PERCENT = 15

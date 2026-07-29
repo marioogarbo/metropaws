@@ -77,9 +77,9 @@ async def create_checkout(
 
     # Server-authoritative price: the Pack Discount (2nd/3rd pet on a lower
     # plan) is computed here and snapshotted on the Payment row — the client
-    # never sends an amount. Exclude the pet being paid for so a renewal
-    # doesn't anchor the discount on itself; `code` withholds the discount from
-    # mid-term upgrades (it rewards adding a pet, not changing tiers).
+    # never sends an amount. Exclude the pet being paid for so it can't anchor
+    # the discount on itself; `code` limits the discount to a pet's FIRST
+    # activation (upgrades and renewals pay full price).
     quote = pricing_utils.pack_discount_quote(
         db, member, plan, exclude_pet_id=pet.id, purchase_code=code
     )
