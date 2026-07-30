@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { PlayStoreIcon } from "@/components/play-store-icon";
+import { PLAY_STORE_URL } from "@/lib/app-download";
 
 export default function MemberPage() {
   const router = useRouter();
@@ -53,19 +55,13 @@ export default function MemberPage() {
         </div>
 
         <div className="flex flex-col gap-3 mb-8">
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#1a1e32] rounded-xl cursor-default select-none">
-            <span className="text-2xl">🍎</span>
-            <div className="text-left">
-              <p className="text-[10px] text-white/60 font-medium leading-none mb-0.5">
-                Download on the
-              </p>
-              <p className="text-sm text-white font-bold leading-none">
-                App Store
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#1a1e32] rounded-xl cursor-default select-none">
-            <span className="text-2xl">▶</span>
+          <a
+            href={PLAY_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3 bg-[#1a1e32] rounded-xl transition-opacity hover:opacity-90"
+          >
+            <PlayStoreIcon />
             <div className="text-left">
               <p className="text-[10px] text-white/60 font-medium leading-none mb-0.5">
                 Get it on
@@ -74,7 +70,13 @@ export default function MemberPage() {
                 Google Play
               </p>
             </div>
-          </div>
+          </a>
+          <Link
+            href="/download"
+            className="flex items-center justify-center px-4 py-3 rounded-xl border border-[#e8eaf2] text-sm font-semibold text-[#263258] transition-colors hover:bg-white"
+          >
+            Other ways to install →
+          </Link>
         </div>
 
         <Link

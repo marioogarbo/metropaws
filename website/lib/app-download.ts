@@ -1,11 +1,17 @@
 /**
- * Single source of truth for the direct Android APK download.
+ * Single source of truth for the two ways a member can install the Android app.
  *
- * The Play Store listing is still in review, so members install the app
- * directly from the website in the meantime. Update these three values
- * every time a new APK is uploaded so the badge, the /download page, and
- * the version label never drift from the actual file.
+ * Google Play carries the reviewed, auto-updating release. The direct APK runs
+ * ahead of it while newer builds wait on a Play release, so both routes stay
+ * offered. Update these values every time a new APK is uploaded so the badge,
+ * the /download page, and the version label never drift from the actual file.
  */
+
+// Live Google Play listing. The plain HTTPS form deep-links into the Play Store
+// app on Android and falls back to the web listing on desktop — unlike
+// market:// which breaks outside Android.
+export const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.metropaws.mobile";
 
 // Direct-download link to the current release APK.
 // Hosted on Google Drive (uc?export=download forces a file download rather

@@ -49,6 +49,16 @@ flutter run
 flutter build apk --release --dart-define=ENV=prod    # release build
 ```
 
+## Engineering context
+
+[`context/`](context/) holds the decisions and constraints the code doesn't
+record — cross-project choices, external-platform state (Google Play,
+PayMongo, Render), and the reasoning behind things that look arbitrary in a
+diff. `context/features/` is long-lived per-subsystem knowledge;
+`context/sessions/` is append-only session history. Read the relevant
+project's `CLAUDE.md` first, then `context/` for anything that depends on
+state outside the repo.
+
 ## Secrets
 
 All secrets live in **gitignored** files, never in the repo:
