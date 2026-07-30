@@ -123,30 +123,117 @@ gap reopens the moment another APK ships ahead of Play.
 
 ## Open items
 
-Ordered by what blocks what.
+*(Superseded — see "Part 2" below. Kept for the record: at this point prod was
+still missing every new field and nothing had been deployed.)*
 
-1. **Deploy the prod backend before promoting v1.4.0 to production.** Verified
-   against the live `https://metropaws-backend.onrender.com/openapi.json` on
-   2026-07-30: `eligibility`, `is_current`, `plan_status`, `plan_expires_at`,
-   and `pack_discount` are **all absent**. The app degrades safely — tolerant
-   defaults in `mobile/lib/core/models/plan_quote.dart` (`eligible: true`,
-   `eligibility: 'new'`) and `reimbursement.dart` (`planStatus: 'active'`)
-   mean it behaves like the old app rather than breaking — but none of the new
-   features work until the backend ships. Order: migrate dev + prod DBs (Pack
-   Discount needs it, plan upgrade/renewal does not) → `.\deploy.ps1` →
-   re-check the openapi.
-2. **QA on device against dev.** Never confirmed before the merge, and this
-   release touches the money path (checkout eligibility, wallet, expiry
-   gating). Play releases cannot be rolled back — only superseded by a higher
-   version code.
-3. **Upload the new APK to Google Drive.** `APK_VERSION` now says `1.4.0` but
-   `APK_HREF` still serves the old 1.3.1 file. The website will advertise a
-   version it doesn't serve until the Drive file is replaced. Harmless right
-   now only because the website isn't deployed from this repo — must happen
-   before anything ships to Vercel.
-4. **Verify App-access demo login against prod** — one of the two earlier
-   Google rejections was login-access.
-5. **Empty the internal tester list** — but only *after* using it to test the
-   v1.4.0 upload, since that track is how you verify before promoting.
-6. **Confirm the 1-country production availability is intended.**
-7. **Digital Asset Links** — optional; details in the feature doc.
+---
+
+# Part 2 — deployed and submitted (spilled into 2026-07-31)
+
+## 6. Prod backend deployed
+
+`python migrate.py` then `.\deploy.ps1 -Env prod`. Two failed attempts first:
+
+1. Docker Desktop wasn't running (`open //./pipe/dockerDesktopLinuxEngine`)
+2. `failed to authorize: ... Post "https://auth.docker.io/token": EOF` — the
+   known IPv6 flakiness; a plain retry cleared it
+
+Third attempt pushed and triggered `dep-d9lkoknqj5pc73994980`.
+
+**Migrations needed an explicit target.** `database.py` calls a bare
+`load_dotenv()`, and `migrate.py` has no env handling of its own — so
+`python migrate.py` hits whatever `DATABASE_URL` is in `.env`, which is *not*
+prod. Since `load_dotenv` defaults to `override=False`, a pre-set env var wins.
+Reusable recipe:
+
+```powershell
+$line = Get-Content .env.prod | Where-Object { $_ -match '^DATABASE_URL=' } | Select-Object -First 1
+$env:DATABASE_URL = ($line -replace '^DATABASE_URL=','').Trim().Trim('"').Trim("'")
+python migrate.py
+Remove-Item Env:\DATABASE_URL
+```
+
+Ran against prod **and** dev, both `Migration complete.` The ALTERs are
+`ADD COLUMN IF NOT EXISTS` and the `CREATE TYPE` is wrapped in a
+`duplicate_object` handler, so re-running is always safe.
+
+Verified after: `eligibility`, `is_current`, `plan_status`, `plan_expires_at`,
+`payout_target`, `provider_id` all present in prod's openapi. Live smoke tests:
+
+```
+GET /settings/pack-discount           {"enabled":true,"percent":15}
+GET /members/reimbursement-providers  []
+GET /settings/mobile-config           {"booking_enabled":false,
+                                       "direct_provider_payment_enabled":false}
+```
+
+## 7. QA passed on the Play internal build
+
+Tested by the client (Romy) on the internal track against **prod**. "Plans for
+Koya" rendered Standard with a `Current plan` badge and Deluxe offered as an
+upgrade — which proves prod is returning `is_current`/`eligibility` and the
+whole upgrade/renewal UI works end-to-end.
+
+**Not covered:** checkout and claim submission — the two paths that actually
+depend on the columns added above (`payments.discount_php`,
+`reimbursements.payout_target`). Still unobserved on 1.4.0.
+
+He also hit the signature mismatch live: *"The app installed on your device
+didn't come from Google Play... re-install from Google Play."* Exactly the
+documented constraint, costing a real support conversation.
+
+## 8. Promotion was blocked, then submitted
+
+`Promote release → Production` was greyed out. Tooltip: **"Track already has a
+draft release"** — an abandoned production draft. Fix was to build the release
+directly in Production via `Create new release → Add from library → 8 (1.4.0)`,
+which sidesteps the promote path entirely since the bundle is already uploaded.
+
+Submitted 100% full rollout, `Managed publishing off` (so it auto-publishes on
+approval), previous bundle `7 (1.3.1)` left in *Not Included*. Device support
+review showed **zero devices lost** on every form factor, and +109 KB install
+size for the whole feature set.
+
+**Correction worth remembering:** Google does **not** review internal testing
+releases — that track is instant and review-free. Review happens only on
+promotion to Production. This was told to the client the wrong way round.
+
+## 9. The Drive APK link has a warning-page problem
+
+`APK_HREF` still resolves (the file was replaced in place, so the ID is
+unchanged) but `uc?export=download` does **not** serve the binary. It returns
+an HTML interstitial:
+
+> Google Drive has detected issues with your download — This file is too large
+> for Google to scan for viruses. **This file is executable and may harm your
+> computer.** app-release.apk (72M)
+
+So the direct route now costs a member four consecutive warnings: this page,
+Android's "allow from this source", Play Protect, and then the signature
+mismatch if they ever move to Play. `website/app/download/page.tsx` step 1
+still claims the file "saves to your phone", which skips the interstitial
+entirely — that copy is wrong.
+
+**The APK route's justification expired tonight.** It existed because it ran
+ahead of Play. Both are now 1.4.0 from the same commit, so it offers zero
+features, a 72 MB download instead of 15.7 MB, and four warning screens. The
+only remaining arguments for keeping it are the 1-country Play availability and
+devices without Play Services.
+
+## Open items
+
+1. **Watch for review approval**, then confirm the public listing shows 1.4.0.
+2. **Retire the APK route** (recommended) or fix the `/download` step-1 copy to
+   mention the Drive warning page. Decision pending with the client.
+3. **Confirm the Drive file is really 1.4.0** — the ID resolves and the size
+   matches, but 1.3.1 was also ~72 MB, so size alone doesn't prove it. Check
+   Drive's version history.
+4. **Exercise checkout and a claim on 1.4.0** — the two migration-dependent
+   paths nobody has run yet.
+5. **Verify Mario's own account is off the internal tester list** — some were
+   removed; that specific one is what caused the original `(Internal Beta)`
+   symptom.
+6. **Provider nomination** — the next feature. See
+   [`../features/provider-nomination.md`](../features/provider-nomination.md).
+7. **Confirm the 1-country production availability is intended.**
+8. **Digital Asset Links** — optional; details in the distribution feature doc.

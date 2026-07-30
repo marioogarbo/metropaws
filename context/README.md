@@ -50,8 +50,13 @@ says. If a fact is derivable by reading a file, link to that file instead.
 - [`features/android-distribution.md`](features/android-distribution.md) —
   the two Android install routes (Google Play + direct APK), why they are
   mutually incompatible, and how the website presents the choice.
+- [`features/provider-nomination.md`](features/provider-nomination.md) —
+  **proposed, not built.** Letting members nominate their own groomer/clinic so
+  direct-to-provider payouts become reachable, and why members must never
+  supply the payout details.
 
 ### Sessions
 - [`sessions/2026-07-30-play-store-launch.md`](sessions/2026-07-30-play-store-launch.md) —
   Play Store production launch follow-up: internal-testing confusion,
-  signing-key investigation, website Play Store buttons.
+  signing-key investigation, website Play Store buttons, then the v1.4.0 build,
+  prod backend deploy, and submission for review.
