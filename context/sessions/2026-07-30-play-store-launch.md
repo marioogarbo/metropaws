@@ -85,16 +85,68 @@ Verification: `npx tsc --noEmit` clean, `npm run build` succeeded (28/28
 static pages), `npm run lint` reports nothing in the touched files. The
 repo's ~50 pre-existing lint errors live in files this session didn't touch.
 
+## 5. Built v1.4.0+8 for both routes
+
+Bumped `mobile/pubspec.yaml` from `1.3.1+7` to `1.4.0+8` — minor, not patch,
+since this release carries plan upgrade/renewal and the Pack Discount admin
+toggle. Both artifacts built from the same commit with
+`--dart-define=ENV=prod`:
+
+| Artifact | Path | Size |
+| --- | --- | --- |
+| AAB (Play) | `mobile/build/app/outputs/bundle/release/app-release.aab` | 54.3 MB |
+| APK (direct) | `mobile/build/app/outputs/flutter-apk/app-release.apk` | 71.9 MB |
+
+**Verified, not assumed.** Dart const-folds the env conditional, so non-prod
+branches are physically absent from the AOT snapshot. Searching
+`lib/arm64-v8a/libapp.so` in both artifacts: `metropaws-backend.onrender.com`
+and `metropaws.ph` present; `metropaws-backend-dev.onrender.com`,
+`localhost:8000`, and `staging-metropaws.vercel.app` all absent. This is a
+better env check than reading build logs — reusable on any future build:
+
+```bash
+unzip -q -o <artifact> "*/lib/arm64-v8a/libapp.so"   # base/lib/... in an AAB
+grep -a -c -F "metropaws-backend-dev.onrender.com" .../libapp.so   # want 0
+```
+
+Note `strings` is not installed in this Git Bash — use `grep -a`, or the check
+silently reports everything as absent.
+
+APK signing confirmed via `apksigner` (needs `JAVA_HOME` pointed at
+`Android Studio/jbr`; `jarsigner` reports nothing because the APK is v2/v3
+signed, not v1). V2 signer SHA-256 `719dd28b…195fb8` — the upload key, as
+expected, so this APK still cannot replace a Play install.
+
+Both routes now advertise 1.4.0 from **identical code**, which is what closes
+the traceability gap — previously both said 1.3.1 while the APK was ahead. The
+gap reopens the moment another APK ships ahead of Play.
+
 ## Open items
 
-1. **Empty the internal tester list** — until then the launch looks broken on
-   any tester's device.
-2. **Ship the newer build to Play** — bump past `1.3.1+7`, build the AAB with
-   `--dart-define=ENV=prod`, promote internal → production, then retire the
-   APK route. The population that can't migrate without uninstalling grows
-   until this happens.
-3. **Confirm the 1-country production availability is intended.**
-4. **Give the APK its own version number.** `APK_VERSION` and the Play
-   release both read `1.3.1`, so a member's bug report can't be traced to a
-   build.
-5. **Digital Asset Links** — optional; details in the feature doc.
+Ordered by what blocks what.
+
+1. **Deploy the prod backend before promoting v1.4.0 to production.** Verified
+   against the live `https://metropaws-backend.onrender.com/openapi.json` on
+   2026-07-30: `eligibility`, `is_current`, `plan_status`, `plan_expires_at`,
+   and `pack_discount` are **all absent**. The app degrades safely — tolerant
+   defaults in `mobile/lib/core/models/plan_quote.dart` (`eligible: true`,
+   `eligibility: 'new'`) and `reimbursement.dart` (`planStatus: 'active'`)
+   mean it behaves like the old app rather than breaking — but none of the new
+   features work until the backend ships. Order: migrate dev + prod DBs (Pack
+   Discount needs it, plan upgrade/renewal does not) → `.\deploy.ps1` →
+   re-check the openapi.
+2. **QA on device against dev.** Never confirmed before the merge, and this
+   release touches the money path (checkout eligibility, wallet, expiry
+   gating). Play releases cannot be rolled back — only superseded by a higher
+   version code.
+3. **Upload the new APK to Google Drive.** `APK_VERSION` now says `1.4.0` but
+   `APK_HREF` still serves the old 1.3.1 file. The website will advertise a
+   version it doesn't serve until the Drive file is replaced. Harmless right
+   now only because the website isn't deployed from this repo — must happen
+   before anything ships to Vercel.
+4. **Verify App-access demo login against prod** — one of the two earlier
+   Google rejections was login-access.
+5. **Empty the internal tester list** — but only *after* using it to test the
+   v1.4.0 upload, since that track is how you verify before promoting.
+6. **Confirm the 1-country production availability is intended.**
+7. **Digital Asset Links** — optional; details in the feature doc.

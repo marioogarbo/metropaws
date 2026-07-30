@@ -21,7 +21,9 @@ export const APK_HREF =
   "https://drive.google.com/uc?export=download&id=1KT2Qi_xCdNsl0njdd54kkzbB9wdHRAto";
 
 // Marketing version of the uploaded APK — keep in sync with mobile pubspec.yaml.
-export const APK_VERSION = "1.3.1";
+// Bumping this without replacing the file behind APK_HREF makes the site
+// advertise a version it doesn't actually serve: upload first, then bump.
+export const APK_VERSION = "1.4.0";
 
 // Conservative floor so we never wrongly tell an eligible member their phone
 // is too old. Essentially every active Android device meets this.
