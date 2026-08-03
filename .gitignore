@@ -18,6 +18,13 @@
 # ── Member/customer data dumps (NEVER commit — this repo is public) ──────────
 backend/founding_reservations_backup.csv
 backend/founding_reservations_backup.json
+# Admin XLSX exports (names, emails, phones) — downloaded next to the code and
+# read by backend/notify_app_launch.py
+metropaws_members_*.xlsx
+metropaws_founding_reservations_*.xlsx
+metropaws_reimbursements_*.xlsx
+# Who the launch broadcast has already emailed
+backend/notify_app_launch_sent.log
 
 # ── Python (backend) ────────────────────────────────────────────────────────
 **/.venv/
