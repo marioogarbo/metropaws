@@ -183,7 +183,7 @@ export default function DownloadPage() {
                     </a>
 
                     {/* Not a link: there is no App Store listing to send anyone to yet */}
-                    <div className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-dashed border-white/20 bg-white/4 px-8 py-4 text-sm font-semibold text-white/55">
+                    <div className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-dashed border-white/25 bg-white/6 px-8 py-4 text-sm font-semibold text-white/70">
                       <Apple className="w-4.5 h-4.5" strokeWidth={2} aria-hidden="true" />
                       iPhone — {IOS_STATUS_LABEL.toLowerCase()}
                     </div>
