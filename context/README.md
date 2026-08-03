@@ -66,6 +66,6 @@ says. If a fact is derivable by reading a file, link to that file instead.
   signing-key investigation, website Play Store buttons, then the v1.4.0 build,
   prod backend deploy, and submission for review.
 - [`sessions/2026-08-03-launch-email-and-document-freeze.md`](sessions/2026-08-03-launch-email-and-document-freeze.md) —
-  built the app-launch announcement broadcast (client-approved, not yet sent)
-  and what the member list actually contained; then froze the agreement and
-  manual on the client's instruction.
+  the app-launch announcement broadcast: what the member list actually contained
+  (38 rows → 30, sent to 25), who was excluded and why; then froze the agreement
+  and manual on the client's instruction.

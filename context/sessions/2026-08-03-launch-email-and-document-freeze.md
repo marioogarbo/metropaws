@@ -56,14 +56,38 @@ Dry run is the default; `--send` also demands typed confirmation. `--test` and
 so a re-run after a failure resumes rather than double-sending; a failed address
 is **not** recorded, so it gets retried. One bad address never aborts the batch.
 
-### State at end of session
+### Sent 2026-08-03 — 25 of 25, no failures
 
-**Nothing has been broadcast.** The ledger does not exist yet. Test copies of
-all three variants were sent to `mro.garbo@gmail.com` and
-`metropaws.wellclub@gmail.com` only — `--test` bypasses the ledger, so both
-addresses are still on the roster and would receive the real email.
+Client approved the copy first (*"the notification message is already fine with
+me."*), then a final test of all three variants went to `mro.garbo@gmail.com`.
 
-Client approved the copy: *"the notification message is already fine with me."*
+**Delivered to 25 recipients:** 11 `founding_member`, 8 `founding_reservation`,
+6 `member`. The ledger
+(`backend/notify_app_launch_sent.log`, gitignored via `backend/.gitignore`'s
+`*.log`) holds 25 entries against 25 unique inboxes — nobody received two
+copies. A re-run now reports all 25 as already delivered and sends nothing; to
+re-reach one person, `--only their@email --resend`.
+
+**5 excluded from the 30, by the client's decision:**
+
+| Excluded | Why |
+| --- | --- |
+| `admin@metropaws.ph` | staff account, not a member |
+| `metropaws.wellclub@gmail.com` | company inbox; also Romeo's second address, and he was reached at `fordlynx2002@yahoo.com` |
+| `carsliquor@yahoo.com` | first name is literally "Test", and shares Anthony Portillo's phone |
+| `mro.garbo@gmail.com` | the owner's second address; reached at `marioogarbo@gmail.com` |
+| `docsrb13@gmail.com` | Mary's second address; reached at `docsrb13@yahoo.com` |
+
+**`manjoywong@gmail.com` was deliberately kept**, so both it and
+`go2emmerson@yahoo.com` were emailed. They share a phone number but carry
+different names (Manuel vs Badong), so they may be two people — and failing to
+tell a real Founding 50 reservation that the app is live is worse than one
+duplicate. If they turn out to be the same person, he got two copies.
+
+**Not verified: actual delivery.** ZeptoMail accepted all 25, which means the
+API took them, not that every mailbox exists. Hard bounces (several yahoo.com /
+hotmail.com addresses on this list) would only show in the ZeptoMail dashboard,
+and hurt sender reputation for later sends.
 
 ### Bug found and fixed while testing
 
@@ -112,10 +136,8 @@ and the commit amended before anything reached the public repo.
 
 ## Still open
 
-- **The broadcast has not been sent.** 30 recipients; decide the 5 same-person
-  `--exclude` flags first, and whether staff rows (`admin@metropaws.ph`,
-  `carsliquor@yahoo.com` whose first name is literally "Test",
-  `metropaws.wellclub@gmail.com`) should be on the list.
+- **Check ZeptoMail for hard bounces** from the 25-address batch. Acceptance by
+  the API is not delivery, and bounces cost sender reputation for future sends.
 - **Waiting on Romy** for the revised agreement and manual — see the restore
   checklist.
 - **Backend not redeployed.** `email_utils.py` changed, so the password-reset
