@@ -54,9 +54,18 @@ says. If a fact is derivable by reading a file, link to that file instead.
   **proposed, not built.** Letting members nominate their own groomer/clinic so
   direct-to-provider payouts become reachable, and why members must never
   supply the payout details.
+- [`features/member-documents.md`](features/member-documents.md) —
+  **active freeze, blocked on the client.** The Membership Agreement and Member
+  Manual are offline for rewriting; why their URLs must keep resolving anyway,
+  what sign-up records in the meantime, and the checklist for putting the new
+  documents back.
 
 ### Sessions
 - [`sessions/2026-07-30-play-store-launch.md`](sessions/2026-07-30-play-store-launch.md) —
   Play Store production launch follow-up: internal-testing confusion,
   signing-key investigation, website Play Store buttons, then the v1.4.0 build,
   prod backend deploy, and submission for review.
+- [`sessions/2026-08-03-launch-email-and-document-freeze.md`](sessions/2026-08-03-launch-email-and-document-freeze.md) —
+  built the app-launch announcement broadcast (client-approved, not yet sent)
+  and what the member list actually contained; then froze the agreement and
+  manual on the client's instruction.
