@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AppleLogoIcon } from "@/components/apple-logo-icon";
 import { PlayStoreIcon } from "@/components/play-store-icon";
 import { IOS_STATUS_LABEL, PLAY_STORE_URL } from "@/lib/app-download";
@@ -55,20 +54,9 @@ function AppStoreBadge() {
 
 export function AppStoreButtons() {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-row gap-3 flex-wrap">
-        <PlayStoreBadge />
-        <AppStoreBadge />
-      </div>
-      <p className="text-[10px] text-white/75 leading-snug max-w-[40ch] [text-shadow:0_1px_3px_oklch(0.18_0.045_258/0.7)]">
-        Free on Google Play, with automatic updates ·{" "}
-        <Link
-          href="/download"
-          className="text-white underline underline-offset-2 transition-colors hover:text-(--color-gold)"
-        >
-          More about the app
-        </Link>
-      </p>
+    <div className="flex flex-row gap-3 flex-wrap">
+      <PlayStoreBadge />
+      <AppStoreBadge />
     </div>
   );
 }
