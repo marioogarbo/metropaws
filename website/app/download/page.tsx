@@ -5,14 +5,12 @@ import Link from "next/link";
 import {
   Download,
   ShieldCheck,
-  FolderDown,
-  Settings2,
-  PackageCheck,
+  Search,
+  LogIn,
   CheckCircle2,
   Apple,
   HelpCircle,
   Check,
-  TriangleAlert,
 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -20,84 +18,106 @@ import { DownloadQr } from "@/components/download-qr";
 import { PlayStoreIcon } from "@/components/play-store-icon";
 import {
   PLAY_STORE_URL,
-  APK_HREF,
-  APK_VERSION,
   ANDROID_MIN_VERSION,
+  IOS_STATUS_LABEL,
 } from "@/lib/app-download";
 
 export const metadata: Metadata = {
   title: "Download the App — MetroPaws",
   description:
-    "Install the MetroPaws app on your Android phone from Google Play or straight from us. Get your pet's Digital Pet Passport, QR ID, wellness benefits, and PawPoints.",
+    "Install the MetroPaws app on your Android phone from Google Play. Carry your pet's Digital Pet Passport, QR ID, wellness benefits, and PawPoints. The iPhone version is coming soon.",
 };
 
 const steps = [
   {
+    icon: Search,
+    title: "Open Google Play",
+    body: "Tap the Google Play button above, or open the Play Store app on your phone and search for MetroPaws.",
+  },
+  {
     icon: Download,
-    title: "Download the APK",
-    body: "Tap the download button above. The MetroPaws app file (.apk) saves to your phone — it's about the size of any normal app.",
-  },
-  {
-    icon: FolderDown,
-    title: "Open the file",
-    body: "Tap the download when it finishes — from your notification bar, or in your Downloads folder / Files app.",
-  },
-  {
-    icon: Settings2,
-    title: 'Allow "this source" once',
-    body: 'Android asks permission the first time. Tap Settings, switch on "Allow from this source," then go back — you only do this once.',
-  },
-  {
-    icon: PackageCheck,
     title: "Tap Install",
-    body: 'If Play Protect shows a notice, tap "Install anyway" or "More details → Install." This is our official app — the notice is just standard for apps outside the Play Store.',
+    body: "Google Play handles the rest. It's free, and it installs the same way as any other app on your phone.",
+  },
+  {
+    icon: LogIn,
+    title: "Sign in",
+    body: "Open MetroPaws and sign in with the member account you registered on this website — nothing else to set up.",
   },
 ] as const;
 
 const faqs = [
   {
-    q: "Which one should I choose?",
-    a: "Google Play if you want the simplest install and automatic updates — that suits most members. The direct download if you want new features as soon as they're ready, before the Google Play version catches up. Both are the same official app.",
+    q: "Is this the official MetroPaws app?",
+    a: "Yes. MetroPaws is published on Google Play by MetroPaws Wellness Club Philippines Inc. Installing from Google Play means you always get the reviewed, official release.",
   },
   {
-    q: "Is this safe to install?",
-    a: "Yes. MetroPaws is published on Google Play by MetroPaws Wellness Club Philippines Inc. The direct download is that same official app, built and signed by us — it just runs a little ahead of the Google Play release.",
+    q: "Does the app cost anything?",
+    a: "No. The app is free to download and free to use with your member account — your MetroPaws membership is the only thing you pay for, and it works the same whether you use the app or this website.",
   },
   {
-    q: "Why does my phone show a warning?",
-    a: 'Android shows a standard caution for any app installed outside the Play Store — it appears for every app delivered this way, not because anything is wrong. Tapping "Install anyway" is expected here. Installing from Google Play skips this step entirely.',
+    q: "Which Android phones can run it?",
+    a: `${ANDROID_MIN_VERSION} — which covers essentially every phone in active use. If Google Play lets you install it, your phone is supported.`,
   },
   {
     q: "Will it update automatically?",
-    a: "From Google Play, yes — updates install on their own like any other app. With the direct download, come back to this page and download the newest version whenever we let you know one is ready.",
+    a: "Yes. New versions arrive on their own through Google Play, like any other app. There's nothing for you to come back and re-download.",
   },
   {
-    q: "Can I switch between the two later?",
-    a: "Yes, but uninstall the one you have first, then install the other. Android will not install over an app that came from a different source. Nothing important is lost — your pets, membership, and PawPoints live on your account and come straight back when you sign in.",
+    q: "I have an iPhone — when can I install it?",
+    a: "The iPhone version is coming soon. We don't have a date to announce yet, and we'll let members know as soon as it's on the App Store.",
   },
   {
-    q: "I have an iPhone — can I install it?",
-    a: "Not yet. The iPhone version is on the way. In the meantime you can use everything on the website with your member account.",
+    q: "Do I need the app to be a member?",
+    a: "No. Everything works on this website with your member account — your pets, your plan, your benefits, and your reimbursement claims. The app simply puts all of it in your pocket.",
   },
 ] as const;
 
-type InstallRouteProps = {
+type PlatformCardProps = {
   icon: ReactNode;
   name: string;
   tagline: string;
   points: readonly string[];
+  variant?: "available" | "coming-soon";
 };
 
-function InstallRoute({ icon, name, tagline, points }: InstallRouteProps) {
+function PlatformCard({
+  icon,
+  name,
+  tagline,
+  points,
+  variant = "available",
+}: PlatformCardProps) {
+  const isComingSoon = variant === "coming-soon";
+
   return (
-    <div className="flex flex-col rounded-2xl bg-(--color-surface) border border-(--color-ink-faint) p-6">
+    <div
+      className={[
+        "flex flex-col rounded-2xl p-6",
+        isComingSoon
+          ? "bg-(--color-surface)/60 border border-dashed border-(--color-ink-faint)"
+          : "bg-(--color-surface) border border-(--color-ink-faint)",
+      ].join(" ")}
+    >
       <div className="flex items-center gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-(--color-navy)">
+        <div
+          className={[
+            "flex size-11 shrink-0 items-center justify-center rounded-xl",
+            isComingSoon ? "bg-(--color-navy)/12" : "bg-(--color-navy)",
+          ].join(" ")}
+        >
           {icon}
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-(--color-navy)">{name}</h3>
-          <p className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-(--color-gold)">
+          <p
+            className={[
+              "mt-0.5 text-xs font-semibold uppercase tracking-widest",
+              isComingSoon
+                ? "text-(--color-ink-muted)"
+                : "text-(--color-gold)",
+            ].join(" ")}
+          >
             {tagline}
           </p>
         </div>
@@ -105,11 +125,18 @@ function InstallRoute({ icon, name, tagline, points }: InstallRouteProps) {
       <ul className="mt-5 flex flex-col gap-2.5">
         {points.map((point) => (
           <li key={point} className="flex gap-2.5">
-            <Check
-              className="w-4 h-4 shrink-0 text-(--color-gold) mt-0.5"
-              strokeWidth={2.5}
-              aria-hidden="true"
-            />
+            {isComingSoon ? (
+              <span
+                className="mt-1.75 size-1.5 shrink-0 rounded-full bg-(--color-ink-muted)/45"
+                aria-hidden="true"
+              />
+            ) : (
+              <Check
+                className="w-4 h-4 shrink-0 text-(--color-gold) mt-0.5"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              />
+            )}
             <span className="text-sm leading-relaxed text-(--color-ink-muted)">
               {point}
             </span>
@@ -138,32 +165,28 @@ export default function DownloadPage() {
                   Your pet&apos;s passport, in your pocket.
                 </h1>
                 <p className="mt-5 text-sm leading-relaxed text-white/70 max-w-[46ch] mx-auto lg:mx-0 mp-rise [animation-delay:320ms]">
-                  Install MetroPaws on your Android phone to carry your pet&apos;s
-                  QR ID, Digital Pet Passport, wellness benefits, and PawPoints
+                  Install MetroPaws from Google Play to carry your pet&apos;s QR
+                  ID, Digital Pet Passport, wellness benefits, and PawPoints
                   everywhere. Setup takes just a few minutes.
                 </p>
 
                 <div className="mt-8 flex flex-col items-center lg:items-start gap-4 mp-rise [animation-delay:460ms]">
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                     <a
-                      href={APK_HREF}
+                      href={PLAY_STORE_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center gap-2.5 bg-(--color-gold) text-(--color-navy) text-sm font-semibold rounded-lg px-8 py-4 transition-all duration-200 ease-out hover:brightness-105 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-navy)"
                     >
-                      <Download className="w-4.5 h-4.5" strokeWidth={2.5} aria-hidden="true" />
-                      Download for Android
-                    </a>
-
-                    <a
-                      href={PLAY_STORE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2.5 bg-white/8 border border-white/20 text-white text-sm font-semibold rounded-lg px-8 py-4 transition-all duration-200 ease-out hover:bg-white/14 hover:border-white/35 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-navy)"
-                    >
                       <PlayStoreIcon />
                       Get it on Google Play
                     </a>
+
+                    {/* Not a link: there is no App Store listing to send anyone to yet */}
+                    <div className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-dashed border-white/20 bg-white/4 px-8 py-4 text-sm font-semibold text-white/55">
+                      <Apple className="w-4.5 h-4.5" strokeWidth={2} aria-hidden="true" />
+                      iPhone — {IOS_STATUS_LABEL.toLowerCase()}
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1.5 text-xs text-white/55">
@@ -172,32 +195,12 @@ export default function DownloadPage() {
                       Official MetroPaws app
                     </span>
                     <span aria-hidden="true" className="text-white/25">·</span>
-                    <span>Direct download v{APK_VERSION}</span>
-                    <span aria-hidden="true" className="text-white/25">·</span>
                     <span>{ANDROID_MIN_VERSION}</span>
                     <span aria-hidden="true" className="text-white/25">·</span>
                     <span>Free</span>
+                    <span aria-hidden="true" className="text-white/25">·</span>
+                    <span>Updates automatically</span>
                   </div>
-
-                  <p className="flex items-start gap-2.5 rounded-xl border border-(--color-gold)/35 bg-(--color-gold)/8 px-4 py-3 text-xs leading-relaxed text-white/80 max-w-[52ch] text-left">
-                    <TriangleAlert
-                      className="w-4 h-4 shrink-0 text-(--color-gold) mt-px"
-                      aria-hidden="true"
-                    />
-                    <span>
-                      <strong className="font-semibold text-white">
-                        Already have MetroPaws on your phone?
-                      </strong>{" "}
-                      These two versions can&apos;t replace each other. Uninstall
-                      the one you have before installing the other, or Android
-                      will refuse it.
-                    </span>
-                  </p>
-
-                  <p className="flex items-center gap-2 text-xs text-white/45">
-                    <Apple className="w-3.5 h-3.5" aria-hidden="true" />
-                    iPhone version coming soon · Now live on Google Play
-                  </p>
                 </div>
               </div>
 
@@ -224,79 +227,75 @@ export default function DownloadPage() {
           </div>
         </section>
 
-        {/* ── Choosing a route, then the direct-install steps ── */}
+        {/* ── Platform availability, then the Google Play steps ── */}
         <section className="bg-(--color-cream) py-20 md:py-28">
           <div className="max-w-5xl mx-auto px-6">
             <div className="text-center max-w-[44ch] mx-auto">
               <p className="text-sm font-semibold uppercase tracking-widest text-(--color-gold)">
-                How to install
+                Where to get it
               </p>
               <h2 className="mt-3 text-2xl md:text-3xl font-bold tracking-tight leading-tight text-(--color-navy)">
-                Two ways in — pick one
+                Android now, iPhone next
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-(--color-ink-muted)">
-                Both are the official MetroPaws app. Choose the one that suits
-                you and stay with it — switching later means uninstalling first.
+                MetroPaws is live on Google Play today. The iPhone version is on
+                the way — and until it lands, everything works on this website.
               </p>
             </div>
 
             <div className="mt-12 grid gap-5 sm:grid-cols-2">
-              <InstallRoute
+              <PlatformCard
                 icon={<PlayStoreIcon />}
-                name="Google Play"
-                tagline="Simplest"
+                name="Android"
+                tagline="Available now"
                 points={[
-                  "Installs in one tap, no extra permissions",
+                  "Installs in one tap from Google Play",
                   "Updates arrive on their own",
-                  "Distributed and checked by Google",
+                  ANDROID_MIN_VERSION,
                 ]}
               />
-              <InstallRoute
+              <PlatformCard
                 icon={
-                  <Download
-                    className="w-5 h-5 text-(--color-gold)"
+                  <Apple
+                    className="w-5 h-5 text-(--color-navy)/55"
                     strokeWidth={2}
                     aria-hidden="true"
                   />
                 }
-                name="Direct download"
-                tagline="Newest first"
+                name="iPhone & iPad"
+                tagline={IOS_STATUS_LABEL}
+                variant="coming-soon"
                 points={[
-                  "New features land here before Google Play",
-                  'Needs a one-time "allow from this source" tap',
-                  "Revisit this page to get each update",
+                  "The same MetroPaws app, built for iOS",
+                  "It will arrive through the App Store",
+                  "We'll tell members the moment it's live",
                 ]}
               />
             </div>
 
             <div className="mt-16 text-center max-w-[44ch] mx-auto">
               <h3 className="text-xl md:text-2xl font-bold tracking-tight leading-tight text-(--color-navy)">
-                Installing the direct download
+                Installing on Android
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-(--color-ink-muted)">
-                Google Play installs the way any app does, so nothing below
-                applies there. Downloading straight from us takes four taps —
-                here&apos;s exactly what to press.
+                Three taps from here to signed in — here&apos;s exactly what to
+                press.
               </p>
             </div>
 
-            <ol className="mt-12 grid gap-5 sm:grid-cols-2">
+            <ol className="mt-12 grid gap-5 sm:grid-cols-3">
               {steps.map(({ icon: Icon, title, body }, i) => (
                 <li
                   key={title}
-                  className="relative flex gap-4 rounded-2xl bg-(--color-surface) border border-(--color-ink-faint) p-6"
+                  className="relative flex flex-col gap-4 rounded-2xl bg-(--color-surface) border border-(--color-ink-faint) p-6"
                 >
-                  <div className="shrink-0">
-                    <div className="flex size-11 items-center justify-center rounded-xl bg-(--color-navy)">
-                      <Icon className="w-5 h-5 text-(--color-gold)" strokeWidth={2} aria-hidden="true" />
-                    </div>
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-(--color-navy)">
+                    <Icon className="w-5 h-5 text-(--color-gold)" strokeWidth={2} aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase tracking-widest text-(--color-gold)">
-                        Step {i + 1}
-                      </span>
-                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-(--color-gold)">
+                      Step {i + 1}
+                    </span>
                     <h3 className="mt-1 text-sm font-bold text-(--color-navy)">
                       {title}
                     </h3>
@@ -311,9 +310,9 @@ export default function DownloadPage() {
             <div className="mt-8 flex items-start gap-3 rounded-2xl bg-(--color-navy) px-6 py-5 max-w-2xl mx-auto">
               <CheckCircle2 className="w-5 h-5 shrink-0 text-(--color-gold) mt-0.5" aria-hidden="true" />
               <p className="text-sm leading-relaxed text-white/85">
-                That&apos;s it — open MetroPaws and sign in with the member
-                account you registered on this website. Your pets and benefits
-                are waiting.
+                That&apos;s it — your pet&apos;s QR ID, Digital Pet Passport,
+                wellness benefits, and PawPoints are all there waiting the
+                moment you sign in.
               </p>
             </div>
           </div>
