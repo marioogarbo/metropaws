@@ -2,15 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Download,
-  ShieldCheck,
-  Search,
-  LogIn,
-  CheckCircle2,
-  HelpCircle,
-  Check,
-} from "lucide-react";
+import { ShieldCheck, CheckCircle2, HelpCircle, Check } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DownloadQr } from "@/components/download-qr";
@@ -27,24 +19,6 @@ export const metadata: Metadata = {
   description:
     "Install the MetroPaws app on your Android phone from Google Play. Carry your pet's Digital Pet Passport, QR ID, wellness benefits, and PawPoints. The iPhone version is coming soon.",
 };
-
-const steps = [
-  {
-    icon: Search,
-    title: "Open Google Play",
-    body: "Tap the Google Play button above, or open the Play Store app on your phone and search for MetroPaws.",
-  },
-  {
-    icon: Download,
-    title: "Tap Install",
-    body: "Google Play handles the rest. It's free, and it installs the same way as any other app on your phone.",
-  },
-  {
-    icon: LogIn,
-    title: "Sign in",
-    body: "Open MetroPaws and sign in with the member account you registered on this website — nothing else to set up.",
-  },
-] as const;
 
 const faqs = [
   {
@@ -227,7 +201,7 @@ export default function DownloadPage() {
           </div>
         </section>
 
-        {/* ── Platform availability, then the Google Play steps ── */}
+        {/* ── Platform availability ── */}
         <section className="bg-(--color-cream) py-20 md:py-28">
           <div className="max-w-5xl mx-auto px-6">
             <div className="text-center max-w-[44ch] mx-auto">
@@ -267,46 +241,12 @@ export default function DownloadPage() {
               />
             </div>
 
-            <div className="mt-16 text-center max-w-[44ch] mx-auto">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight leading-tight text-(--color-navy)">
-                Installing on Android
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-(--color-ink-muted)">
-                Three taps from here to signed in — here&apos;s exactly what to
-                press.
-              </p>
-            </div>
-
-            <ol className="mt-12 grid gap-5 sm:grid-cols-3">
-              {steps.map(({ icon: Icon, title, body }, i) => (
-                <li
-                  key={title}
-                  className="relative flex flex-col gap-4 rounded-2xl bg-(--color-surface) border border-(--color-ink-faint) p-6"
-                >
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-(--color-navy)">
-                    <Icon className="w-5 h-5 text-(--color-gold)" strokeWidth={2} aria-hidden="true" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold uppercase tracking-widest text-(--color-gold)">
-                      Step {i + 1}
-                    </span>
-                    <h3 className="mt-1 text-sm font-bold text-(--color-navy)">
-                      {title}
-                    </h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-(--color-ink-muted)">
-                      {body}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-8 flex items-start gap-3 rounded-2xl bg-(--color-navy) px-6 py-5 max-w-2xl mx-auto">
+            <div className="mt-12 flex items-start gap-3 rounded-2xl bg-(--color-navy) px-6 py-5 max-w-2xl mx-auto">
               <CheckCircle2 className="w-5 h-5 shrink-0 text-(--color-gold) mt-0.5" aria-hidden="true" />
               <p className="text-sm leading-relaxed text-white/85">
-                That&apos;s it — your pet&apos;s QR ID, Digital Pet Passport,
-                wellness benefits, and PawPoints are all there waiting the
-                moment you sign in.
+                Sign in with the member account you registered on this website —
+                your pet&apos;s QR ID, Digital Pet Passport, wellness benefits,
+                and PawPoints are all there waiting.
               </p>
             </div>
           </div>
@@ -346,7 +286,7 @@ export default function DownloadPage() {
             <div className="mt-12 flex flex-col items-center text-center gap-4">
               <p className="flex items-center gap-2 text-sm text-(--color-ink-muted)">
                 <HelpCircle className="w-4 h-4 text-(--color-gold)" aria-hidden="true" />
-                Stuck on any step? We&apos;ll walk you through it.
+                Something not working? We&apos;ll sort it out with you.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <a

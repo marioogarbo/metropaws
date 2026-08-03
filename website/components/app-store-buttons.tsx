@@ -66,7 +66,7 @@ export function AppStoreButtons() {
           href="/download"
           className="text-white underline underline-offset-2 transition-colors hover:text-(--color-gold)"
         >
-          How to install
+          More about the app
         </Link>
       </p>
     </div>
