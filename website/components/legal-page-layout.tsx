@@ -15,7 +15,8 @@ interface LegalPageLayoutProps {
   title: string;
   lastUpdated: string;
   sections: TocSection[];
-  crossLink: { label: string; href: string };
+  /** Sibling document to point at. Omitted when that document is unpublished. */
+  crossLink?: { label: string; href: string };
   children: React.ReactNode;
 }
 
@@ -146,28 +147,32 @@ export function LegalPageLayout({
                   {title}
                 </a>
               ))}
-              <div className="mt-8 pt-6 border-t border-(--color-ink-faint)">
-                <Link
-                  href={crossLink.href}
-                  className="text-sm text-(--color-ink-muted) hover:text-(--color-navy) transition-colors leading-snug"
-                >
-                  {crossLink.label} →
-                </Link>
-              </div>
+              {crossLink && (
+                <div className="mt-8 pt-6 border-t border-(--color-ink-faint)">
+                  <Link
+                    href={crossLink.href}
+                    className="text-sm text-(--color-ink-muted) hover:text-(--color-navy) transition-colors leading-snug"
+                  >
+                    {crossLink.label} →
+                  </Link>
+                </div>
+              )}
             </nav>
           </aside>
 
           {/* Document */}
           <article className="min-w-0">
             {children}
-            <div className="md:hidden mt-12 pt-6 border-t border-(--color-ink-faint)">
-              <Link
-                href={crossLink.href}
-                className="text-sm text-(--color-ink-muted) hover:text-(--color-navy) transition-colors"
-              >
-                {crossLink.label} →
-              </Link>
-            </div>
+            {crossLink && (
+              <div className="md:hidden mt-12 pt-6 border-t border-(--color-ink-faint)">
+                <Link
+                  href={crossLink.href}
+                  className="text-sm text-(--color-ink-muted) hover:text-(--color-navy) transition-colors"
+                >
+                  {crossLink.label} →
+                </Link>
+              </div>
+            )}
           </article>
         </div>
       </div>

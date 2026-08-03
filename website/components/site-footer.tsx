@@ -2,6 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Phone, Mail, MapPin } from "lucide-react";
 import { PLAY_STORE_URL } from "@/lib/app-download";
+import {
+  AGREEMENT_UNDER_REVISION,
+  MANUAL_UNDER_REVISION,
+  MEMBER_MANUAL_PATH,
+} from "@/lib/legal-documents";
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -141,15 +146,20 @@ function FooterContent() {
           <p className="text-white/90 text-sm text-center md:text-left">
             © 2026 MetroPaws Wellness Club. All rights reserved.
           </p>
+          {/* Documents under revision are pulled from the footer rather than
+              linked to their notice page — no point pointing members at a
+              placeholder. Privacy Policy always stays. */}
           <div className="flex items-center gap-5">
-            <a
-              href="/docs/member-manual.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/90 text-sm hover:text-(--color-gold) transition-colors duration-150"
-            >
-              Member Manual
-            </a>
+            {!MANUAL_UNDER_REVISION && (
+              <a
+                href={MEMBER_MANUAL_PATH}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/90 text-sm hover:text-(--color-gold) transition-colors duration-150"
+              >
+                Member Manual
+              </a>
+            )}
             <Link
               href="/privacy-policy"
               target="_blank"
@@ -158,14 +168,16 @@ function FooterContent() {
             >
               Privacy Policy
             </Link>
-            <Link
-              href="/terms-of-service"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/90 text-sm hover:text-(--color-gold) transition-colors duration-150"
-            >
-              Terms of Service
-            </Link>
+            {!AGREEMENT_UNDER_REVISION && (
+              <Link
+                href="/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/90 text-sm hover:text-(--color-gold) transition-colors duration-150"
+              >
+                Terms of Service
+              </Link>
+            )}
           </div>
         </div>
       </div>

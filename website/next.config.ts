@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 import { PLAY_STORE_URL } from "./lib/app-download";
+import {
+  MANUAL_NOTICE_PATH,
+  MANUAL_UNDER_REVISION,
+  MEMBER_MANUAL_PATH,
+} from "./lib/legal-documents";
 
 const nextConfig: NextConfig = {
   devIndicators: false,
@@ -20,6 +25,22 @@ const nextConfig: NextConfig = {
     return [
       { source: "/download", destination: PLAY_STORE_URL, permanent: false },
     ];
+  },
+
+  // The Member Manual PDF is being rewritten (see lib/legal-documents.ts), but
+  // the Android app on Play links straight to the PDF path from its Account
+  // section, so that URL must keep resolving. `beforeFiles` is the only phase
+  // that runs ahead of the public/ file handler, which is what lets this shadow
+  // the still-present PDF instead of serving it. A rewrite, not a redirect, so
+  // the app's in-app browser doesn't bounce to a different address.
+  async rewrites() {
+    return {
+      beforeFiles: MANUAL_UNDER_REVISION
+        ? [{ source: MEMBER_MANUAL_PATH, destination: MANUAL_NOTICE_PATH }]
+        : [],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 };
 

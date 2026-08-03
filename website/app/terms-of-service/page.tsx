@@ -2,12 +2,25 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { LegalPageLayout } from "@/components/legal-page-layout";
+import { DocumentUnderRevision } from "@/components/document-under-revision";
+import { AGREEMENT_UNDER_REVISION } from "@/lib/legal-documents";
 
-export const metadata: Metadata = {
-  title: "Terms of Service | MetroPaws Wellness Club",
-  description:
-    "The terms that govern your MetroPaws membership, including coverage, billing, and your rights as a member.",
-};
+// This page IS the Membership Agreement (the app's agreementUrl points here), so
+// it goes dark with it. The terms below are left in place: flipping the flag in
+// lib/legal-documents.ts publishes them again.
+export const metadata: Metadata = AGREEMENT_UNDER_REVISION
+  ? {
+      title: "Membership Agreement | MetroPaws Wellness Club",
+      description:
+        "Our Membership Agreement is being updated. The revised version will be published here.",
+      // Keep a placeholder out of search results.
+      robots: { index: false, follow: true },
+    }
+  : {
+      title: "Terms of Service | MetroPaws Wellness Club",
+      description:
+        "The terms that govern your MetroPaws membership, including coverage, billing, and your rights as a member.",
+    };
 
 const sections = [
   { id: "acceptance", title: "1. Acceptance of Terms" },
@@ -26,6 +39,10 @@ const sections = [
 ];
 
 export default function TermsOfServicePage() {
+  if (AGREEMENT_UNDER_REVISION) {
+    return <DocumentUnderRevision documentName="Membership Agreement" />;
+  }
+
   return (
     <div className="flex flex-col min-h-svh overflow-x-clip">
       <SiteHeader />

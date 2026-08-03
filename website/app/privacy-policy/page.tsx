@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { LegalPageLayout } from "@/components/legal-page-layout";
+import { AGREEMENT_UNDER_REVISION } from "@/lib/legal-documents";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | MetroPaws Wellness Club",
@@ -33,7 +34,12 @@ export default function PrivacyPolicyPage() {
           title="Privacy Policy"
           lastUpdated="June 1, 2026"
           sections={sections}
-          crossLink={{ label: "Read our Terms of Service", href: "/terms-of-service" }}
+          // No point sending readers to the agreement while it's a placeholder.
+          crossLink={
+            AGREEMENT_UNDER_REVISION
+              ? undefined
+              : { label: "Read our Terms of Service", href: "/terms-of-service" }
+          }
         >
           <PrivacyContent />
         </LegalPageLayout>

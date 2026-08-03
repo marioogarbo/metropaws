@@ -5,6 +5,10 @@ import { Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import {
+  AGREEMENT_UNDER_REVISION,
+  PRIVACY_ONLY_CONSENT_VERSION,
+} from "@/lib/legal-documents";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ?? "https://metropaws-backend.onrender.com";
@@ -36,6 +40,18 @@ const inputError = "border-red-400 focus:ring-red-400";
 // Version of the membership agreement + privacy terms shown at sign-up.
 // Must match CURRENT_AGREEMENT_VERSION on the backend.
 const AGREEMENT_VERSION = "2026-07";
+
+// While the Membership Agreement is being rewritten, sign-up asks members to
+// accept the Privacy Policy alone — there's no sense binding anyone to wording
+// that is being retired. The consent record stays truthful by storing a
+// privacy-only version marker instead of the agreement version.
+const CONSENT_VERSION = AGREEMENT_UNDER_REVISION
+  ? PRIVACY_ONLY_CONSENT_VERSION
+  : AGREEMENT_VERSION;
+
+const CONSENT_ERROR = AGREEMENT_UNDER_REVISION
+  ? "Please accept the Privacy Policy to continue."
+  : "Please accept the Membership Agreement and Privacy Policy to continue.";
 
 type FieldErrors = {
   firstName: string | null;
@@ -119,9 +135,7 @@ export function RegisterForm() {
     else if (password !== confirmPassword)
       next.confirmPassword = "Passwords do not match.";
 
-    if (!agreementAccepted)
-      next.agreement =
-        "Please accept the Membership Agreement and Privacy Policy to continue.";
+    if (!agreementAccepted) next.agreement = CONSENT_ERROR;
 
     if (Object.values(next).some(Boolean)) {
       setErrors(next);
@@ -146,7 +160,7 @@ export function RegisterForm() {
           phone: phoneValue,
           password,
           agreement_accepted: true,
-          agreement_version: AGREEMENT_VERSION,
+          agreement_version: CONSENT_VERSION,
         }),
       });
 
@@ -382,7 +396,8 @@ export function RegisterForm() {
           </div>
         </FieldLabel>
 
-        {/* Digital Agreement acceptance — required for members */}
+        {/* Consent acceptance — required for members. While the Membership
+            Agreement is under revision this asks for the Privacy Policy only. */}
         <div className="pt-1">
           <label className="flex cursor-pointer items-start gap-3">
             <input
@@ -399,13 +414,17 @@ export function RegisterForm() {
             />
             <span className="text-sm leading-relaxed text-(--color-ink-muted)">
               I have read and accept the{" "}
-              <Link
-                href="/terms-of-service"
-                className="font-medium text-(--color-navy) underline underline-offset-2 transition-colors hover:text-(--color-gold)"
-              >
-                Membership Agreement
-              </Link>{" "}
-              and{" "}
+              {!AGREEMENT_UNDER_REVISION && (
+                <>
+                  <Link
+                    href="/terms-of-service"
+                    className="font-medium text-(--color-navy) underline underline-offset-2 transition-colors hover:text-(--color-gold)"
+                  >
+                    Membership Agreement
+                  </Link>{" "}
+                  and{" "}
+                </>
+              )}
               <Link
                 href="/privacy-policy"
                 className="font-medium text-(--color-navy) underline underline-offset-2 transition-colors hover:text-(--color-gold)"
