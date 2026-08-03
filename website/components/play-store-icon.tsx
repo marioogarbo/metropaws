@@ -1,5 +1,5 @@
 /**
- * Google Play's four-colour glyph. Shared by the hero badge and the /download
+ * Google Play's four-colour glyph. Shared by the hero badge and the member
  * page so the brand mark is defined once. Google's badge guidelines require the
  * official colours, so this icon deliberately ignores the MetroPaws palette.
  */

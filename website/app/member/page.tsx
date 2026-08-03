@@ -71,12 +71,6 @@ export default function MemberPage() {
               </p>
             </div>
           </a>
-          <Link
-            href="/download"
-            className="flex items-center justify-center px-4 py-3 rounded-xl border border-[#e8eaf2] text-sm font-semibold text-[#263258] transition-colors hover:bg-white"
-          >
-            Other ways to install →
-          </Link>
         </div>
 
         <Link

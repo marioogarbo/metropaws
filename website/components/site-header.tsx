@@ -5,6 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { X, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PLAY_STORE_URL } from "@/lib/app-download";
+
+// Nav entries are a mix of in-site routes and the Play Store listing, so the
+// external ones are told apart by their href rather than by a flag to keep.
+const isExternal = (href: string) => href.startsWith("http");
 
 export function SiteHeader() {
   const [barVisible, setBarVisible] = useState(true);
@@ -14,7 +19,7 @@ export function SiteHeader() {
     { label: "About", href: "/about" },
     { label: "Founding", href: "/#founding" },
     { label: "Pricing", href: "/#pricing" },
-    { label: "Get the App", href: "/download" },
+    { label: "Get the App", href: PLAY_STORE_URL },
     { label: "FAQ", href: "/#faq" },
     { label: "Contact Us", href: "/#contact" },
   ] as const;
@@ -98,6 +103,9 @@ export function SiteHeader() {
               <Link
                 key={label}
                 href={href}
+                {...(isExternal(href)
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
                 className="text-sm font-medium text-(--color-ink-muted) hover:text-(--color-navy) transition-colors"
               >
                 {label}
@@ -143,6 +151,9 @@ export function SiteHeader() {
                 <Link
                   key={label}
                   href={href}
+                  {...(isExternal(href)
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
                     "py-4 text-sm font-medium text-(--color-ink-muted) hover:text-(--color-navy) transition-colors",

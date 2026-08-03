@@ -1,6 +1,6 @@
 /**
- * The Apple corporate logo. Shared by the hero badge and the /download page so
- * the brand mark is defined once, mirroring PlayStoreIcon.
+ * The Apple corporate logo, mirroring PlayStoreIcon so both brand marks are
+ * defined the same way.
  *
  * lucide-react's `Apple` icon is a piece of fruit with a leaf — recognisable as
  * an apple, not as Apple — which reads as amateur next to the real Google Play

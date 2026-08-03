@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Phone, Mail, MapPin } from "lucide-react";
+import { PLAY_STORE_URL } from "@/lib/app-download";
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -36,7 +37,7 @@ const navigateLinks = [
   { label: "Home", href: "/" },
   { label: "Plans & Pricing", href: "/#pricing" },
   { label: "Founding 50", href: "/#founding" },
-  { label: "Download App", href: "/download" },
+  { label: "Get the App", href: PLAY_STORE_URL },
   { label: "FAQ", href: "/#faq" },
   { label: "Register", href: "/register" },
 ];
