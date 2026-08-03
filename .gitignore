@@ -15,6 +15,10 @@
 **/.render-service-id.*
 **/serviceAccountKey.json
 
+# ── Member/customer data dumps (NEVER commit — this repo is public) ──────────
+backend/founding_reservations_backup.csv
+backend/founding_reservations_backup.json
+
 # ── Python (backend) ────────────────────────────────────────────────────────
 **/.venv/
 **/venv/
