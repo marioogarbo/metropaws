@@ -8,7 +8,6 @@ import {
   Search,
   LogIn,
   CheckCircle2,
-  Apple,
   HelpCircle,
   Check,
 } from "lucide-react";
@@ -16,6 +15,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DownloadQr } from "@/components/download-qr";
 import { PlayStoreIcon } from "@/components/play-store-icon";
+import { AppleLogoIcon } from "@/components/apple-logo-icon";
 import {
   PLAY_STORE_URL,
   ANDROID_MIN_VERSION,
@@ -184,7 +184,7 @@ export default function DownloadPage() {
 
                     {/* Not a link: there is no App Store listing to send anyone to yet */}
                     <div className="inline-flex items-center justify-center gap-2.5 rounded-lg border border-dashed border-white/25 bg-white/6 px-8 py-4 text-sm font-semibold text-white/70">
-                      <Apple className="w-4.5 h-4.5" strokeWidth={2} aria-hidden="true" />
+                      <AppleLogoIcon className="text-white/70" />
                       iPhone — {IOS_STATUS_LABEL.toLowerCase()}
                     </div>
                   </div>
@@ -255,13 +255,7 @@ export default function DownloadPage() {
                 ]}
               />
               <PlatformCard
-                icon={
-                  <Apple
-                    className="w-5 h-5 text-(--color-navy)/55"
-                    strokeWidth={2}
-                    aria-hidden="true"
-                  />
-                }
+                icon={<AppleLogoIcon className="text-(--color-navy)/55" />}
                 name="iPhone & iPad"
                 tagline={IOS_STATUS_LABEL}
                 variant="coming-soon"

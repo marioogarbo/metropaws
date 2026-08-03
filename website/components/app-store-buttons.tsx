@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Apple } from "lucide-react";
+import { AppleLogoIcon } from "@/components/apple-logo-icon";
 import { PlayStoreIcon } from "@/components/play-store-icon";
 import { IOS_STATUS_LABEL, PLAY_STORE_URL } from "@/lib/app-download";
 
@@ -10,8 +10,10 @@ import { IOS_STATUS_LABEL, PLAY_STORE_URL } from "@/lib/app-download";
  */
 const badgeShell =
   "inline-flex items-center gap-2.5 rounded-lg px-4 py-2.5 border bg-[oklch(0.18_0.045_258)]";
+// The real store badges set the top line in caps ("GET IT ON"), which is what
+// makes the pair read as store badges rather than as ordinary buttons.
 const badgeCaption =
-  "text-[9px] font-medium leading-none tracking-wide";
+  "text-[9px] font-semibold uppercase leading-none tracking-[0.09em]";
 const badgeLabel = "text-sm font-semibold leading-tight mt-0.5";
 
 function PlayStoreBadge() {
@@ -40,7 +42,7 @@ function PlayStoreBadge() {
 function AppStoreBadge() {
   return (
     <div className={`${badgeShell} border-dashed border-white/25`}>
-      <Apple className="w-5 h-5 text-white/70" strokeWidth={2} aria-hidden="true" />
+      <AppleLogoIcon className="text-white/70" />
       <div>
         <div className={`${badgeCaption} text-(--color-gold)`}>
           {IOS_STATUS_LABEL}
