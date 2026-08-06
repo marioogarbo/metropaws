@@ -73,4 +73,5 @@ says. If a fact is derivable by reading a file, link to that file instead.
   built `/getting-started`; confirmed QR Ph payments have been live all along (so
   no manual payment path is needed), corrected the app's plan flow, declined
   client edit access and why, and found the shipped app still asks for the frozen
-  Membership Agreement.
+  Membership Agreement. Then renamed the benefit pools from "wallet" to
+  "benefit" — website only, so the app's wording now lags the site.

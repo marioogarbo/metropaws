@@ -109,18 +109,61 @@ CSS-level. Layout was reasoned about, not seen. The one spot flagged for human
 eyes: at a 320px viewport the gallery-scan diagram labels compute to about
 11px.
 
+## "Wallet" became "benefit", and the app did not follow
+
+Later the same day the client asked to drop the word "wallet" for the two
+annual pools, and to pull the app-preview section from the homepage.
+
+**The word meant two unrelated things and only one was renamed.** The
+MetroPaws pools ("Preventive Wellness Wallet", "Emergency Wallet", "Benefit
+Wallet") are now "benefit". Third-party e-wallet apps ("scan with your wallet
+app", "e-wallet and bank apps", meaning GCash and Maya) were left alone,
+because "open your benefit app, tap Scan QR" is not a sentence. The instruction
+was "alisin lahat"; taking it literally would have broken the payment copy.
+
+**The fallback drift warned about above actually happened.** Live pricing
+already said "benefit" because the cards render `plan.features` from the
+database, while the hardcoded `FALLBACK_PLANS` in
+[`website/components/plans-section.tsx`](../../website/components/plans-section.tsx)
+still said "Wallet". A backend outage would have flipped the wording back with
+no error anywhere. Both now agree. This is the concrete cost of DB-backed copy:
+two places to change, and only one of them fails loudly.
+
+**The app still says "Wallet"** — a `BENEFIT WALLET` heading and a `Wallet` tab
+in the bottom nav. So site and app now disagree on the word, which is the
+confusion the rename was meant to remove. Closing it needs a new AAB.
+
+Two consequences for assets committed hours earlier:
+
+| Asset | Now stale because |
+| --- | --- |
+| `website/public/app-home-screen.png` | shows the `BENEFIT WALLET` heading |
+| `website/public/app-choose-plan.png` | shows "Preventive Wellness Wallet"; those strings come from the same database row that was already edited, so a fresh capture reads "Benefit" |
+
+`AppPreviewSection` is unmounted, not deleted — the client said "muna". Its
+`public/mobile-app-*.jpg` mocks show per-service session counts ("Vaccines 1
+left") and a **Book** tab, neither of which exists any more; the app moved to
+two peso benefits and a Claim tab. **Side effect worth undoing soon:** the
+homepage now carries no app screenshots at all, which works against the "show
+the product, not the category" principle in `PRODUCT.md`.
+
 ## Open
 
 - **Consent gap in the shipped app** — step one of this guide is the sign-up
   screen, which still asks members to accept a document they cannot read. See
   [`../features/member-documents.md`](../features/member-documents.md). Needs a
   new AAB.
+- **App wording lags the site** — the app says "Wallet" where the site now says
+  "benefit". Needs a new AAB, same trip as the consent fix above.
+- **Re-capture four screenshots** — `mobile-app-*.jpg` for the app preview, plus
+  `app-home-screen.png` and `app-choose-plan.png` for the guide.
 - **Member Manual boundary** — "how to use the app" is the manual's job, and the
   manual is frozen for rewriting. The guide deliberately stops at payment.
   `website/public/app-reimbursement-screen.png` is committed but unused,
   pending that decision: either a claims section is added or the file goes.
 - **Missing screenshot** — the "One step left / Complete Payment" screen. Step 4
   currently has no image.
-- **`app-choose-plan.png` carries prices.** Plans are admin-editable, so a price
-  change makes the screenshot disagree with the pricing section. Re-capture it
+- **`app-choose-plan.png` carries prices and DB wording.** Plans are
+  admin-editable, so a price or feature-string change makes the screenshot
+  disagree with the pricing section. Re-capture it
   whenever a plan price moves.
