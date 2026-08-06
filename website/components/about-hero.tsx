@@ -14,9 +14,9 @@ export function AboutHero() {
         <div className="mt-10 w-16 h-0.5 bg-(--color-gold) mp-rule-draw [animation-delay:380ms]" />
 
         <p className="mt-10 text-sm leading-relaxed text-white/80 max-w-[55ch] mp-rise [animation-delay:520ms]">
-          MetroPaws is an exclusive wellness club built around two annual benefit
-          wallets: one for preventive care, one for emergencies, both tracked to the
-          peso in your app. Paired with a digital Pet Passport and a curated network of
+          MetroPaws is an exclusive wellness club built around two annual benefits:
+          one for preventive care, one for emergencies, both tracked to the peso in
+          your app. Paired with a digital Pet Passport and a curated network of
           trusted vets and groomers, it keeps your pet cared for and covered all year.
         </p>
       </div>

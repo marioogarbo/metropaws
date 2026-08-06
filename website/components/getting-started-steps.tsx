@@ -56,13 +56,13 @@ const steps: WalkthroughStep[] = [
   {
     title: "Choose a plan on the last step",
     detail:
-      "Standard, Deluxe, or Premium, picked as you finish adding your pet. Each one lists the wellness and emergency wallet it carries, and you can upgrade later without losing what you have already used.",
+      "Standard, Deluxe, or Premium, picked as you finish adding your pet. Each one lists the wellness and emergency benefit it carries, and you can upgrade later without losing what you have already used.",
     shot: {
       // Prices are visible in this screenshot and plans are editable from the
       // admin panel, so a price change in admin makes this image disagree with
       // the pricing section. Re-capture it whenever a plan price moves.
       src: "/app-choose-plan.png",
-      alt: "The plan step of Add a Pet, listing Standard, Deluxe and Premium with the wallet amounts each one includes.",
+      alt: "The plan step of Add a Pet, listing Standard, Deluxe and Premium with the benefit amounts each one includes.",
       width: 435,
       height: 887,
     },

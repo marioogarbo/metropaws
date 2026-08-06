@@ -1,13 +1,13 @@
 const offerings = [
   {
     id: "01",
-    name: "The Preventive Wellness Wallet",
+    name: "The Preventive Wellness Benefit",
     description:
       "An annual fund for grooming, vaccinations, and check-ups — from ₱2,000 on Standard up to ₱7,000 on Premium — tracked to the peso inside the app.",
   },
   {
     id: "02",
-    name: "The Emergency Wallet",
+    name: "The Emergency Benefit",
     description:
       "A separate fund set aside for urgent visits — from ₱300 up to ₱1,500 a year — so an emergency never catches you flat-footed.",
   },

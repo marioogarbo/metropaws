@@ -4,7 +4,7 @@ import { Wallet, ReceiptText, Users } from "lucide-react";
 const pillars = [
   {
     icon: Wallet,
-    label: "Emergency Wallet",
+    label: "Emergency Benefit",
     detail:
       "A dedicated emergency fund every year — from ₱300 on Standard up to ₱1,500 on Premium — for when an urgent visit can't wait.",
   },

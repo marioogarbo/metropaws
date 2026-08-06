@@ -21,7 +21,7 @@ const steps = [
   },
 ];
 
-const walletRows = [
+const benefitRows = [
   { label: "Annual Vet Benefit", used: 30 },
   { label: "Grooming Sessions", used: 50 },
   { label: "Lab Savings", used: 15 },
@@ -76,12 +76,12 @@ export function HowItWorksSection() {
           ))}
         </ol>
 
-        {/* Benefit Wallet preview */}
+        {/* Benefits preview */}
         <div className="mp-reveal mt-16 rounded-xl bg-(--color-navy) p-8 md:p-10">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-12">
             <div className="shrink-0 lg:max-w-[30ch]">
               <p className="text-sm font-semibold uppercase tracking-widest text-(--color-gold)">
-                Benefit Wallet
+                Your Benefits
               </p>
               <h3 className="mt-3 text-xl font-bold text-white leading-tight">
                 Your annual benefit, tracked to the peso
@@ -93,7 +93,7 @@ export function HowItWorksSection() {
             </div>
 
             <div className="flex-1 flex flex-col gap-5">
-              {walletRows.map(({ label, used }) => (
+              {benefitRows.map(({ label, used }) => (
                 <div key={label}>
                   <div className="flex items-baseline justify-between gap-4">
                     <span className="text-sm font-medium text-white">{label}</span>

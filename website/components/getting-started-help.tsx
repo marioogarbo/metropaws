@@ -17,7 +17,7 @@ const answers = [
   },
   {
     question: "I paid but my plan is not showing.",
-    answer: `Close the app and open it again. It rechecks your payment every time it loads, so a plan that was paid for will appear on its own. If it is still missing, send us the reference number from your wallet receipt at ${SUPPORT_EMAIL} and we will sort it out.`,
+    answer: `Close the app and open it again. It rechecks your payment every time it loads, so a plan that was paid for will appear on its own. If it is still missing, send us the reference number from your GCash or bank receipt at ${SUPPORT_EMAIL} and we will sort it out.`,
   },
   {
     question: "Do I need a credit card?",
@@ -91,9 +91,9 @@ export function GettingStartedCta() {
               Then your pet has a card
             </h2>
             <p className="mt-3 text-sm text-white/70 leading-relaxed max-w-[52ch]">
-              Once the plan is active, your pet&apos;s card carries the benefit
-              wallet, what is left in it to the peso, and the QR Pet ID you show at
-              the clinic.
+              Once the plan is active, your pet&apos;s card carries both benefits,
+              what is left in each to the peso, and the QR Pet ID you show at the
+              clinic.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -118,7 +118,7 @@ export function GettingStartedCta() {
             <div className="overflow-hidden rounded-xl border border-white/15">
               <Image
                 src="/app-home-screen.png"
-                alt="A MetroPaws dashboard showing a pet's card with its preventive wellness and emergency wallet balances, a File a claim link, and a Show Digital Pawprint button."
+                alt="A MetroPaws dashboard showing a pet's card with its preventive wellness and emergency benefit balances, a File a claim link, and a Show Digital Pawprint button."
                 width={432}
                 height={930}
                 sizes="(max-width: 1024px) 200px, 240px"
