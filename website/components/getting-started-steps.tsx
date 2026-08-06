@@ -45,7 +45,7 @@ const steps: WalkthroughStep[] = [
   {
     title: "Add your pet",
     detail:
-      "Adding a pet runs in three short steps: details, health card, then the plan. The three photos on the first step are required, since they are what lets us verify a claim later.",
+      "Adding a pet runs in three short steps: details, health card, then the plan. The three photos on the first step are required. They are how we verify a claim later.",
     shot: {
       src: "/app-add-pet-details.png",
       alt: "The first step of Add a Pet, asking for a front face, full body and with-owner photo, then the pet's name, type, sex and breed.",
@@ -75,7 +75,7 @@ const steps: WalkthroughStep[] = [
   {
     title: "Scan the QR Ph code",
     id: "payment",
-    detail: `Your total appears with nothing added on top, next to a countdown of ${CHECKOUT_WINDOW_LABEL}. Open ${appList}, then scan the code on screen. If the countdown runs out, nothing is charged and you can start again.`,
+    detail: `Your total appears with nothing added on top, next to a countdown that starts at ${CHECKOUT_WINDOW_LABEL}. Open ${appList}, then scan the code on screen. If the countdown runs out, nothing is charged and you can start again.`,
     showsCheckoutDiagram: true,
     showsGalleryNote: true,
   },

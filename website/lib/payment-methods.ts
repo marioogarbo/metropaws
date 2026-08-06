@@ -19,5 +19,10 @@ export const QR_PH_APPS = [
 
 export const QR_PH_FALLBACK_LABEL = "and any bank app that supports QR Ph";
 
-/** Roughly how long a checkout code stays valid. PayMongo sets this, not us. */
+/**
+ * Roughly how long a checkout code stays valid. PayMongo sets this, not us: we
+ * pass no expiry at checkout. Read off the countdown on the live checkout
+ * screen, which is MM:SS and was observed at 29:47 and 29:41 on two separate
+ * sessions, so it starts at 30:00. Minutes, not seconds.
+ */
 export const CHECKOUT_WINDOW_LABEL = "about 30 minutes";
