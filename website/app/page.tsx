@@ -5,6 +5,7 @@ import { AppPreviewSection } from "@/components/app-preview-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
 import { CoverageTeaser } from "@/components/coverage-teaser";
 import { PlansSection } from "@/components/plans-section";
+import { HowToPayRail } from "@/components/how-to-pay-rail";
 import { PawPointsSection } from "@/components/pawpoints-section";
 import { CommunitySection } from "@/components/community-section";
 import { FoundingSection } from "@/components/founding-section";
@@ -23,6 +24,7 @@ export default function Home() {
         <HowItWorksSection />
         <CoverageTeaser />
         <PlansSection />
+        <HowToPayRail />
         <PawPointsSection />
         <CommunitySection />
         <FoundingSection />

@@ -24,6 +24,15 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/download", destination: PLAY_STORE_URL, permanent: false },
+      // The guide started life as payment-only at /how-to-pay before it grew to
+      // cover account creation through activation. Temporary (307) for the same
+      // reason as above: the scope could move again, and a cached 308 would
+      // outlive the decision.
+      {
+        source: "/how-to-pay",
+        destination: "/getting-started",
+        permanent: false,
+      },
     ];
   },
 

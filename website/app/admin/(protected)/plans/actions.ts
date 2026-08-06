@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidateAdminAndHome } from "@/lib/revalidate";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ?? "https://metropaws-backend.onrender.com";
@@ -135,7 +135,7 @@ export async function createPlanAction(
     return { error: apiErrorMessage(res, err.detail, "Failed to create plan.") };
   }
 
-  revalidatePath("/admin/plans");
+  revalidateAdminAndHome("/admin/plans");
   return { error: null };
 }
 
@@ -204,7 +204,7 @@ export async function updatePlanAction(
     return { error: apiErrorMessage(res, err.detail, "Failed to update plan.") };
   }
 
-  revalidatePath("/admin/plans");
+  revalidateAdminAndHome("/admin/plans");
   return { error: null };
 }
 
@@ -226,6 +226,6 @@ export async function deletePlanAction(planId: string): Promise<ActionState> {
     return { error: apiErrorMessage(res, err.detail, "Failed to delete plan.") };
   }
 
-  revalidatePath("/admin/plans");
+  revalidateAdminAndHome("/admin/plans");
   return { error: null };
 }

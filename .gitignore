@@ -25,6 +25,12 @@ metropaws_founding_reservations_*.xlsx
 metropaws_reimbursements_*.xlsx
 # Who the launch broadcast has already emailed
 backend/notify_app_launch_sent.log
+# Raw app screenshots dropped at the repo root while capturing marketing assets.
+# They routinely carry a member's name, PawPoints, pet records and, on the
+# checkout screen, a live scannable QR Ph code. Anything meant for the website
+# gets cropped, renamed and committed under website/public/ deliberately.
+/Screenshot *.png
+/Screenshot *.jpg
 
 # ── Python (backend) ────────────────────────────────────────────────────────
 **/.venv/

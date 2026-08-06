@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidateAdminAndHome } from "@/lib/revalidate";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ?? "https://metropaws-backend.onrender.com";
@@ -85,7 +85,7 @@ export async function createFaqAction(
     return { error: "Network error. Please try again." };
   }
 
-  revalidatePath("/admin/faqs");
+  revalidateAdminAndHome("/admin/faqs");
   return { error: null };
 }
 
@@ -133,7 +133,7 @@ export async function updateFaqAction(
     return { error: "Network error. Please try again." };
   }
 
-  revalidatePath("/admin/faqs");
+  revalidateAdminAndHome("/admin/faqs");
   return { error: null };
 }
 
@@ -162,7 +162,7 @@ export async function toggleFaqPublishedAction(
     return { error: "Network error. Please try again." };
   }
 
-  revalidatePath("/admin/faqs");
+  revalidateAdminAndHome("/admin/faqs");
   return { error: null };
 }
 
@@ -188,7 +188,7 @@ export async function reorderFaqsAction(ids: string[]): Promise<ActionState> {
     return { error: "Network error. Please try again." };
   }
 
-  revalidatePath("/admin/faqs");
+  revalidateAdminAndHome("/admin/faqs");
   return { error: null };
 }
 
@@ -211,6 +211,6 @@ export async function deleteFaqAction(id: string): Promise<ActionState> {
     return { error: "Network error. Please try again." };
   }
 
-  revalidatePath("/admin/faqs");
+  revalidateAdminAndHome("/admin/faqs");
   return { error: null };
 }

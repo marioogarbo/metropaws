@@ -1,5 +1,9 @@
 import type { Faq } from "@/types/faq";
 import { FaqAccordion } from "@/components/faq-accordion";
+import {
+  PUBLIC_CONTENT_REVALIDATE_SECONDS,
+  PUBLIC_CONTENT_TIMEOUT_MS,
+} from "@/lib/public-content";
 import { Phone, Mail } from "lucide-react";
 import Link from "next/link";
 
@@ -60,7 +64,8 @@ const FALLBACK_FAQS: Faq[] = [
 async function fetchFaqs(): Promise<Faq[]> {
   try {
     const response = await fetch(`${BACKEND_URL}/faqs`, {
-      next: { revalidate: 3600 },
+      next: { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(PUBLIC_CONTENT_TIMEOUT_MS),
     });
     if (!response.ok) {
       return FALLBACK_FAQS;
