@@ -63,7 +63,8 @@ Both flags live in `website/lib/legal-documents.ts`.
 | `/terms-of-service` | `DocumentUnderRevision` notice, `robots: noindex`. `TermsContent` stays in the file, unrendered. |
 | `/docs/member-manual.pdf` | `beforeFiles` rewrite in `next.config.ts` → `/member-manual`, which renders the same notice. The PDF stays in `public/`, shadowed. `beforeFiles` is the only rewrite phase that runs ahead of the static-file handler. |
 | Site footer | Member Manual and Terms of Service links removed. Privacy Policy stays. |
-| Sign-up checkbox | Privacy Policy only. |
+| Sign-up checkbox (website) | Privacy Policy only. |
+| Sign-up checkbox (Android app) | **Not changed** — still asks for the Membership Agreement. See below. |
 | Privacy Policy page | ToS cross-link hidden (`crossLink` is now optional on `LegalPageLayout`). |
 
 The Privacy Policy is **never** part of this freeze — Play requires a live
@@ -85,6 +86,32 @@ WHERE agreement_version = '2026-08-privacy-only';
 The backend takes `agreement_version` as a free-form string and stores it
 verbatim ([`backend/routers/auth.py`](../../backend/routers/auth.py)), so this
 needed no API change.
+
+### The app never got this change (verified 2026-08-06)
+
+**Only the website sign-up was updated.** The shipped Android app still asks
+members to accept the Membership Agreement, and still records the pre-freeze
+version:
+
+| | Website | Android app |
+| --- | --- | --- |
+| Consent copy | "Please accept the Privacy Policy to continue." ([`register-form.tsx:52-54`](../../website/components/register-form.tsx)) | "Please accept the Membership Agreement and Privacy Policy to continue." ([`register_screen.dart:129-130`](../../mobile/lib/features/auth/screens/register_screen.dart)) |
+| Version recorded | `2026-08-privacy-only` | `2026-07.2` ([`register_screen.dart:24`](../../mobile/lib/features/auth/screens/register_screen.dart)) |
+
+Two consequences, both real:
+
+1. **The consent record is false for app sign-ups.** The member is asked to
+   accept a document whose link serves the "under revision" notice, and the
+   backend stores it as though the full agreement was accepted.
+2. **The SQL above does not find them.** App sign-ups during the freeze are
+   indistinguishable from pre-freeze members, so the re-consent decision in the
+   restore checklist cannot be scoped from the database alone. Anyone acting on
+   that query must also treat every `2026-07.2` row created after 2026-08-03 as
+   suspect.
+
+Fixing it needs a new AAB, so it cannot ship the way the website fix did. It
+is worth resolving before any guide walks new members through that screen (see
+[`../sessions/2026-08-07-getting-started-guide.md`](../sessions/2026-08-07-getting-started-guide.md)).
 
 **Pre-existing drift worth knowing** (verified 2026-08-03, not introduced by
 the freeze): the three surfaces do not agree on the version string, even

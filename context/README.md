@@ -69,3 +69,8 @@ says. If a fact is derivable by reading a file, link to that file instead.
   the app-launch announcement broadcast: what the member list actually contained
   (38 rows → 30, sent to 25), who was excluded and why; then froze the agreement
   and manual on the client's instruction.
+- [`sessions/2026-08-07-getting-started-guide.md`](sessions/2026-08-07-getting-started-guide.md) —
+  built `/getting-started`; confirmed QR Ph payments have been live all along (so
+  no manual payment path is needed), corrected the app's plan flow, declined
+  client edit access and why, and found the shipped app still asks for the frozen
+  Membership Agreement.
