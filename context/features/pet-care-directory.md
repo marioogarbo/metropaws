@@ -346,6 +346,33 @@ which sits inside a sentence and is covered by WCAG 2.5.8's inline exception.
 safe-area insets anywhere, so opting into the notch area would push content
 under it. That is a site-wide change, not a directory one.
 
+### Delight pass, 2026-08-08 (`/impeccable delight`)
+
+The brief here is set by PRODUCT.md ("premium, exclusive, confident... does not
+beg for attention") plus this page's emotional context: people often open it
+because a pet needs care. That rules out playful entirely. Nothing was added to
+the disclaimer or the backend-down state; both stay plain.
+
+- **`.mp-settle`** (`globals.css`): the list re-settles over 190ms with a 20ms
+  stagger capped at 8 rows, so row 19 is never held more than ~160ms. The `<ul>`
+  is keyed on the **filter chip only, deliberately not on the query** — keying
+  on typing would replay the animation on every keystroke and strobe. Verified
+  by comparing `Animation.startTime` before and after: unchanged across
+  keystrokes, changed on a chip tap.
+- **Empty state** names the search back to the reader ("Nothing here matches
+  *zzzz*"), which is usually where the surprise is: a stray character or an old
+  term still in the box.
+- **Escape clears the search field**, and clearing via the X button returns the
+  caret to the input. Without that the focused element is a button that just
+  unmounted, so focus falls to the top of the document and the next keystroke
+  goes nowhere.
+- **The map arrow leans 2px** toward where it is taking you, on hover and on
+  keyboard focus.
+
+Considered and rejected: making the service tags clickable filters. A tag is a
+slug ("Diagnostics") while a chip is a group ("Veterinary"), so the jump would
+land on a chip the reader did not click. More confusing than helpful.
+
 ### Site-wide eyebrow contrast — known failure, deliberately not changed
 
 `DESIGN.md` prescribes section eyebrows as `text-sm font-semibold uppercase

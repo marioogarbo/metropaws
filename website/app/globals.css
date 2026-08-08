@@ -198,6 +198,37 @@
     }
   }
 
+  /*
+    Directory list settling after a filter changes.
+
+    Shorter and shallower than mp-rise: this fires when someone taps a filter
+    chip, not once on arrival, so it has to acknowledge the change and get out
+    of the way. Deliberately NOT bound to typing in the search box, where a
+    per-keystroke replay would strobe. The stagger is capped in the component so
+    the last row is never held back more than ~160ms.
+  */
+  @keyframes mp-settle {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .mp-settle {
+    animation: mp-settle 190ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mp-settle {
+      animation-duration: 1ms;
+      animation-delay: 0ms !important;
+    }
+  }
+
   @keyframes mp-rule-draw {
     from {
       opacity: 0;

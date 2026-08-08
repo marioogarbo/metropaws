@@ -1,7 +1,16 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { Clock, Globe, Mail, MapPin, Phone, Search, X } from "lucide-react";
+import { useId, useMemo, useRef, useState } from "react";
+import {
+  Clock,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  Search,
+  SearchX,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mapUrl, telHref, websiteLabel } from "@/lib/directory";
 import {
@@ -135,12 +144,18 @@ function DetailRow({
   );
 }
 
+/** Rows past this point settle together, so row 19 is never left waiting. */
+const MAX_STAGGER_STEPS = 8;
+const STAGGER_STEP_MS = 20;
+
 function ProviderRow({
   provider,
   activeFilter,
+  index,
 }: {
   provider: DirectoryProvider;
   activeFilter: FilterId;
+  index: number;
 }) {
   const tel = telHref(provider.phone);
   const map = mapUrl(provider);
@@ -148,7 +163,7 @@ function ProviderRow({
   return (
     <li
       className={cn(
-        "border-t border-(--color-ink-faint)/40",
+        "mp-settle border-t border-(--color-ink-faint)/40",
         "transition-colors duration-150 motion-reduce:transition-none",
         // A partner is marked by a wash of the brand gold rather than a
         // coloured edge, so the row still reads as part of one list.
@@ -156,6 +171,9 @@ function ProviderRow({
           ? "bg-(--color-gold-wash) hover:bg-(--color-gold-wash-hover) focus-within:bg-(--color-gold-wash-hover)"
           : "hover:bg-(--color-cream-warm)/70 focus-within:bg-(--color-cream-warm)/70",
       )}
+      style={{
+        animationDelay: `${Math.min(index, MAX_STAGGER_STEPS) * STAGGER_STEP_MS}ms`,
+      }}
     >
       <div className="grid gap-x-10 gap-y-4 px-4 py-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:py-6">
         <div>
@@ -189,11 +207,17 @@ function ProviderRow({
                       // Vertical padding on an inline element expands the tap
                       // box without changing the line box, so this reaches 44px
                       // on touch while still flowing inside the address text.
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-3.5 -my-3.5 pointer-fine:py-1.5 pointer-fine:-my-1.5 font-semibold text-(--color-navy) underline underline-offset-4 hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
+                      className="group inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-3.5 -my-3.5 pointer-fine:py-1.5 pointer-fine:-my-1.5 font-semibold text-(--color-navy) underline underline-offset-4 hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
                     >
                       View on map
                       <span className="sr-only">: {provider.name}</span>
-                      <span aria-hidden="true">→</span>
+                      {/* The arrow leans toward where it is taking you. */}
+                      <span
+                        aria-hidden="true"
+                        className="transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                      >
+                        →
+                      </span>
                     </a>
                   </>
                 )}
@@ -267,6 +291,19 @@ export function DirectoryList({
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterId>("all");
   const searchId = useId();
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Clearing puts the caret back in the field.
+   *
+   * Without this the focused element is a button that just unmounted, so focus
+   * falls to the top of the document and the next keystroke goes nowhere. The
+   * expected move after clearing a search is to type again.
+   */
+  function clearQuery() {
+    setQuery("");
+    searchRef.current?.focus();
+  }
 
   const indexed = useMemo(
     () => providers.map((p) => ({ provider: p, haystack: searchIndex(p) })),
@@ -328,9 +365,17 @@ export function DirectoryList({
               />
               <input
                 id={searchId}
+                ref={searchRef}
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  // Escape clears the field, the way every search box does.
+                  if (event.key === "Escape" && query) {
+                    event.preventDefault();
+                    setQuery("");
+                  }
+                }}
                 placeholder="Search a name, service, or area"
                 className={cn(
                   // white/40, not /25: a form control's own boundary needs
@@ -353,7 +398,7 @@ export function DirectoryList({
               {query && (
                 <button
                   type="button"
-                  onClick={() => setQuery("")}
+                  onClick={clearQuery}
                   aria-label="Clear search"
                   className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-(--color-silver) hover:bg-white/10 hover:text-(--color-surface) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
                 >
@@ -439,24 +484,50 @@ export function DirectoryList({
           </div>
 
           {visible.length > 0 ? (
-            <ul className="mt-4 border-b border-(--color-ink-faint)/40">
-              {visible.map((provider) => (
+            /*
+              Keyed on the chip only. Remounting replays the settle animation,
+              which is the right acknowledgement for a discrete tap; keying on
+              the query too would replay it on every keystroke and strobe.
+            */
+            <ul
+              key={activeFilter}
+              className="mt-4 border-b border-(--color-ink-faint)/40"
+            >
+              {visible.map((provider, index) => (
                 <ProviderRow
                   key={provider.id}
                   provider={provider}
                   activeFilter={activeFilter}
+                  index={index}
                 />
               ))}
             </ul>
           ) : (
-            <div className="mt-4 border-y border-(--color-ink-faint)/40 px-4 py-16 text-center">
-              <p className="text-sm font-semibold text-(--color-navy)">
-                Nothing matches that yet
+            <div className="mp-settle mt-4 border-y border-(--color-ink-faint)/40 px-4 py-16 text-center">
+              <SearchX
+                size={22}
+                className="mx-auto text-(--color-ink-faint)"
+                aria-hidden="true"
+              />
+              {/* Echoing the query confirms what was actually searched, which
+                  is usually where the surprise is (a stray character, an old
+                  term still in the box). */}
+              <p className="mt-4 text-base font-semibold text-(--color-navy)">
+                {query.trim() ? (
+                  <>
+                    Nothing here matches{" "}
+                    <span className="text-(--color-gold-deep)">
+                      &ldquo;{query.trim()}&rdquo;
+                    </span>
+                  </>
+                ) : (
+                  "Nothing in this category yet"
+                )}
               </p>
               <p className="mx-auto mt-2 max-w-[46ch] text-sm text-(--color-ink-muted) leading-relaxed">
                 The directory covers Las Piñas and the areas next to it, so a
-                provider further out may simply not be listed. Try a shorter
-                search, or clear the filters to see everything.
+                provider further out may simply not be listed yet. Try a shorter
+                search, or clear the filters to see all {providers.length}.
               </p>
               <button
                 type="button"
