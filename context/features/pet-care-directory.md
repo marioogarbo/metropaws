@@ -183,13 +183,25 @@ side-stripe colored borders on cards"), and the label-per-line
 
 ### Entry points
 
-The header nav already carries six desktop links and wraps if pushed. So:
+The header nav already carries six desktop links and wraps if pushed, so it was
+left alone. If the client wants the directory in the top nav, something else
+comes out.
 
-- `SiteFooter` → Navigate list gains **"Pet Care Directory"**.
+- `SiteFooter` → Navigate list gains **"Find Pet Care"**.
 - `CoverageTeaser`'s "The Pack Network" pillar gains a
-  "Browse pet care near you →" link.
+  "Find pet care near you →" link.
+- **`components/directory-cta.tsx` replaced `components/partner-clinic-cta.tsx`
+  on the homepage** (client decision, 2026-08-08). The old "Bring MetroPaws to
+  your clinic" section pitched a partner network that does not exist:
+  `clinic_partners` and `reimbursement_providers` are both empty, so "join a
+  growing network of Metro Manila clinics" was a claim with nothing behind it.
 
-No header change. If the client wants it in the top nav, something else comes out.
+  **What this removed:** the homepage no longer invites clinics to partner. The
+  Facebook link that section pointed at is still in `site-footer.tsx` and
+  `faq-section.tsx`, so clinics can still reach MetroPaws, but there is no
+  partnership pitch anywhere on the site now. Put one back when there is a real
+  programme to point at. Nothing linked to the old `#partner` anchor (checked),
+  so no dead links.
 
 ### No hardcoded fallback list — a deliberate break from the FAQ pattern
 
@@ -265,6 +277,24 @@ Measured, not eyeballed (script in the session notes):
 - **Partner badge.** Navy on `--color-gold` is **3.52:1**, which passes as large
   text on the 14px-semibold CTA buttons but fails for the 12px badge. The badge
   uses a darkened gold `oklch(0.52 0.08 82)` with cream text (**12.52:1**).
+
+### Site-wide eyebrow contrast — known failure, deliberately not changed
+
+`DESIGN.md` prescribes section eyebrows as `text-sm font-semibold uppercase
+tracking-widest` in `--color-gold`. At 14px semibold that is **not** WCAG "large
+text" (which needs 18.66px bold or 24px regular), so it needs 4.5:1:
+
+| Eyebrow on | Ratio | AA at this size |
+| --- | --- | --- |
+| `--color-navy` | 3.52:1 | fails |
+| `--color-cream-warm` | 3.93:1 | fails |
+| `--color-cream` | 4.80:1 | passes |
+
+This pattern appears **23 times across the site**. The new directory components
+use it too, for consistency. Fixing it means either a lighter gold on dark
+grounds (`oklch(0.82 0.115 82)` gives 6.74:1 but reads as a visibly different
+gold beside the gold CTA buttons) or a larger eyebrow. Both are brand-level
+calls, so nothing was changed unilaterally.
 
 ## Also found during QA, NOT fixed (pre-existing, site-wide)
 

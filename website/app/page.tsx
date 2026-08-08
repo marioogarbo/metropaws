@@ -10,7 +10,7 @@ import { CommunitySection } from "@/components/community-section";
 import { FoundingSection } from "@/components/founding-section";
 import { FaqSection } from "@/components/faq-section";
 import { SiteFooter } from "@/components/site-footer";
-import { PartnerClinicCta } from "@/components/partner-clinic-cta";
+import { DirectoryCta } from "@/components/directory-cta";
 
 export default function Home() {
   return (
@@ -35,7 +35,7 @@ export default function Home() {
         <CommunitySection />
         <FoundingSection />
         <FaqSection />
-        <PartnerClinicCta />
+        <DirectoryCta />
       </main>
 
       <SiteFooter variant="photo" />
