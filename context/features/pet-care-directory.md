@@ -507,23 +507,204 @@ service line, unconfirmed note, and addresses all pass AA. Touch targets stayed
 at 0 undersized across 320 / 390 / 844x390 / 768x1024, desktop rows still reach
 to 16px of the container edge, no horizontal overflow at 1440 / 834 / 390.
 
-### Site-wide eyebrow contrast — known failure, deliberately not changed
+### Phone reach pass, 2026-08-08 (`/impeccable adapt clarify`)
 
-`DESIGN.md` prescribes section eyebrows as `text-sm font-semibold uppercase
-tracking-widest` in `--color-gold`. At 14px semibold that is **not** WCAG "large
-text" (which needs 18.66px bold or 24px regular), so it needs 4.5:1:
+The earlier device pass fixed touch targets and landscape. It never measured
+**how far down the page the first listing sits in portrait**, which is the thing
+that matters on a page people open when a pet needs care.
 
-| Eyebrow on | Ratio | AA at this size |
-| --- | --- | --- |
-| `--color-navy` | 3.52:1 | fails |
-| `--color-cream-warm` | 3.93:1 | fails |
-| `--color-cream` | 4.80:1 | passes |
+| Device | First listing was | After this pass | Viewport |
+| --- | --- | --- | --- |
+| Galaxy Fold, closed (280px) | 986px | 794px | 653px |
+| iPhone SE (375px) | 872px | 728px | 667px |
+| Pixel 7 (412px) | 815px | 668px | 915px |
+| iPhone 15 Pro Max (430px) | 815px | 668px | 932px |
 
-This pattern appears **23 times across the site**. The new directory components
-use it too, for consistency. Fixing it means either a lighter gold on dark
-grounds (`oklch(0.82 0.115 82)` gives 6.74:1 but reads as a visibly different
-gold beside the gold CTA buttons) or a larger eyebrow. Both are brand-level
-calls, so nothing was changed unilaterally.
+**Superseded** by the disclosure change below, which took these to 688 / 643 /
+583 / 583. The reasoning here still stands; only the figures moved on.
+
+So a Pixel 7 and a 15 Pro Max now show the first listing without scrolling, and
+an SE is one short scroll instead of 1.3 screens. Where it came from, measured
+per block rather than guessed:
+
+- **The disclaimer's bordered panel is now `lg:` only.** Below `lg` it is a
+  hairline rule and flowing text: same words, same position, same prominence,
+  but it stops spending 40px of padding plus a border to fence off the only
+  thing in its column. Worth 64px on a phone and it reads as part of the hero
+  instead of a legal box bolted to it. Desktop is pixel-identical.
+- Hero padding `pt-12 pb-11` → `pt-8 pb-7`, control band `pt-7 pb-11` →
+  `pt-5 pb-6`, results `pt-8` → `pt-6`, hero gap `gap-8` → `gap-6`, control gap
+  `gap-4` → `gap-3`. All phone-only; every `md:` value is untouched, so desktop
+  keeps the rhythm `DESIGN.md` asks for.
+- The `max-height:540px` landscape overrides became `md:`-scoped, since the
+  portrait base is now tighter than what they were setting. Landscape still
+  improved (586px → 545px).
+
+**The search placeholder was clipped on the commonest small phones.** At 16px
+(the size touch gets, so iOS does not zoom on focus) "Search by name, service,
+or area" needs 255px and an iPhone SE gave the field 247px, a folded Galaxy
+152px. Two fixes: the placeholder drops the "Search by" that the magnifier icon
+already conveys (the `sr-only` label keeps the full phrase), and the field only
+reserves right padding for the clear button **when there is one** to clear.
+Holding 40px open for an unrendered control was most of the deficit. Now 175px
+needed against 180 / 275 / 312px available at 280 / 375 / 412px.
+
+**The eyebrow read "Around Las Piñas" and the paragraph two lines below said
+"around Las Piñas".** The eyebrow now names what the list is, "Community
+directory", which keeps `DESIGN.md`'s eyebrow pattern, drops the repetition, and
+sets the non-endorsement frame before the disclaimer has to argue for it.
+
+Re-verified: 0 touch targets under 44px at 320 / 390 / 844x390 / 768x1024, no
+horizontal overflow at 280 through 2560, desktop rows still reach to 16px of the
+container edge, all 19 marks on one left edge, `--color-ink-muted` on cream
+still 6.02:1.
+
+#### The filter chips: two answers, chosen by input method
+
+The five chips measure **678px**. Everything below that width scrolled
+horizontally, which meant **3 of 5 filters were off-screen on an iPhone SE and a
+folded Galaxy**, 2 on a Pixel 7 and on a narrow desktop window. On a 19-item
+list the chips are the primary navigation, so this was not cosmetic.
+
+Wrapping everywhere was measured and rejected: at 375px the chips wrap to
+**three** rows (148px, against 48px for the scroller), because "Veterinary 10"
+alone is 151px with its glyph. Dropping the glyph to make wrapping cheaper was
+also rejected: the chip is where the row mark gets its caption, so removing it
+on phones would break the vocabulary exactly where the marks do the most work.
+
+So the split is by **pointer type, not width**, consistent with the device pass
+above:
+
+- **Coarse pointer (touch)** keeps the scroller. Swiping a filter row is a
+  learned gesture and it costs one row instead of three. What it lacked was a
+  cue, so the row now carries a `mask-image` fade on **only the side that has
+  more to reach**: right-only at the start, both edges mid-scroll, left-only at
+  the end. Driven by a scroll handler plus a `ResizeObserver`, so rotating the
+  phone re-evaluates it. No mask renders until hydration, and a mask does not
+  affect layout, so there is no shift.
+- **Fine pointer (mouse)** wraps. A mouse has no swipe: on a narrow desktop
+  window the scroller became a scrollbar to drag with Pet Stores and Boarding
+  simply out of reach. Verified: 547px mouse → 2 rows, 0 off-screen, no
+  scrollbar; 375px mouse → 3 rows, 0 off-screen; 768px+ → 1 row, nothing wraps.
+
+Touch reach figures above are unchanged by this, since touch still gets one row.
+
+#### The disclaimer became a disclosure, 2026-08-09 (client call)
+
+The client looked at the page on a phone and said the first screen was all
+header and preamble with no list, which the measurements agreed with: the first
+listing sat at **724px on a 667px viewport**, and the disclaimer was 144px of
+that, the second-largest block on the page.
+
+It could not simply move: it is the one element here with consequences, and the
+build deliberately put it above the listings so a member who has a bad visit has
+already read that MetroPaws did not vouch for the business. Moving it also
+saves almost nothing, since it costs 144px wherever it sits. **Shortening was
+the only real lever.**
+
+It is now a native `<details>`. Visible at all times is the operative sentence,
+"**A listing here is not a recommendation.** Confirm hours and fees before you
+go." Folded away is the precise wording (accreditation / endorsement /
+agreement, the Partner exception), which elaborates rather than warns.
+
+`<details>` rather than a client component: it needs no JavaScript, survives a
+failed hydration, is keyboard-operable for free, and keeps the full text in the
+DOM for screen readers and for the record. **Verified with JavaScript disabled**:
+the toggle still opens, 89px to 238px, with the legal text present.
+
+| Device | Was | Now | Viewport | First row visible |
+| --- | --- | --- | --- | --- |
+| Pixel 7 (412px) | 815px | **583px** | 915px | 332px |
+| iPhone 15 Pro Max | 815px | **583px** | 932px | 349px |
+| iPhone SE (375px) | 872px | **643px** | 667px | 24px |
+| Galaxy Fold (280px) | 986px | **688px** | 653px | 0px |
+
+The hero intro also lost "member or not": "everyone" already carries it, and the
+sentence was running to a third line on a 375px phone to say it twice.
+
+**A Fold still shows no listing above the fold** (688px against 653px). The
+remaining blocks are the site header at 100px and the control band at 145px,
+neither of which is a directory-level decision. Not pursued.
+
+#### Polish pass, 2026-08-09
+
+Three real defects, found by inspecting at 3x rather than by reading the page at
+1x:
+
+- **"View on map" had a broken underline.** The anchor is `inline-flex` with a
+  `gap`, and a flex container paints `text-decoration` under each flex item
+  separately, so the underline stopped at the gap and reappeared under the
+  arrow, reading as two links. The underline now lives on a span around the
+  label; the anchor is `no-underline` and the arrow, being an affordance rather
+  than link text, carries none.
+- **The chip row drew a scrollbar.** Phones draw an overlay one that fades by
+  itself, but a desktop-class scrollbar renders as a permanent grey bar slicing
+  the control band. `scrollbar-none` (verified to resolve to
+  `scrollbar-width: none`, not silently no-op), and the `pb-1` that had been
+  reserved for it is gone, which also returns 4px to every phone.
+- **The service separator could begin a line.** At 280px "Veterinary / Grooming
+  / Boarding / Pet Supplies" wrapped onto a line starting with "/". A
+  non-breaking space before the slash moves the break to after it.
+
+**Three things that looked like defects and were not.** Recorded so nobody
+"fixes" them later:
+
+- "19 places" appears two-toned in screenshots. It is a single text node with a
+  single colour (`childNodes: 1, elementChildren: 0`); the split is JPEG
+  compression around the numeral.
+- The address and hours icons look indented relative to the listing name. The
+  boxes align at exactly **88px**; the offset is lucide's glyph inset inside its
+  own 14px box. Nudging individual glyphs would be over-tuning that breaks the
+  moment an icon is swapped.
+- `transitionDuration` still reads 0.15s under `prefers-reduced-motion: reduce`.
+  That is the wrong property to measure: `transition-none` sets
+  `transition-property`, which correctly computes to `none` on the row, chip,
+  mark, and arrow. Nothing transitions.
+
+Also confirmed at 390px: 0 console or hydration warnings, focus rings on
+**47/47** interactive elements, cumulative layout shift **0.0000**, keyboard
+focus scrolls the last chip into view, and the longest listing renders at 280px
+with 0 overflowing elements.
+
+**Still open, needs a brand decision.** At 280px, 15 of 19 listing names wrap to
+two or more lines, because the page gutter is `px-6` (48px of a 280px screen) on
+every section. Dropping to `px-4` below `sm` would buy 16px back for every row,
+but `SiteHeader` and `SiteFooter` set their own gutters, so changing this page
+alone would misalign the logo with the content edge. That is a site-wide change,
+not a directory one.
+
+### Site-wide eyebrow contrast — CORRECTED 2026-08-09, the old table was wrong
+
+**The figures previously recorded here were wrong, and their conclusions were
+backwards.** Re-measured from the live tokens, resolving `oklch()` through a
+canvas (Chromium returns `oklch()` unconverted, so a naive `getComputedStyle`
+regex yields garbage; that is the likely source of the original error):
+
+`--color-gold` resolves to `rgb(200, 157, 72)`, `--color-navy` to
+`rgb(14, 31, 57)`.
+
+| Gold text on | Previously recorded | Actually | AA at 14px semibold |
+| --- | --- | --- | --- |
+| `--color-navy` | 3.52:1, fails | **6.57:1** | **passes** |
+| `--color-cream` | 4.80:1, passes | **2.31:1** | **fails badly** |
+| `--color-cream-warm` | 3.93:1, fails | **2.10:1** | **fails badly** |
+
+Two other figures in the contrast section above were also wrong: navy on
+`--color-gold` (the partner badge) is **6.57:1**, not 3.52:1 (contrast is
+symmetric, so it is the same pair), and cream on `--color-gold-deep` is
+**5.11:1**, not 12.52:1. Both still pass; only the numbers were off.
+
+**The practical implication is the opposite of what was recorded.** A gold
+eyebrow on **navy is fine**. A gold eyebrow on **cream or cream-warm is the
+real failure**, at roughly 2:1. Anyone who had "fixed" this by following the old
+table would have moved eyebrows onto cream, which is the worst ground for them.
+
+This page is unaffected either way: its only eyebrow ("Community directory")
+sits on navy at 6.57:1, and the one gold-on-cream use is `--color-gold-deep` in
+the empty state, which measures 5.02:1 and passes. **The site-wide audit of the
+23 eyebrow instances still needs doing, but against these numbers, not the old
+ones**, and the question is now "which of them sit on cream", not "all of them
+fail".
 
 ## Also found during QA, NOT fixed (pre-existing, site-wide)
 

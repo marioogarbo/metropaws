@@ -1,6 +1,14 @@
 "use client";
 
-import { Fragment, useId, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Clock,
   Globe,
@@ -93,8 +101,12 @@ function ServiceLine({
       {provider.services.map((slug, index) => (
         <Fragment key={slug}>
           {index > 0 && (
+            // Non-breaking space before the slash so the separator can never
+            // begin a line. On a 280px screen "Veterinary / Grooming /
+            // Boarding / Pet Supplies" wrapped to a line starting with "/".
+            // The break now falls after the slash, where it belongs.
             <span className="text-(--color-ink-faint)" aria-hidden="true">
-              {" / "}
+              {" / "}
             </span>
           )}
           <span
@@ -257,9 +269,17 @@ function ProviderRow({
                         // group now (it tints the service mark on hover), and a
                         // nested bare group would leave `group-hover:` below
                         // matching the row, leaning the arrow on any row hover.
-                        className="group/map inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-3.5 -my-3.5 pointer-fine:py-1.5 pointer-fine:-my-1.5 font-semibold text-(--color-navy) underline underline-offset-4 hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
+                        // The underline lives on the label, not on the anchor.
+                        // An inline-flex box paints text-decoration under each
+                        // flex item separately, so the anchor's own underline
+                        // broke across the 4px gap and reappeared under the
+                        // arrow, reading as two links. The arrow is an
+                        // affordance, not part of the link text anyway.
+                        className="group/map inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-3.5 -my-3.5 pointer-fine:py-1.5 pointer-fine:-my-1.5 font-semibold text-(--color-navy) no-underline hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
                       >
-                        View on map
+                        <span className="underline underline-offset-4">
+                          View on map
+                        </span>
                         <span className="sr-only">: {provider.name}</span>
                         {/* The arrow leans toward where it is taking you. */}
                         <span
@@ -351,6 +371,47 @@ export function DirectoryList({
   const [activeFilter, setActiveFilter] = useState<DirectoryFilterId>("all");
   const searchId = useId();
   const searchRef = useRef<HTMLInputElement>(null);
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const [chipEdges, setChipEdges] = useState({ left: false, right: false });
+
+  /**
+   * Which side of the chip row still has filters on it.
+   *
+   * Only meaningful while the row scrolls, which is touch only. A fine pointer
+   * wraps the chips instead, so both edges read false and no mask is applied.
+   */
+  const updateChipEdges = useCallback(() => {
+    const el = chipsRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setChipEdges({ left: el.scrollLeft > 1, right: el.scrollLeft < max - 1 });
+  }, []);
+
+  useEffect(() => {
+    updateChipEdges();
+    const el = chipsRef.current;
+    if (!el) return;
+    // Rotating the phone changes what fits, and so does the chip row wrapping
+    // when a mouse appears on a hybrid device.
+    const observer = new ResizeObserver(updateChipEdges);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [updateChipEdges]);
+
+  /**
+   * Fade only the edge that has more behind it, so the cue disappears at each
+   * end instead of permanently dimming the first and last chip.
+   */
+  const chipMask = useMemo(() => {
+    const FADE = "1.5rem";
+    if (!chipEdges.left && !chipEdges.right) return undefined;
+    const stops = [
+      chipEdges.left ? `transparent 0, black ${FADE}` : "black 0",
+      chipEdges.right ? `black calc(100% - ${FADE}), transparent 100%` : "black 100%",
+    ].join(", ");
+    const image = `linear-gradient(to right, ${stops})`;
+    return { maskImage: image, WebkitMaskImage: image };
+  }, [chipEdges]);
 
   /**
    * Clearing puts the caret back in the field.
@@ -409,18 +470,21 @@ export function DirectoryList({
         keeps the brand's navy share on a page that is otherwise a long light
         list.
       */}
-      <section className="bg-(--color-navy) border-t border-white/10 pt-7 pb-11 md:pt-9 md:pb-14 [@media(max-height:540px)]:pt-6 [@media(max-height:540px)]:pb-6">
+      <section className="bg-(--color-navy) border-t border-white/10 pt-5 pb-6 md:pt-9 md:pb-14 [@media(max-height:540px)]:md:pt-6 [@media(max-height:540px)]:md:pb-6">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="sr-only">Search the directory</h2>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
             <div className="relative sm:max-w-md lg:w-80 lg:max-w-none lg:shrink-0">
               <label htmlFor={searchId} className="sr-only">
                 Search by name, service, or area
               </label>
-              {/* Label and placeholder say the same thing. They used to differ
-                  ("Search a name..."), which is both ungrammatical and a
-                  mismatch for anyone comparing what they hear to what they
-                  see. */}
+              {/* The placeholder drops the "Search by" the label keeps. At 16px
+                  (the size touch gets, to stop iOS zooming on focus) the full
+                  phrase needs 255px and an iPhone SE gives the field 247px, so
+                  it was clipped mid-word on the commonest small phone and cut
+                  in half on a folded Galaxy. The magnifier already says
+                  "search"; the words left are the ones carrying the hint, and
+                  the label below stays complete for screen readers. */}
               <Search
                 size={15}
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-(--color-silver)"
@@ -439,7 +503,7 @@ export function DirectoryList({
                     setQuery("");
                   }
                 }}
-                placeholder="Search by name, service, or area"
+                placeholder="Name, service, or area"
                 className={cn(
                   // white/40, not /25: a form control's own boundary needs
                   // 3:1 against its surroundings (WCAG 1.4.11). On navy, /25
@@ -448,7 +512,12 @@ export function DirectoryList({
                   // 16px on phones: iOS Safari zooms the whole page when it
                   // focuses an input under 16px, which throws the layout off
                   // mid-search. Back to the brand's 14px once there is room.
-                  "pl-10 pr-10 text-base pointer-fine:text-sm",
+                  "pl-10 text-base pointer-fine:text-sm",
+                  // Only reserve room for the clear button once there is one.
+                  // Holding 40px open for an unrendered control is what pushed
+                  // the placeholder over the edge on a 280px folded screen; the
+                  // placeholder is gone by the time the button appears.
+                  query ? "pr-10" : "pr-3",
                   "text-(--color-surface) placeholder:text-(--color-silver)",
                   "hover:border-white/60",
                   "focus:outline-none focus:ring-2 focus:ring-(--color-gold) focus:border-transparent",
@@ -471,13 +540,38 @@ export function DirectoryList({
             </div>
 
             <div
+              ref={chipsRef}
+              onScroll={updateChipEdges}
+              style={chipMask}
+              // The five chips measure 678px, so on a 375px phone three of them
+              // sit off-screen. Two different answers, chosen by input method
+              // rather than width, the way the rest of this page does it:
+              //
+              // Touch keeps the horizontal scroller. Swiping a filter row is a
+              // learned gesture and it costs one row instead of three. What it
+              // was missing is a cue, so the edges now fade only on the side
+              // that has more to reach.
+              //
+              // A mouse has no swipe. On a narrow desktop window this became a
+              // scrollbar to drag, with Pet Stores and Boarding simply out of
+              // reach, so a fine pointer wraps instead.
+              //
               // overscroll-x-contain stops a swipe that runs off the end of the
               // chips from becoming a browser back-navigation on iOS.
-              className="-mx-6 overflow-x-auto overscroll-x-contain px-6 pb-1 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0"
+              className={cn(
+                "-mx-6 overflow-x-auto overscroll-x-contain px-6",
+                // No scrollbar under the chips. Phones draw an overlay one that
+                // fades by itself, but a desktop-class scrollbar renders as a
+                // permanent grey bar slicing the band, and the edge fade above
+                // already carries the "there is more" cue for every input.
+                "scrollbar-none",
+                "pointer-fine:mx-0 pointer-fine:overflow-visible pointer-fine:px-0",
+                "lg:mx-0 lg:overflow-visible lg:px-0",
+              )}
               role="group"
               aria-label="Filter by service"
             >
-              <div className="flex gap-2 lg:flex-wrap lg:justify-end">
+              <div className="flex gap-2 pointer-fine:flex-wrap lg:flex-wrap lg:justify-end">
                 {[{ id: "all" as const, label: "All" }, ...SERVICE_FILTERS].map(
                   ({ id, label }) => {
                     const isActive = activeFilter === id;
@@ -537,7 +631,7 @@ export function DirectoryList({
         </div>
       </section>
 
-      <section className="bg-(--color-cream) pt-8 pb-16 md:pt-10 md:pb-20">
+      <section className="bg-(--color-cream) pt-6 pb-16 md:pt-10 md:pb-20">
         <div className="max-w-6xl mx-auto px-6">
           {/* "Places", not "providers", throughout this page. "Provider" is HMO
               language in the Philippines, where it means an *accredited* one,
