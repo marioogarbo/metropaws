@@ -12,6 +12,7 @@ from routers import auth, members, pets, admin, plans, clinic, payments, setting
 from routers.faqs import public_router as faqs_public, admin_router as faqs_admin
 from routers.promos import public_router as promos_public, admin_router as promos_admin
 from routers.founding_reservations import public_router as reservations_public, admin_router as reservations_admin
+from routers.directory import public_router as directory_public, admin_router as directory_admin
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -50,6 +51,8 @@ app.include_router(promos_public)
 app.include_router(promos_admin)
 app.include_router(reservations_public)
 app.include_router(reservations_admin)
+app.include_router(directory_public)
+app.include_router(directory_admin)
 
 
 @app.get("/")

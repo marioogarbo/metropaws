@@ -19,6 +19,7 @@ const pillars = [
     label: "The Pack Network",
     detail:
       "A growing circle of partner vets and groomers across Las Piñas, with extra member perks.",
+    link: { label: "Find pet care near you", href: "/find-pet-care" },
   },
 ];
 
@@ -49,7 +50,7 @@ export function CoverageTeaser() {
 
           {/* Right: three pillars */}
           <div className="flex flex-col sm:flex-row gap-8 flex-1 md:pl-6">
-            {pillars.map(({ icon: Icon, label, detail }) => (
+            {pillars.map(({ icon: Icon, label, detail, link }) => (
               <div key={label} className="flex gap-3 items-start flex-1">
                 <div className="mt-0.5 shrink-0">
                   <Icon
@@ -63,6 +64,14 @@ export function CoverageTeaser() {
                   <p className="mt-1 text-sm leading-relaxed text-(--color-ink-muted)">
                     {detail}
                   </p>
+                  {link && (
+                    <Link
+                      href={link.href}
+                      className="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-(--color-navy) hover:text-(--color-gold) transition-colors"
+                    >
+                      {link.label} →
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

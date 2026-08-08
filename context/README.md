@@ -59,6 +59,11 @@ says. If a fact is derivable by reading a file, link to that file instead.
   Manual are offline for rewriting; why their URLs must keep resolving anyway,
   what sign-up records in the meantime, and the checklist for putting the new
   documents back.
+- [`features/pet-care-directory.md`](features/pet-care-directory.md) —
+  the public Las Piñas pet-care directory and its admin CRUD: why it gets its own
+  table instead of reusing `reimbursement_providers`, why "Providers" was the
+  wrong name for the admin page, and why this page ships without a hardcoded
+  fallback list.
 
 ### Sessions
 - [`sessions/2026-07-30-play-store-launch.md`](sessions/2026-07-30-play-store-launch.md) —

@@ -307,6 +307,39 @@ class ReimbursementProvider(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
+class DirectoryProvider(Base):
+    """A public listing in the website's pet-care directory — a community
+    resource, NOT a partnership and NOT a payout target.
+
+    Deliberately separate from ReimbursementProvider: `is_active` on that table
+    is the control that authorises MetroPaws to wire money to a business. If the
+    two shared a row, publishing a listing to the website would also make it
+    payable, and this table is read by an UNAUTHENTICATED public endpoint, so it
+    must not carry payout details at all.
+
+    `services` holds slugs from directory_taxonomy.SERVICE_LABELS, not the
+    client's free-text category line, so one place can appear under several of
+    the website's filters. `is_partner` only flips the card's badge from
+    "Community Directory" to "MetroPaws Partner"; it grants nothing."""
+    __tablename__ = "directory_providers"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    name = Column(String, nullable=False)
+    services = Column(JSON, nullable=False, default=list)
+    address = Column(Text, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    hours = Column(Text, nullable=True)
+    # Explicit Google Maps pin. Blank is fine — the website builds a maps search
+    # from name + address, so every card gets a working map button either way.
+    map_url = Column(Text, nullable=True)
+    is_partner = Column(Boolean, default=False, nullable=False)
+    is_published = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
 class PaymentStatus(str, enum.Enum):
     pending = "pending"
     paid = "paid"

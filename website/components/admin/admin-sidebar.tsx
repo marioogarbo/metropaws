@@ -16,6 +16,7 @@ import {
   Megaphone,
   Wallet,
   Banknote,
+  MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutAction } from "@/app/admin/actions";
@@ -29,6 +30,9 @@ const NAV_LINKS = [
   { href: "/admin/reservations", label: "Reservations", icon: BookMarked },
   { href: "/admin/reimbursements", label: "Reimbursements", icon: Receipt },
   { href: "/admin/providers", label: "Providers", icon: Banknote },
+  // "Directory" rather than a second "Providers": the entry above is the
+  // reimbursement payout list, this one is the public website listing.
+  { href: "/admin/directory", label: "Directory", icon: MapPin },
   { href: "/admin/promos", label: "Promos & Events", icon: Megaphone },
   { href: "/admin/faqs", label: "FAQs", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },

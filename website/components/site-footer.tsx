@@ -42,6 +42,7 @@ const navigateLinks = [
   { label: "Home", href: "/" },
   { label: "Plans & Pricing", href: "/#pricing" },
   { label: "Getting Started", href: "/getting-started" },
+  { label: "Find Pet Care", href: "/find-pet-care" },
   { label: "Founding 50", href: "/#founding" },
   { label: "Get the App", href: PLAY_STORE_URL },
   { label: "FAQ", href: "/#faq" },

@@ -1,0 +1,61 @@
+import { Info } from "lucide-react";
+
+/**
+ * The disclaimer sits beside the headline rather than under the list.
+ *
+ * It is the only part of this page with consequences: a member who has a bad
+ * visit needs to have already read that MetroPaws did not vouch for the
+ * business. Putting it in the hero means it is read in the same breath as the
+ * promise, not discovered afterwards in small print.
+ */
+/*
+ * Body copy on navy uses `--color-silver` (5.77:1), not `--color-ink-faint`
+ * (3.23:1). The faint token is the site's habit for text on navy but it misses
+ * WCAG AA for body size, and the disclaimer below is the last text on this page
+ * that should be hard to read.
+ */
+export function DirectoryHero() {
+  return (
+    <section className="bg-(--color-navy) pt-12 pb-12 md:pt-20 md:pb-20">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:items-start">
+          <div className="mp-reveal">
+            <p className="text-sm font-semibold uppercase tracking-widest text-(--color-gold)">
+              Around Las Piñas
+            </p>
+            <h1 className="mt-3 text-3xl md:text-5xl font-bold text-(--color-surface) tracking-tight leading-tight text-balance">
+              Find pet care near you
+            </h1>
+            <p className="mt-4 text-sm text-(--color-silver) leading-relaxed max-w-[52ch]">
+              Vets, groomers, pet stores, and boarding places around Las Piñas,
+              gathered in one list. Free to use whether or not you are a
+              MetroPaws member.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/15 p-5 md:p-7">
+            <div className="flex items-center gap-2.5">
+              <Info
+                size={16}
+                className="text-(--color-gold) shrink-0"
+                aria-hidden="true"
+              />
+              <h2 className="text-sm font-semibold text-(--color-gold)">
+                What this list is, and what it is not
+              </h2>
+            </div>
+            <p className="mt-3 text-sm text-(--color-silver) leading-relaxed">
+              Being listed is not accreditation, endorsement, or any agreement
+              with MetroPaws, unless marked{" "}
+              <strong className="font-semibold text-(--color-surface)">
+                MetroPaws Partner
+              </strong>
+              . Details change, so confirm hours and fees with the provider
+              before visiting.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
