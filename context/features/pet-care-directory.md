@@ -13,7 +13,7 @@
 | Seed | `backend/seed_directory.py` |
 | Service vocabulary (website) | `website/lib/directory-taxonomy.ts` |
 | Fetch + helpers | `website/lib/directory.ts` |
-| Public page | `website/app/find-pet-care/page.tsx` + `components/directory-{hero,list,notes}.tsx` |
+| Public page | `website/app/find-pet-care/page.tsx` + `components/directory-{hero,list,notes,service-mark}.tsx` |
 | Admin page | `website/app/admin/(protected)/directory/` + `components/admin/directory-table.tsx` |
 
 A public, admin-editable list of vet clinics, groomers, pet stores and boarding
@@ -372,6 +372,140 @@ the disclaimer or the backend-down state; both stay plain.
 Considered and rejected: making the service tags clickable filters. A tag is a
 slug ("Diagnostics") while a chip is a group ("Veterinary"), so the jump would
 land on a chip the reader did not click. More confusing than helpful.
+
+### Service marks, 2026-08-08 — and why not the providers' own logos
+
+The question was whether each listing should carry the business's logo or some
+identifier image. **Logos were rejected**, on three grounds in this order:
+
+1. **It contradicts the page's own disclaimer.** These 19 businesses never
+   consented to being listed, and all 19 ship `is_partner = false`. Publishing
+   publicly-posted contact details is ordinary directory practice; reproducing a
+   business's trademark next to a gold "MetroPaws Partner" tier is an
+   affiliation claim, which is the exact thing the hero spends a paragraph
+   denying. Copyright in the mark is a separate problem from the trademark one.
+2. **It would make scanning worse.** For small Las Piñas businesses the only
+   available "logo" is a Facebook profile picture: storefront photos, text on
+   white, mixed croppings and densities. Nineteen mismatched images down a left
+   edge is noise. A row-start image only helps if it is *consistent*.
+3. **Someone has to maintain it** — 19 sourced files kept current, forever.
+
+What shipped instead: **a mark per service group**, derived from data MetroPaws
+already owns (`components/directory-service-mark.tsx`).
+
+- Four glyphs, one per filter chip: `Stethoscope` / `Scissors` / `ShoppingBag` /
+  `BedDouble`. `BedDouble` over `House` because a house glyph in site chrome
+  reads as "home page"; `ShoppingBag` over `Store` because a store front shares
+  its roofline with the bed, and silhouette is the whole point at 18px.
+- **The same glyph appears on the filter chip**, which is where it gets its
+  caption. A reader meets the scissors beside the word "Grooming" before meeting
+  it on a row, so the marks read as a vocabulary rather than a puzzle. "All"
+  deliberately carries **no** icon: it is the absence of a service filter, not a
+  fifth service, and a paw print there collapsed into a smudge at chip size.
+- **Which glyph** comes from `primaryFilter()` in `lib/directory-taxonomy.ts`:
+  the first stored service a chip claims. `services` keeps the order the admin
+  typed, which is the order the business leads with, so **reordering the
+  services in admin changes the mark** — the right lever to hand an operator who
+  disagrees with the pick. No new column, no new API field.
+- **Under a filter the mark still shows the listing's primary service**, not the
+  filtered one. Filtering to Grooming and seeing a stethoscope on "Golden Bunch
+  Veterinary Clinic & Pet Grooming Center" is information, not a bug: the mark
+  says what the place mainly is, the highlighted tag already says why it
+  matched. Making the marks follow the active filter would render all 19
+  identical and throw the rail away.
+- Monochrome navy on `--color-navy-wash` (new token, the gold-wash mechanic in
+  navy). Four coloured tiles would have been a fifth palette decision on a
+  palette committed to navy and gold.
+- `aria-hidden`: the service tags below say the same thing in words, so the
+  glyph is never the sole carrier of a fact.
+
+Two layout consequences, both measured:
+
+- The mark sits **outside** the row's two-column grid, not inside the name
+  block. Inside, it indented name/tags/address while hours and contacts stayed
+  flush left, and on a phone (where the columns stack) that left a visibly
+  ragged edge mid-row. Outside, all 19 marks share one left edge and every line
+  of content shares another.
+- The mark costs 56px of row width, which came out of the hours column and put
+  four listings' opening hours on a third line. The identity column went
+  **1.2fr → 1.1fr** to buy it back: three-line hours dropped from 4 rows to 2,
+  at the cost of ~9px across the whole list. Hours is the field people scan (it
+  already carries `--color-ink` + `font-medium` for that reason); addresses wrap
+  gracefully, hours do not.
+
+Re-verified after the change: trailing space in a desktop row is still **16px**,
+0 touch targets under 44px at 320 / 390 / 844x390 / 768x1024 with touch
+emulation, no horizontal overflow at 1440 / 834 / 390, `next build` clean.
+
+**If a real partner is ever signed**, their logo is the one case where the
+consent objection disappears — a partner has a contractual relationship by
+definition. That would be a nullable `logo_url` on the directory row, rendered
+in the mark's slot for partner rows only. Not built: there are zero partners
+today, so it would be dead code.
+
+### Copy and simplification pass, 2026-08-08 (`/impeccable clarify simplify`)
+
+**"Providers" is gone from the public page.** In the Philippines "provider"
+reads as *HMO-accredited provider*, which is the precise claim the hero
+disclaimer exists to deny; it is also already taken in the admin, where
+`/admin/providers` means payout targets. The public page now says **places**
+("19 places", "7 of 19 places", "Show all 19 places", "Suggest a place"). The
+`DirectoryProvider` type, props, and API field names are unchanged: this was a
+copy change, not a rename.
+
+**The disclaimer was on the page twice.** The hero box and the closing fine
+print said the same thing in different words, and the footer version also
+claimed MetroPaws "reconfirms details periodically", which no one does. The
+footer paragraph was **deleted**. The hero box, which the original build made
+prominent on purpose, is untouched and still carries the full statement
+(accreditation / endorsement / agreement, the Partner exception, and confirm
+before visiting). The removal path in "Is this your business?" is also
+untouched. **If the client wants belt-and-braces boilerplate at the bottom, put
+it back without the maintenance claim.**
+
+**The placeholder rows stopped apologising twice.** Three listings carry
+"Please verify before visiting" in `hours` and "Please verify directly with the
+clinic / with the establishment / directly" in `phone`: four wordings of one
+idea, two of them stacked in a single row, none actionable. `isUnverified()` in
+`lib/directory.ts` now recognises that family, and `unconfirmedNote()` in
+`directory-list.tsx` says it once and points somewhere useful:
+
+| Data | Row now shows |
+| --- | --- |
+| No hours, no number (South Metro, Paw Station) | "Hours and phone not confirmed. The map listing usually has both." |
+| Real hours, prose number (Kaboochi) | the real hours, plus "Phone not confirmed. The map listing usually shows it." |
+
+The underlying rows are unchanged; this is a render-time fix, so an admin
+normalising the text later costs nothing.
+
+**Service pills became a service line.** Eleven of nineteen listings have a
+single service, so the pill was a lone bordered capsule restating the mark
+beside it, and the four-service listings became a hedge of borders. Services now
+render as `Veterinary / Grooming / Boarding / Pet Supplies` in muted text, with
+the labels matching the active chip in navy semibold. That keeps the "why is
+this in my results?" answer, drops a row of chrome and vertical space from every
+listing, and leaves the mark to do the at-a-glance work. `ServiceTags` →
+`ServiceLine`.
+
+Smaller fixes:
+
+- Disclaimer heading was "What this list is, and what it is not": shape with no
+  content, so a heading-skimmer learned nothing. Now **"A listing here is not a
+  recommendation"**, which is the fact itself.
+- Hero body said the list was "gathered in one list", which describes the page
+  to someone already looking at it. Replaced with the thing a first-time visitor
+  actually wonders: **"Free to use, whether or not you are a MetroPaws member."**
+- Search placeholder said "Search **a** name, service, or area" while its
+  `sr-only` label said "Search **by**...". Both now say "by".
+- Empty state dropped "a provider further out may simply not be listed yet" and
+  the duplicated "see all 19" (the button says it).
+
+Contrast re-measured after the change, through canvas colour parsing (Chromium
+returns `oklch()` unconverted, so a naive `getComputedStyle` regex reports
+garbage): `--color-ink-muted` on cream is **6.02:1** at 14px, so the count line,
+service line, unconfirmed note, and addresses all pass AA. Touch targets stayed
+at 0 undersized across 320 / 390 / 844x390 / 768x1024, desktop rows still reach
+to 16px of the container edge, no horizontal overflow at 1440 / 834 / 390.
 
 ### Site-wide eyebrow contrast — known failure, deliberately not changed
 

@@ -28,7 +28,7 @@ export function DirectoryUnavailable() {
             We would rather show you nothing than an out-of-date phone number
             for a clinic. Please try again in a few minutes. If your pet needs
             care today, message us and we will point you to the nearest open
-            provider.
+            clinic.
           </p>
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
@@ -67,16 +67,16 @@ export function DirectoryEmpty() {
             No listings published yet
           </p>
           <p className="mx-auto mt-3 max-w-[52ch] text-sm text-(--color-ink-muted) leading-relaxed">
-            We are still compiling providers around Las Piñas. If there is a vet
-            or groomer you trust, send us the name and we will look into adding
+            We are still putting this list together. If there is a vet or
+            groomer you trust, send us the name and we will look into adding
             them.
           </p>
           <a
-            href={`mailto:${CONTACT_EMAIL}?subject=Provider%20suggestion`}
+            href={`mailto:${CONTACT_EMAIL}?subject=Directory%20suggestion`}
             className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-lg bg-(--color-gold) px-5 text-sm font-semibold text-(--color-navy) hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-navy) transition-all"
           >
             <Mail size={14} aria-hidden="true" />
-            Suggest a provider
+            Suggest a place
           </a>
         </div>
       </div>
@@ -105,11 +105,11 @@ export function DirectoryNote() {
               ourselves before anything goes on this page.
             </p>
             <a
-              href={`mailto:${CONTACT_EMAIL}?subject=Provider%20suggestion`}
+              href={`mailto:${CONTACT_EMAIL}?subject=Directory%20suggestion`}
               className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-(--color-navy) px-5 text-sm font-semibold text-(--color-gold) hover:bg-(--color-navy-mid) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors"
             >
               <Mail size={14} aria-hidden="true" />
-              Suggest a provider
+              Suggest a place
             </a>
           </div>
 
@@ -119,8 +119,7 @@ export function DirectoryNote() {
             </h2>
             <p className="mt-3 text-sm text-(--color-ink-muted) leading-relaxed max-w-[54ch]">
               Listings are compiled from publicly posted contact details. If
-              something is wrong, or you would rather not appear here at all,
-              email{" "}
+              something is wrong, or you would rather not be listed, email{" "}
               <a
                 href={`mailto:${CONTACT_EMAIL}?subject=Directory%20listing%20correction`}
                 className="font-medium text-(--color-navy) underline underline-offset-4 hover:text-(--color-ink) transition-colors"
@@ -131,13 +130,6 @@ export function DirectoryNote() {
             </p>
           </div>
         </div>
-
-        <p className="mt-10 text-xs text-(--color-ink-muted) leading-relaxed max-w-[80ch]">
-          MetroPaws maintains this list as a community resource and reconfirms
-          details periodically. Inclusion is not accreditation, endorsement, or a
-          contractual relationship. Please verify schedules, fees, and service
-          availability with the provider before visiting.
-        </p>
       </div>
     </section>
   );

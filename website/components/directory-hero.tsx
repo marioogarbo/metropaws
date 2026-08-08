@@ -36,9 +36,13 @@ export function DirectoryHero() {
             <h1 className="mt-3 text-3xl md:text-5xl [@media(max-height:540px)]:text-3xl font-bold text-(--color-surface) tracking-tight leading-tight text-balance">
               Find pet care near you
             </h1>
+            {/* "Gathered in one list" described the page to someone looking at
+                it. What a first-time visitor actually wants to know is whether
+                this is a members-only benefit, so the second sentence answers
+                that instead. */}
             <p className="mt-4 text-sm text-(--color-silver) leading-relaxed max-w-[52ch]">
-              Vets, groomers, pet stores, and boarding around Las Piñas,
-              gathered in one list. Free for anyone to use.
+              Vets, groomers, pet stores, and boarding around Las Piñas. Free to
+              use, whether or not you are a MetroPaws member.
             </p>
           </div>
 
@@ -51,8 +55,12 @@ export function DirectoryHero() {
                 className="text-(--color-gold) shrink-0"
                 aria-hidden="true"
               />
+              {/* The old heading, "What this list is, and what it is not", was
+                  shape without content: a reader who skims headings learned
+                  nothing and had to read the paragraph to find the one fact
+                  that matters. This heading is that fact. */}
               <h2 className="text-sm font-semibold text-(--color-gold)">
-                What this list is, and what it is not
+                A listing here is not a recommendation
               </h2>
             </div>
             <p className="mt-3 text-sm text-(--color-silver) leading-relaxed">
@@ -61,8 +69,7 @@ export function DirectoryHero() {
               <strong className="font-semibold text-(--color-surface)">
                 MetroPaws Partner
               </strong>
-              . Details change, so confirm hours and fees with the provider
-              before visiting.
+              . Details change, so confirm hours and fees before you go.
             </p>
           </div>
         </div>

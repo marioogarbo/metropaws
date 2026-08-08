@@ -55,6 +55,9 @@ export const SERVICE_FILTERS = [
 
 export type ServiceFilterId = (typeof SERVICE_FILTERS)[number]["id"];
 
+/** The chip set as the page uses it: the service groups, plus the unfiltered view. */
+export type DirectoryFilterId = ServiceFilterId | "all";
+
 export function serviceLabel(slug: ServiceSlug): string {
   return SERVICE_LABELS[slug];
 }
@@ -75,4 +78,24 @@ export function matchesFilter(
 ): boolean {
   const slugs = filterSlugs(filterId);
   return services.some((slug) => slugs.includes(slug));
+}
+
+/**
+ * The group a listing leads with: the first stored service that a chip claims.
+ *
+ * `services` keeps the order the admin typed it, which is the order the business
+ * itself leads with — "Mighty Waggers Pet Supplies & Pet Grooming" stores
+ * `pet_supplies` first, "Petunia Veterinary Clinic" stores `veterinary` first.
+ * So reordering the list in admin changes which mark the row carries, which is
+ * the right lever to hand an operator who disagrees with the pick.
+ *
+ * Null only if a listing carries slugs no chip covers, which the taxonomy is
+ * built to prevent.
+ */
+export function primaryFilter(services: ServiceSlug[]): ServiceFilterId | null {
+  for (const slug of services) {
+    const filter = SERVICE_FILTERS.find((f) => filterSlugs(f.id).includes(slug));
+    if (filter) return filter.id;
+  }
+  return null;
 }

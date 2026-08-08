@@ -62,6 +62,11 @@
      without a side-stripe. -hover is the same wash under pointer/focus. */
   --color-gold-wash: oklch(0.72 0.115 82 / 0.07);
   --color-gold-wash-hover: oklch(0.72 0.115 82 / 0.13);
+  /* The same wash mechanic in navy, for the service mark that opens each
+     directory row. A tint rather than a new hue: the palette is committed to
+     navy and gold, and four coloured icon tiles would be a fifth decision. */
+  --color-navy-wash: oklch(0.24 0.055 258 / 0.09);
+  --color-navy-wash-hover: oklch(0.24 0.055 258 / 0.15);
   --color-cream: oklch(0.97 0.01 80);
   --color-cream-warm: oklch(0.94 0.015 75);
   --color-ink: oklch(0.2 0.03 258);

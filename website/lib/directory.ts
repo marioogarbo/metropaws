@@ -70,6 +70,21 @@ export function telHref(phone: string | null): string | null {
   return `tel:${first.trim().startsWith("+") ? "+" : ""}${digits}`;
 }
 
+/**
+ * True when a field holds an apology instead of data.
+ *
+ * Three seed listings carry "Please verify before visiting" where opening hours
+ * belong and "Please verify directly with the clinic" where a number belongs.
+ * That is the honest state of the data, but printed as written a single row
+ * says almost the same sentence twice, in two different wordings, and neither
+ * tells the reader anything they could act on. The row uses this to say what is
+ * missing once, and to point at the map listing instead.
+ */
+export function isUnverified(value: string | null): boolean {
+  if (!value) return false;
+  return /please\s+(verify|confirm|check)/i.test(value);
+}
+
 /** Strip the scheme so a website reads as a domain rather than a URL. */
 export function websiteLabel(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");

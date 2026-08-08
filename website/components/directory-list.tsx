@@ -1,9 +1,10 @@
 "use client";
 
-import { useId, useMemo, useRef, useState } from "react";
+import { Fragment, useId, useMemo, useRef, useState } from "react";
 import {
   Clock,
   Globe,
+  Info,
   Mail,
   MapPin,
   Phone,
@@ -12,17 +13,16 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mapUrl, telHref, websiteLabel } from "@/lib/directory";
+import { isUnverified, mapUrl, telHref, websiteLabel } from "@/lib/directory";
 import {
   SERVICE_FILTERS,
   filterSlugs,
   matchesFilter,
   serviceLabel,
-  type ServiceFilterId,
+  type DirectoryFilterId,
 } from "@/lib/directory-taxonomy";
+import { ServiceMark, filterIcon } from "@/components/directory-service-mark";
 import type { DirectoryProvider } from "@/types/directory";
-
-type FilterId = ServiceFilterId | "all";
 
 /**
  * Fold accents so "las pinas" finds "Las Piñas".
@@ -67,39 +67,66 @@ const CONTACT_LINK_CLASS = cn(
 
 // ── Row pieces ────────────────────────────────────────────────────────────────
 
-function ServiceTags({
+/**
+ * The listing's services, as one line of text.
+ *
+ * These were bordered pills. Eleven of nineteen listings carry a single
+ * service, so the pill was a lone bordered capsule restating the mark beside
+ * it, and the four-service listings turned into a hedge of borders. The mark
+ * now answers "what kind of place is this?" at a glance, which leaves this as
+ * the detail layer, and a detail layer does not need chrome.
+ *
+ * Emphasising the labels that caused the match still answers "why is this in my
+ * filtered results?" without a word of explanation.
+ */
+function ServiceLine({
   provider,
   activeFilter,
 }: {
   provider: DirectoryProvider;
-  activeFilter: FilterId;
+  activeFilter: DirectoryFilterId;
 }) {
-  // Highlighting the tags that caused the match answers "why is this here?"
-  // without a word of explanation.
-  const highlighted = activeFilter === "all" ? [] : filterSlugs(activeFilter);
+  const matched = activeFilter === "all" ? [] : filterSlugs(activeFilter);
 
   return (
-    <ul className="mt-2 flex flex-wrap gap-1.5">
-      {provider.services.map((slug) => {
-        const isMatch = highlighted.includes(slug);
-        return (
-          <li key={slug}>
-            <span
-              className={cn(
-                "inline-block rounded-full border px-2.5 py-1 text-xs font-medium",
-                "transition-colors duration-150 motion-reduce:transition-none",
-                isMatch
-                  ? "border-(--color-navy) bg-(--color-navy) text-(--color-surface)"
-                  : "border-(--color-ink-faint) text-(--color-ink-muted)",
-              )}
-            >
-              {serviceLabel(slug)}
+    <p className="mt-1.5 text-sm text-(--color-ink-muted)">
+      {provider.services.map((slug, index) => (
+        <Fragment key={slug}>
+          {index > 0 && (
+            <span className="text-(--color-ink-faint)" aria-hidden="true">
+              {" / "}
             </span>
-          </li>
-        );
-      })}
-    </ul>
+          )}
+          <span
+            className={cn(
+              "transition-colors duration-150 motion-reduce:transition-none",
+              matched.includes(slug) && "font-semibold text-(--color-navy)",
+            )}
+          >
+            {serviceLabel(slug)}
+          </span>
+        </Fragment>
+      ))}
+    </p>
   );
+}
+
+/**
+ * What we could not confirm, said once.
+ *
+ * Replaces the pair of near-identical apologies the placeholder rows used to
+ * print ("Please verify before visiting" in hours, "Please verify directly with
+ * the establishment" in contact). Neither told the reader anything actionable;
+ * this names the gap and points at the map listing, which is where a current
+ * number or opening time actually lives.
+ */
+function unconfirmedNote(hasHours: boolean, hasPhone: boolean): string | null {
+  if (hasHours && hasPhone) return null;
+  if (!hasHours && !hasPhone) {
+    return "Hours and phone not confirmed. The map listing usually has both.";
+  }
+  if (!hasHours) return "Hours not confirmed. The map listing usually shows them.";
+  return "Phone not confirmed. The map listing usually shows it.";
 }
 
 function DetailRow({
@@ -154,16 +181,19 @@ function ProviderRow({
   index,
 }: {
   provider: DirectoryProvider;
-  activeFilter: FilterId;
+  activeFilter: DirectoryFilterId;
   index: number;
 }) {
   const tel = telHref(provider.phone);
   const map = mapUrl(provider);
+  // A "Please verify..." string in either field is an absence, not a value.
+  const hours = isUnverified(provider.hours) ? null : provider.hours;
+  const note = unconfirmedNote(Boolean(hours), Boolean(tel));
 
   return (
     <li
       className={cn(
-        "mp-settle border-t border-(--color-ink-faint)/40",
+        "mp-settle group border-t border-(--color-ink-faint)/40",
         "transition-colors duration-150 motion-reduce:transition-none",
         // A partner is marked by a wash of the brand gold rather than a
         // coloured edge, so the row still reads as part of one list.
@@ -175,105 +205,134 @@ function ProviderRow({
         animationDelay: `${Math.min(index, MAX_STAGGER_STEPS) * STAGGER_STEP_MS}ms`,
       }}
     >
-      <div className="grid gap-x-10 gap-y-4 px-4 py-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:py-6">
-        <div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h3 className="text-base font-semibold text-(--color-navy) leading-snug text-balance">
-              {provider.name}
-            </h3>
-            {provider.is_partner && (
-              <span className="rounded-full bg-(--color-gold-deep) px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-(--color-cream)">
-                MetroPaws Partner
-              </span>
+      {/* The mark leads the row from OUTSIDE the two-column grid, not from
+          inside the name block. Inside, it indented the name, tags, and address
+          while hours and contacts stayed flush left, and on a phone (where the
+          two columns stack) that left a visibly ragged edge mid-row. Out here
+          every line of content shares one left edge at every breakpoint, and
+          the marks form an unbroken rail to scan down instead of nineteen
+          identically shaped blocks of text. */}
+      <div className="flex gap-3 px-4 py-5 md:gap-4 md:py-6">
+        <ServiceMark services={provider.services} />
+
+        {/* min-w-0 so a long address wraps instead of widening the column. */}
+        {/* 1.1fr, down from the 1.2fr this grid used before the mark existed.
+            The mark takes 56px off the row, which came out of the hours column
+            and pushed four listings' opening hours onto a third line. Names and
+            addresses wrap gracefully; a set of hours does not. */}
+        <div className="grid min-w-0 flex-1 gap-x-8 gap-y-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h3 className="text-base font-semibold text-(--color-navy) leading-snug text-balance">
+                {provider.name}
+              </h3>
+              {provider.is_partner && (
+                <span className="rounded-full bg-(--color-gold-deep) px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-(--color-cream)">
+                  MetroPaws Partner
+                </span>
+              )}
+            </div>
+
+            <ServiceLine provider={provider} activeFilter={activeFilter} />
+
+            {provider.address && (
+              <div className="mt-3">
+                {/* The map link rides with the address because that is what it
+                    acts on. As its own button it added a row of height to every
+                    listing for no extra meaning. */}
+                <DetailRow icon={MapPin} label="Address">
+                  {provider.address}
+                  {map && (
+                    <>
+                      {" "}
+                      <a
+                        href={map}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        // Vertical padding on an inline element expands the tap
+                        // box without changing the line box, so this reaches
+                        // 44px on touch while still flowing inside the address.
+                        //
+                        // Named `group/map`, not a bare `group`: the row is a
+                        // group now (it tints the service mark on hover), and a
+                        // nested bare group would leave `group-hover:` below
+                        // matching the row, leaning the arrow on any row hover.
+                        className="group/map inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-3.5 -my-3.5 pointer-fine:py-1.5 pointer-fine:-my-1.5 font-semibold text-(--color-navy) underline underline-offset-4 hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
+                      >
+                        View on map
+                        <span className="sr-only">: {provider.name}</span>
+                        {/* The arrow leans toward where it is taking you. */}
+                        <span
+                          aria-hidden="true"
+                          className="transition-transform duration-150 ease-out group-hover/map:translate-x-0.5 group-focus-visible/map:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/map:translate-x-0"
+                        >
+                          →
+                        </span>
+                      </a>
+                    </>
+                  )}
+                </DetailRow>
+              </div>
             )}
           </div>
 
-          <ServiceTags provider={provider} activeFilter={activeFilter} />
-
-          {provider.address && (
-            <div className="mt-3">
-              {/* The map link rides with the address because that is what it
-                  acts on. As its own button it added a row of height to every
-                  listing for no extra meaning. */}
-              <DetailRow icon={MapPin} label="Address">
-                {provider.address}
-                {map && (
-                  <>
-                    {" "}
-                    <a
-                      href={map}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      // Vertical padding on an inline element expands the tap
-                      // box without changing the line box, so this reaches 44px
-                      // on touch while still flowing inside the address text.
-                      className="group inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-3.5 -my-3.5 pointer-fine:py-1.5 pointer-fine:-my-1.5 font-semibold text-(--color-navy) underline underline-offset-4 hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
-                    >
-                      View on map
-                      <span className="sr-only">: {provider.name}</span>
-                      {/* The arrow leans toward where it is taking you. */}
-                      <span
-                        aria-hidden="true"
-                        className="transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
-                      >
-                        →
-                      </span>
-                    </a>
-                  </>
-                )}
+          {/* Hours and contact split into two columns once there is room, so
+              the row reaches the full width instead of trailing off into dead
+              space, and hours can be scanned straight down the page. */}
+          <div className="grid gap-x-8 gap-y-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-start">
+            {hours ? (
+              <DetailRow icon={Clock} label="Hours" emphasis>
+                {hours}
               </DetailRow>
-            </div>
-          )}
-        </div>
+            ) : (
+              note && (
+                <DetailRow icon={Info} label="Note">
+                  {note}
+                </DetailRow>
+              )
+            )}
 
-        {/* Hours and contact split into two columns once there is room, so the
-            row reaches the full width instead of trailing off into dead space,
-            and hours can be scanned straight down the page. */}
-        <div className="grid gap-x-8 gap-y-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-start">
-          {provider.hours && (
-            <DetailRow icon={Clock} label="Hours" emphasis>
-              {provider.hours}
-            </DetailRow>
-          )}
-
-          <div className="space-y-0.5 pointer-fine:space-y-2.5">
-            {provider.phone && (
-              <DetailRow icon={Phone} label="Contact" action={Boolean(tel)}>
-                {tel ? (
+            <div className="space-y-0.5 pointer-fine:space-y-2.5">
+              {tel && (
+                <DetailRow icon={Phone} label="Contact" action>
                   <a href={tel} className={CONTACT_LINK_CLASS}>
                     {provider.phone}
                   </a>
-                ) : (
-                  // Some listings carry "Please verify directly with the clinic"
-                  // where a number belongs. True, and never a tappable link.
-                  provider.phone
-                )}
-              </DetailRow>
-            )}
+                </DetailRow>
+              )}
 
-            {provider.email && (
-              <DetailRow icon={Mail} label="Email" action>
-                <a
-                  href={`mailto:${provider.email}`}
-                  className={cn(CONTACT_LINK_CLASS, "break-all")}
-                >
-                  {provider.email}
-                </a>
-              </DetailRow>
-            )}
+              {/* Hours are real but the number is not: the note has nowhere
+                  else to go, so it rides in the contact column instead. */}
+              {hours && note && (
+                <DetailRow icon={Info} label="Note">
+                  {note}
+                </DetailRow>
+              )}
 
-            {provider.website && (
-              <DetailRow icon={Globe} label="Website" action>
-                <a
-                  href={provider.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(CONTACT_LINK_CLASS, "break-all")}
-                >
-                  {websiteLabel(provider.website)}
-                </a>
-              </DetailRow>
-            )}
+              {provider.email && (
+                <DetailRow icon={Mail} label="Email" action>
+                  <a
+                    href={`mailto:${provider.email}`}
+                    className={cn(CONTACT_LINK_CLASS, "break-all")}
+                  >
+                    {provider.email}
+                  </a>
+                </DetailRow>
+              )}
+
+              {provider.website && (
+                <DetailRow icon={Globe} label="Website" action>
+                  <a
+                    href={provider.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(CONTACT_LINK_CLASS, "break-all")}
+                  >
+                    {websiteLabel(provider.website)}
+                  </a>
+                </DetailRow>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -289,7 +348,7 @@ export function DirectoryList({
   providers: DirectoryProvider[];
 }) {
   const [query, setQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<FilterId>("all");
+  const [activeFilter, setActiveFilter] = useState<DirectoryFilterId>("all");
   const searchId = useId();
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -358,6 +417,10 @@ export function DirectoryList({
               <label htmlFor={searchId} className="sr-only">
                 Search by name, service, or area
               </label>
+              {/* Label and placeholder say the same thing. They used to differ
+                  ("Search a name..."), which is both ungrammatical and a
+                  mismatch for anyone comparing what they hear to what they
+                  see. */}
               <Search
                 size={15}
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-(--color-silver)"
@@ -376,7 +439,7 @@ export function DirectoryList({
                     setQuery("");
                   }
                 }}
-                placeholder="Search a name, service, or area"
+                placeholder="Search by name, service, or area"
                 className={cn(
                   // white/40, not /25: a form control's own boundary needs
                   // 3:1 against its surroundings (WCAG 1.4.11). On navy, /25
@@ -418,6 +481,14 @@ export function DirectoryList({
                 {[{ id: "all" as const, label: "All" }, ...SERVICE_FILTERS].map(
                   ({ id, label }) => {
                     const isActive = activeFilter === id;
+                    // The chip is where the glyph gets its caption. By the time
+                    // a reader meets the scissors on a row, they have already
+                    // seen it beside the word "Grooming", so the marks read as
+                    // a vocabulary rather than as decoration to be decoded.
+                    //
+                    // "All" gets none, which also lets the reset chip read as a
+                    // different kind of control than the four filters.
+                    const Icon = filterIcon(id);
                     return (
                       <button
                         key={id}
@@ -426,6 +497,7 @@ export function DirectoryList({
                         aria-pressed={isActive}
                         className={cn(
                           "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-4 text-sm font-medium",
+                          Icon && "pl-3",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-navy)",
                           "transition-colors duration-150 motion-reduce:transition-none",
                           isActive
@@ -436,6 +508,14 @@ export function DirectoryList({
                               "border-white/40 text-(--color-silver) hover:border-white/70 hover:text-(--color-surface) active:bg-white/10",
                         )}
                       >
+                        {Icon && (
+                          <Icon
+                            size={15}
+                            strokeWidth={1.75}
+                            className="shrink-0"
+                            aria-hidden="true"
+                          />
+                        )}
                         {label}
                         <span
                           className={cn(
@@ -459,7 +539,12 @@ export function DirectoryList({
 
       <section className="bg-(--color-cream) pt-8 pb-16 md:pt-10 md:pb-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="sr-only">Pet care providers</h2>
+          {/* "Places", not "providers", throughout this page. "Provider" is HMO
+              language in the Philippines, where it means an *accredited* one,
+              which is the exact claim the hero disclaimer exists to deny. It is
+              also already taken in the admin, where /admin/providers means
+              payout targets. */}
+          <h2 className="sr-only">Pet care places</h2>
 
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p
@@ -468,8 +553,8 @@ export function DirectoryList({
               aria-live="polite"
             >
               {visible.length === providers.length
-                ? `${providers.length} providers listed`
-                : `${visible.length} of ${providers.length} providers`}
+                ? `${providers.length} places`
+                : `${visible.length} of ${providers.length} places`}
             </p>
 
             {isFiltered && visible.length > 0 && (
@@ -525,16 +610,15 @@ export function DirectoryList({
                 )}
               </p>
               <p className="mx-auto mt-2 max-w-[46ch] text-sm text-(--color-ink-muted) leading-relaxed">
-                The directory covers Las Piñas and the areas next to it, so a
-                provider further out may simply not be listed yet. Try a shorter
-                search, or clear the filters to see all {providers.length}.
+                This list covers Las Piñas and the areas next to it, so
+                somewhere further out may not be here yet. Try a shorter search.
               </p>
               <button
                 type="button"
                 onClick={clearFilters}
                 className="mt-6 inline-flex min-h-11 items-center rounded-lg border border-(--color-navy) px-5 text-sm font-semibold text-(--color-navy) hover:bg-(--color-navy) hover:text-(--color-surface) active:bg-(--color-navy-mid) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
               >
-                Show all providers
+                Show all {providers.length} places
               </button>
             </div>
           )}
