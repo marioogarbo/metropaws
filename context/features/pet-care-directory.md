@@ -310,6 +310,42 @@ against navy where WCAG 1.4.11 wants **3:1** for a control's own boundary. They
 are now `white/40` (**3.70:1**), hover `white/60`–`white/70`. The active chip is
 filled **cream, not gold**: gold behind navy text is 3.52:1 and fails at 14px.
 
+### Device pass, 2026-08-08 (`/impeccable adapt`)
+
+Audited at 320 / 360 / 390 portrait, 844x390 landscape, and 768x1024 tablet,
+all with touch emulation. Three measured failures, all fixed:
+
+1. **40 touch targets under 44px on every phone size.** Phone, email, and
+   website links were 18px tall. On a page someone opens because their dog needs
+   a vet, the phone number is the action. Contact links now carry a real 44px
+   band; the "View on map" link uses inline vertical padding (which expands the
+   tap box without changing the line box). Padding alone was not enough for the
+   contact rows: at a 28px pitch the expanded hit boxes overlap and steal each
+   other's taps, so the row itself carries the height.
+2. **iOS Safari zoomed the page on search focus.** The input was 14px, and
+   Safari zooms any focused input under 16px. It is 16px on touch, back to the
+   brand's 14px with a mouse.
+3. **A swipe past the end of the filter chips triggered browser back.**
+   Fixed with `overscroll-x-contain`.
+
+**These are gated on `pointer-fine:`, not on a width breakpoint.** The first
+attempt used `md:`, which silently failed the two contexts that need it most:
+a phone in landscape (844px wide) and a tablet in portrait (768px wide) are both
+past `md` and both still touch-only. Screen size does not tell you input method.
+Verified: every touch context reports 0 undersized targets, a mouse still gets
+the compact inline layout.
+
+Landscape phones also got the desktop two-column hero via
+`@media (max-height:540px) and (min-width:640px)`, plus reduced padding. First
+listing moved from **888px to 609px** down the page, a 31% cut.
+
+The one remaining sub-44px target is `csr@metropaws.ph` in the closing note,
+which sits inside a sentence and is covered by WCAG 2.5.8's inline exception.
+
+`viewport-fit=cover` was deliberately **not** added: the site sets no
+safe-area insets anywhere, so opting into the notch area would push content
+under it. That is a site-wide change, not a directory one.
+
 ### Site-wide eyebrow contrast — known failure, deliberately not changed
 
 `DESIGN.md` prescribes section eyebrows as `text-sm font-semibold uppercase

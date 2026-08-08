@@ -19,20 +19,26 @@ export function DirectoryHero() {
     // Bottom padding is short because DirectoryList's search band continues
     // this same navy field directly below it. The two read as one dark zone:
     // what the list is, then the controls for it, then the results on cream.
-    <section className="bg-(--color-navy) pt-12 pb-11 md:pt-20 md:pb-14">
+    //
+    // The max-height rule catches a phone held sideways: 844x390 is wide enough
+    // for the md: padding but only 390px tall, so the intro would eat two
+    // screens before a single listing.
+    <section className="bg-(--color-navy) pt-12 pb-11 md:pt-20 md:pb-14 [@media(max-height:540px)]:pt-8 [@media(max-height:540px)]:pb-8">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:items-start">
+        {/* A phone held sideways has the width for two columns but almost no
+            height, so it gets the desktop split early rather than stacking the
+            disclaimer under the headline and pushing every listing off-screen. */}
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:items-start [@media(max-height:540px)_and_(min-width:640px)]:grid-cols-[1.15fr_1fr] [@media(max-height:540px)_and_(min-width:640px)]:gap-10 [@media(max-height:540px)_and_(min-width:640px)]:items-start">
           <div className="mp-reveal">
             <p className="text-sm font-semibold uppercase tracking-widest text-(--color-gold)">
               Around Las Piñas
             </p>
-            <h1 className="mt-3 text-3xl md:text-5xl font-bold text-(--color-surface) tracking-tight leading-tight text-balance">
+            <h1 className="mt-3 text-3xl md:text-5xl [@media(max-height:540px)]:text-3xl font-bold text-(--color-surface) tracking-tight leading-tight text-balance">
               Find pet care near you
             </h1>
             <p className="mt-4 text-sm text-(--color-silver) leading-relaxed max-w-[52ch]">
-              Vets, groomers, pet stores, and boarding places around Las Piñas,
-              gathered in one list. Free to use whether or not you are a
-              MetroPaws member.
+              Vets, groomers, pet stores, and boarding around Las Piñas,
+              gathered in one list. Free for anyone to use.
             </p>
           </div>
 

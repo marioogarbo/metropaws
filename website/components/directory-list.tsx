@@ -41,6 +41,21 @@ function searchIndex(provider: DirectoryProvider): string {
 const DETAIL_LINK_CLASS =
   "underline underline-offset-2 decoration-(--color-ink-faint) hover:text-(--color-navy) hover:decoration-(--color-navy) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) rounded-xs transition-colors duration-150 motion-reduce:transition-none";
 
+/**
+ * Contact links get a real 44px tap band below `md`, then collapse back to
+ * inline text where a pointer is likely.
+ *
+ * Measured at 320/360/390px, every phone, email, and website link was an 18px
+ * target. On a page someone opens because their dog needs a vet, the phone
+ * number is the action, and 18px is not a thing you hit one-handed. Padding
+ * alone would not do: at a 28px pitch the expanded hit boxes overlap and steal
+ * each other's taps, so the row itself has to carry the height.
+ */
+const CONTACT_LINK_CLASS = cn(
+  DETAIL_LINK_CLASS,
+  "flex min-h-11 items-center pointer-fine:inline pointer-fine:min-h-0",
+);
+
 // ── Row pieces ────────────────────────────────────────────────────────────────
 
 function ServiceTags({
@@ -82,20 +97,24 @@ function DetailRow({
   icon: Icon,
   label,
   emphasis,
+  action,
   children,
 }: {
   icon: typeof Clock;
   label: string;
   /** Opening hours carry more decision weight than a website URL. */
   emphasis?: boolean;
+  /** Holds a tappable link, so the icon centres on the 44px band on touch. */
+  action?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-2.5">
+    <div className={cn("flex gap-2.5", action && "items-center pointer-fine:items-start")}>
       <Icon
         size={14}
         className={cn(
-          "mt-0.75 shrink-0",
+          "shrink-0",
+          action ? "pointer-fine:mt-0.75" : "mt-0.75",
           emphasis ? "text-(--color-ink-muted)" : "text-(--color-ink-faint)",
         )}
         aria-hidden="true"
@@ -103,6 +122,7 @@ function DetailRow({
       <p
         className={cn(
           "text-sm leading-relaxed",
+          action && "min-w-0 flex-1",
           emphasis
             ? "font-medium text-(--color-ink)"
             : "text-(--color-ink-muted)",
@@ -166,7 +186,10 @@ function ProviderRow({
                       href={map}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-1.5 -my-1.5 font-semibold text-(--color-navy) underline underline-offset-4 hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
+                      // Vertical padding on an inline element expands the tap
+                      // box without changing the line box, so this reaches 44px
+                      // on touch while still flowing inside the address text.
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-xs py-3.5 -my-3.5 pointer-fine:py-1.5 pointer-fine:-my-1.5 font-semibold text-(--color-navy) underline underline-offset-4 hover:text-(--color-gold-deep) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors duration-150 motion-reduce:transition-none"
                     >
                       View on map
                       <span className="sr-only">: {provider.name}</span>
@@ -189,11 +212,11 @@ function ProviderRow({
             </DetailRow>
           )}
 
-          <div className="space-y-2.5">
+          <div className="space-y-0.5 pointer-fine:space-y-2.5">
             {provider.phone && (
-              <DetailRow icon={Phone} label="Contact">
+              <DetailRow icon={Phone} label="Contact" action={Boolean(tel)}>
                 {tel ? (
-                  <a href={tel} className={DETAIL_LINK_CLASS}>
+                  <a href={tel} className={CONTACT_LINK_CLASS}>
                     {provider.phone}
                   </a>
                 ) : (
@@ -205,10 +228,10 @@ function ProviderRow({
             )}
 
             {provider.email && (
-              <DetailRow icon={Mail} label="Email">
+              <DetailRow icon={Mail} label="Email" action>
                 <a
                   href={`mailto:${provider.email}`}
-                  className={cn(DETAIL_LINK_CLASS, "break-all")}
+                  className={cn(CONTACT_LINK_CLASS, "break-all")}
                 >
                   {provider.email}
                 </a>
@@ -216,12 +239,12 @@ function ProviderRow({
             )}
 
             {provider.website && (
-              <DetailRow icon={Globe} label="Website">
+              <DetailRow icon={Globe} label="Website" action>
                 <a
                   href={provider.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(DETAIL_LINK_CLASS, "break-all")}
+                  className={cn(CONTACT_LINK_CLASS, "break-all")}
                 >
                   {websiteLabel(provider.website)}
                 </a>
@@ -290,7 +313,7 @@ export function DirectoryList({
         keeps the brand's navy share on a page that is otherwise a long light
         list.
       */}
-      <section className="bg-(--color-navy) border-t border-white/10 pt-7 pb-11 md:pt-9 md:pb-14">
+      <section className="bg-(--color-navy) border-t border-white/10 pt-7 pb-11 md:pt-9 md:pb-14 [@media(max-height:540px)]:pt-6 [@media(max-height:540px)]:pb-6">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="sr-only">Search the directory</h2>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
@@ -314,7 +337,11 @@ export function DirectoryList({
                   // 3:1 against its surroundings (WCAG 1.4.11). On navy, /25
                   // is 2.06:1 and /40 is 3.70:1.
                   "w-full min-h-11 rounded-lg border border-white/40 bg-white/5",
-                  "pl-10 pr-10 text-sm text-(--color-surface) placeholder:text-(--color-silver)",
+                  // 16px on phones: iOS Safari zooms the whole page when it
+                  // focuses an input under 16px, which throws the layout off
+                  // mid-search. Back to the brand's 14px once there is room.
+                  "pl-10 pr-10 text-base pointer-fine:text-sm",
+                  "text-(--color-surface) placeholder:text-(--color-silver)",
                   "hover:border-white/60",
                   "focus:outline-none focus:ring-2 focus:ring-(--color-gold) focus:border-transparent",
                   "transition-colors duration-150 motion-reduce:transition-none",
@@ -336,7 +363,9 @@ export function DirectoryList({
             </div>
 
             <div
-              className="-mx-6 overflow-x-auto px-6 pb-1 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0"
+              // overscroll-x-contain stops a swipe that runs off the end of the
+              // chips from becoming a browser back-navigation on iOS.
+              className="-mx-6 overflow-x-auto overscroll-x-contain px-6 pb-1 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0"
               role="group"
               aria-label="Filter by service"
             >
