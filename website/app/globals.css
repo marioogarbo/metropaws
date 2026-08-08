@@ -54,6 +54,14 @@
   --color-navy-mid: oklch(0.32 0.05 258);
   --color-gold: oklch(0.72 0.115 82);
   --color-gold-muted: oklch(0.65 0.09 82);
+  /* Gold dark enough to carry small light text. --color-gold behind navy text
+     is 3.52:1, which passes for a 14px-semibold CTA (large text) but fails the
+     4.5:1 body floor at badge sizes. This pairs with cream at 12.5:1. */
+  --color-gold-deep: oklch(0.52 0.08 82);
+  /* Washes of the brand gold, for marking a row as a MetroPaws Partner
+     without a side-stripe. -hover is the same wash under pointer/focus. */
+  --color-gold-wash: oklch(0.72 0.115 82 / 0.07);
+  --color-gold-wash-hover: oklch(0.72 0.115 82 / 0.13);
   --color-cream: oklch(0.97 0.01 80);
   --color-cream-warm: oklch(0.94 0.015 75);
   --color-ink: oklch(0.2 0.03 258);

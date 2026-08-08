@@ -278,6 +278,38 @@ Measured, not eyeballed (script in the session notes):
   text on the 14px-semibold CTA buttons but fails for the 12px badge. The badge
   uses a darkened gold `oklch(0.52 0.08 82)` with cream text (**12.52:1**).
 
+### Design pass, 2026-08-08 (`/impeccable layout colorize polish`)
+
+Three structural findings, all fixed:
+
+1. **The search and filters moved onto the navy field.** They used to open the
+   cream results section. Under the headline sat a band of empty navy, and on a
+   phone the controls were a full screen below the fold. Putting them on the
+   same navy as the hero, separated by a `border-white/10` hairline, fixes the
+   dead space, brings the controls into reach on mobile, and restores the
+   navy share `DESIGN.md` asks for (navy is now ~50% of the first 900px
+   instead of ~25%). `DirectoryHero`'s bottom padding is deliberately short
+   because `DirectoryList`'s control band continues the same field.
+2. **Rows reached only two thirds of the width.** Hours and contacts stacked in
+   one column, leaving ~300px of dead space at the right edge of every row.
+   They now split into two columns at `xl`, measured down to **16px** of
+   trailing space. Hours also carries `--color-ink` + `font-medium` because it
+   is the field people scan for; contacts stay `--color-ink-muted`.
+3. **Partner rows get a gold wash, not a stripe.** `--color-gold-wash` (7% of
+   the brand gold) tints the row; `--color-gold-wash-hover` (13%) on hover and
+   focus. A coloured left edge is banned by both `DESIGN.md` and the impeccable
+   ruleset, and the wash keeps the row inside one list rather than fencing it
+   off.
+
+New tokens in `globals.css` (previously magic values in components):
+`--color-gold-deep`, `--color-gold-wash`, `--color-gold-wash-hover`.
+
+Two more AA failures found and fixed in the dark control band: the search input
+and the inactive filter chips were outlined in `white/25`, which is **2.06:1**
+against navy where WCAG 1.4.11 wants **3:1** for a control's own boundary. They
+are now `white/40` (**3.70:1**), hover `white/60`–`white/70`. The active chip is
+filled **cream, not gold**: gold behind navy text is 3.52:1 and fails at 14px.
+
 ### Site-wide eyebrow contrast — known failure, deliberately not changed
 
 `DESIGN.md` prescribes section eyebrows as `text-sm font-semibold uppercase

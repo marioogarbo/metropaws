@@ -598,9 +598,7 @@ function ListingRow({
                 {provider.name}
               </p>
               {provider.is_partner && (
-                // Darkened gold — brand gold behind navy text is only 3.52:1,
-                // and this badge is smaller than the public one.
-                <span className="shrink-0 rounded-full bg-[oklch(0.52_0.08_82)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-[oklch(0.97_0.010_80)]">
+                <span className="shrink-0 rounded-full bg-(--color-gold-deep) px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-(--color-cream)">
                   Partner
                 </span>
               )}

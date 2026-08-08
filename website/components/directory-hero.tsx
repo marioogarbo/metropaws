@@ -16,7 +16,10 @@ import { Info } from "lucide-react";
  */
 export function DirectoryHero() {
   return (
-    <section className="bg-(--color-navy) pt-12 pb-12 md:pt-20 md:pb-20">
+    // Bottom padding is short because DirectoryList's search band continues
+    // this same navy field directly below it. The two read as one dark zone:
+    // what the list is, then the controls for it, then the results on cream.
+    <section className="bg-(--color-navy) pt-12 pb-11 md:pt-20 md:pb-14">
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:items-start">
           <div className="mp-reveal">
@@ -33,7 +36,9 @@ export function DirectoryHero() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/15 p-5 md:p-7">
+          {/* Capped below lg, where the hero is a single column and an
+              uncapped panel would run the disclaimer past 80ch. */}
+          <div className="max-w-2xl rounded-xl border border-white/15 p-5 md:p-7 lg:max-w-none">
             <div className="flex items-center gap-2.5">
               <Info
                 size={16}
