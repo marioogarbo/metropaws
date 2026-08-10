@@ -1,12 +1,6 @@
 import type { Plan } from "@/types/plan";
 import { PricingCards } from "@/components/pricing-cards";
-import {
-  PUBLIC_CONTENT_REVALIDATE_SECONDS,
-  PUBLIC_CONTENT_TIMEOUT_MS,
-} from "@/lib/public-content";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "https://metropaws-backend.onrender.com";
+import { fetchPublicContent } from "@/lib/public-content";
 
 const FALLBACK_PLANS: Plan[] = [
   {
@@ -68,11 +62,8 @@ const FALLBACK_PLANS: Plan[] = [
 
 async function fetchPlans(): Promise<Plan[]> {
   try {
-    const response = await fetch(`${BACKEND_URL}/plans`, {
-      next: { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS },
-      signal: AbortSignal.timeout(PUBLIC_CONTENT_TIMEOUT_MS),
-    });
-    if (!response.ok) {
+    const response = await fetchPublicContent("/plans");
+    if (!response) {
       return FALLBACK_PLANS;
     }
     const data = (await response.json()) as Plan[];

@@ -3,11 +3,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DirectoryHero } from "@/components/directory-hero";
 import { DirectoryList } from "@/components/directory-list";
-import {
-  DirectoryEmpty,
-  DirectoryNote,
-  DirectoryUnavailable,
-} from "@/components/directory-notes";
+import { DirectoryRecovery } from "@/components/directory-recovery";
+import { DirectoryEmpty, DirectoryNote } from "@/components/directory-notes";
 import { fetchDirectory } from "@/lib/directory";
 
 export const metadata: Metadata = {
@@ -24,8 +21,14 @@ export default async function FindPetCarePage() {
       <SiteHeader />
       <main className="flex flex-col flex-1">
         <DirectoryHero />
+        {/*
+          A failed fetch hands over to the browser rather than rendering a dead
+          end. This page is static with an hour-long revalidate window, so an
+          error rendered here is an error cached for everyone who arrives in that
+          hour; `DirectoryRecovery` fetches the listings at view time instead.
+        */}
         {!directory.ok ? (
-          <DirectoryUnavailable />
+          <DirectoryRecovery />
         ) : directory.providers.length === 0 ? (
           <DirectoryEmpty />
         ) : (

@@ -1,4 +1,4 @@
-import { CloudOff, ListPlus, Mail, Phone } from "lucide-react";
+import { CloudOff, ListPlus, Mail, Phone, RotateCw } from "lucide-react";
 
 const CONTACT_EMAIL = "csr@metropaws.ph";
 const CONTACT_PHONE_LABEL = "0920-922-4486";
@@ -10,8 +10,14 @@ const CONTACT_PHONE_HREF = "tel:09209224486";
  * This page deliberately ships no hardcoded copy of the listings (see
  * `lib/directory.ts`), so a visitor who lands here gets a way to reach a human
  * instead of a stale phone number. Both contacts are real and staffed.
+ *
+ * `onRetry` comes from `DirectoryRecovery`, which is the only thing that renders
+ * this now. Retrying is worth offering because the usual cause is a backend that
+ * was asleep when the page was built and is awake by the time someone reads it —
+ * "try again in a few minutes" was asking the visitor to do by hand what the
+ * button does in one tap.
  */
-export function DirectoryUnavailable() {
+export function DirectoryUnavailable({ onRetry }: { onRetry?: () => void }) {
   return (
     <section className="bg-(--color-cream) py-16 md:py-20">
       <div className="max-w-6xl mx-auto px-6">
@@ -26,14 +32,23 @@ export function DirectoryUnavailable() {
           </p>
           <p className="mx-auto mt-3 max-w-[52ch] text-sm text-(--color-ink-muted) leading-relaxed">
             We would rather show you nothing than an out-of-date phone number
-            for a clinic. Please try again in a few minutes. If your pet needs
-            care today, message us and we will point you to the nearest open
-            clinic.
+            for a clinic. If your pet needs care today, message us and we will
+            point you to the nearest open clinic.
           </p>
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-(--color-gold) px-5 text-sm font-semibold text-(--color-navy) hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-navy) transition-all"
+              >
+                <RotateCw size={14} aria-hidden="true" />
+                Try again
+              </button>
+            )}
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-(--color-gold) px-5 text-sm font-semibold text-(--color-navy) hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-navy) transition-all"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-(--color-navy) px-5 text-sm font-semibold text-(--color-navy) hover:bg-(--color-navy) hover:text-(--color-surface) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold) transition-colors"
             >
               <Mail size={14} aria-hidden="true" />
               {CONTACT_EMAIL}

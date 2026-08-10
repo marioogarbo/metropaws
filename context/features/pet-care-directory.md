@@ -212,9 +212,13 @@ Six FAQ answers are stable marketing copy. Nineteen clinics' phone numbers and
 opening hours are operational data that goes stale, and a hardcoded copy silently
 diverges the moment an admin edits a row. Serving a visitor a stale phone number
 for an emergency vet is worse than serving them an honest "we can't load this
-right now — here's our contact email". The page keeps the same ISR + timeout
-policy from `lib/public-content.ts` (`revalidate: 3600`, 5s timeout); only the
-fallback differs, and it is an error state, not stale content.
+right now — here's our contact email". The page keeps the same ISR + fetch policy
+from `lib/public-content.ts`; only the fallback differs, and it is an error state,
+not stale content.
+
+**This decision held, but the error state turned out to be a trap of its own** —
+see "The page shipped broken in production" below. A page with no fallback must
+also make sure a failed fetch never becomes the cached page.
 
 ---
 
@@ -705,6 +709,97 @@ the empty state, which measures 5.02:1 and passes. **The site-wide audit of the
 23 eyebrow instances still needs doing, but against these numbers, not the old
 ones**, and the question is now "which of them sit on cream", not "all of them
 fail".
+
+## The page shipped broken in production, 2026-08-10 — and why
+
+The client opened `/find-pet-care` on prod and got "The directory is not loading
+right now" while `/admin/directory` listed all 19 rows. The page was not
+half-working; it had been serving that error state to every visitor.
+
+Nothing was wrong with the data or the API. Measured at the time:
+
+| Check | Result |
+| --- | --- |
+| `GET /directory` on prod | **200, 19 rows, 0.3s** |
+| `https://metropaws.ph/find-pet-care` | `X-Nextjs-Prerender: 1`, `X-Vercel-Cache: HIT`, `Age: 3070` |
+| Listings in that HTML | **0** |
+
+So the failure was baked into a **cached prerender**. The chain:
+
+1. The backend is on **Render's free plan** — it spins down after ~15 min idle
+   and a cold start takes 30–60s (`backend/docs/HOSTING_AND_DATA_SAFETY_RECOMMENDATION.md`).
+2. `PUBLIC_CONTENT_TIMEOUT_MS` was **5000**. No 5s ceiling survives that.
+3. A page with `revalidate: 3600` regenerates in the **background**, triggered by
+   a visitor arriving after the window closes — typically long after the last
+   member closed the app, so the regenerating request is the one that has to wake
+   the container. It timed out.
+4. The render still *succeeded* — it returned `DirectoryUnavailable` — so Next
+   cached that HTML as the page and served it for the next hour. **A failure to
+   fetch became the published page.**
+5. The next regeneration found the backend asleep again. Steady state: broken.
+
+**The "no hardcoded fallback" decision above did not cause this, but it is why
+this page is where the bug became visible.** The same timeout was failing
+site-wide; the homepage was quietly serving its six hardcoded fallback FAQs
+instead of the ten the client wrote in admin (verified: prod `/faqs` returns
+"Why Join MetroPaws?", the live HTML contained "Is MetroPaws free?"). A fallback
+hid the fault everywhere else, which is how it survived QA — every page looked
+populated.
+
+### What changed
+
+- **`lib/public-content.ts` now makes two attempts**, 5s then 25s, behind one
+  `fetchPublicContent(path)` used by the directory, FAQ, and plan fetchers (which
+  also dropped three copies of the `BACKEND_URL` constant). The first attempt
+  keeps a warm backend fast and doubles as the alarm clock; the second rides out
+  the cold start it just triggered. A 4xx/5xx is not retried — that is an answer,
+  not a sleeping container. Nobody waits on this: a background regeneration keeps
+  serving the previous page while it works.
+- **A failure no longer renders a dead end.** `app/api/directory/route.ts` is a
+  same-origin route (`maxDuration = 60`) and `components/directory-recovery.tsx`
+  calls it on mount whenever the server render came back empty-handed. The
+  visitor gets the real listings even while the cached HTML says otherwise, and
+  the wake-up means the next regeneration lands on a backend that is already up.
+  A successful call also populates the shared fetch cache, so the page can
+  re-prerender correctly whether or not the backend is awake at that moment.
+- The route returns **503 with `Cache-Control: no-store`** on failure, and
+  `s-maxage=300` on success so one wake-up serves everyone arriving in the next
+  five minutes rather than each visitor starting the container.
+- `DirectoryUnavailable` gained a **"Try again"** button (the retry moved from a
+  sentence asking the visitor to come back later into one tap) and the loading
+  state **says the wait can take up to a minute** — an unqualified spinner tells
+  someone whose pet needs a vet to give up at five seconds.
+
+The prerendered success path is unchanged: when the fetch works, the HTML ships
+with all 19 listings, no client fetch, no spinner, nothing for a crawler to miss.
+
+### Verified 2026-08-10
+
+Against a stub backend seeded with the real prod payload, plus a final build
+against prod itself:
+
+| Scenario | Result |
+| --- | --- |
+| Backend answers in 12s (past the old 5s ceiling) | **19 listings prerendered**; stub log shows the abort at 4.8s and the retry succeeding at 12s |
+| Build against prod backend | `/find-pet-care` prerenders 19 listings + "19 places"; homepage prerenders the **real DB FAQs**, not the fallback |
+| Page prerendered from a failure, backend then reachable | `GET /api/directory` → 200, 19 rows, `s-maxage=300` — the heal path a visitor's browser takes |
+| Backend down, no cached data | `GET /api/directory` → **503, `no-store`** — a failure is never cached |
+| Backend down at build | Page prerenders the recovery state, not a dead end |
+
+`npx tsc --noEmit` clean, `next build` clean, ESLint clean on all eight touched
+files. `/find-pet-care` is still `○` static with the 1h window; `/api/directory`
+is `ƒ` dynamic.
+
+### This is a mitigation, not the cure
+
+The cure is the backend not sleeping. The hosting doc already recommends Render's
+paid Starter plan (~US$7/mo) and this is the second feature to be bitten by the
+free plan's spin-down. Until that happens, a visitor who arrives while the
+container is cold and the cached page is a failure waits on the heal fetch —
+correct, but up to ~25s. **Do not "solve" that with a keep-alive ping:** the free
+plan's 750 monthly instance-hours barely covers one always-on service (~730h),
+so pinging it awake would spend the entire allowance and risk taking the API down
+outright.
 
 ## Also found during QA, NOT fixed (pre-existing, site-wide)
 

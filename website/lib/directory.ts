@@ -1,11 +1,5 @@
 import type { DirectoryProvider } from "@/types/directory";
-import {
-  PUBLIC_CONTENT_REVALIDATE_SECONDS,
-  PUBLIC_CONTENT_TIMEOUT_MS,
-} from "@/lib/public-content";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "https://metropaws-backend.onrender.com";
+import { fetchPublicContent } from "@/lib/public-content";
 
 /** A phone field needs at least this many digits before we offer to dial it. */
 const MIN_DIALABLE_DIGITS = 7;
@@ -23,15 +17,18 @@ export type DirectoryResult =
  * which go stale the moment an admin edits a row. Handing a visitor a stale
  * number for an emergency vet is worse than telling them the list is
  * temporarily unavailable, so the caller renders an error state instead.
+ *
+ * Having no fallback also makes a failure here visible in a way the FAQ and plan
+ * sections' failures are not, which is what `app/api/directory/route.ts` and
+ * `components/directory-recovery.tsx` exist to catch: a page prerendered from a
+ * failure would otherwise be served to everyone for the rest of its revalidate
+ * window.
  */
 export async function fetchDirectory(): Promise<DirectoryResult> {
-  try {
-    const response = await fetch(`${BACKEND_URL}/directory`, {
-      next: { revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS },
-      signal: AbortSignal.timeout(PUBLIC_CONTENT_TIMEOUT_MS),
-    });
-    if (!response.ok) return { ok: false, providers: [] };
+  const response = await fetchPublicContent("/directory");
+  if (!response) return { ok: false, providers: [] };
 
+  try {
     const data = (await response.json()) as DirectoryProvider[];
     if (!Array.isArray(data)) return { ok: false, providers: [] };
     return { ok: true, providers: data };
