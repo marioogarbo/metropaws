@@ -397,26 +397,23 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
         backgroundColor: navy,
         foregroundColor: Colors.white,
         elevation: 0,
-        titleSpacing: 0,
+        titleSpacing: 8,
         toolbarHeight: 64,
         // Screen title at display size per the typography mandate ("never use
-        // titleLarge as a screen heading") — matches the Benefits hub register.
-        // FittedBox guards the long word on narrow (360dp) screens.
+        // titleLarge as a screen heading"). No brand mark beside it, unlike
+        // PawPoints: "Reimbursements" is long enough that the icon, the back
+        // arrow and the help action together pushed FittedBox into shrinking
+        // the title below display size — the one thing the mandate forbids.
+        // The word carries the screen on its own. FittedBox stays as a guard
+        // for the narrowest devices.
         title: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: Row(
-            children: [
-              const Icon(Icons.receipt_long_rounded,
-                  size: 24, color: AppColors.gold),
-              const SizedBox(width: 10),
-              Text(
-                'Reimbursements',
-                style: theme.textTheme.displaySmall!.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ],
+          child: Text(
+            'Reimbursements',
+            style: theme.textTheme.displaySmall!.copyWith(
+              color: Colors.white,
+            ),
           ),
         ),
         actions: [
@@ -655,10 +652,6 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sits above the first field because the costly mistake — picking
-            // the wrong payment path — is made before anything is filled in.
-            _HowItWorksPrompt(onTap: _showHowClaimsWork),
-            const SizedBox(height: 20),
             // ── Section 1: what happened ─────────────────────────────
             const _SectionHeader('What happened'),
             const SizedBox(height: 12),
@@ -1346,52 +1339,6 @@ class _ReceiptAttachment extends StatelessWidget {
 }
 
 // ── How claims work ─────────────────────────────────────────────────────────
-
-/// Slim inline entry to the instructions, for members who never think to look
-/// for a help icon in the app bar.
-class _HowItWorksPrompt extends StatelessWidget {
-  const _HowItWorksPrompt({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final gold = isDark ? AppColors.gold : AppColors.goldDark;
-
-    return Semantics(
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: gold.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: gold.withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.help_outline_rounded, size: 18, color: gold),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'First time claiming? See how it works',
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded,
-                  size: 18, color: cs.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Member-facing instructions for the two claim paths.
 ///
