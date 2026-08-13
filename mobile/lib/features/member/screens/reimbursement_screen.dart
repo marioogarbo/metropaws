@@ -80,7 +80,30 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
   String _payoutTarget = 'member';
   String? _selectedProviderId;
   String? _selectedProviderName;
+  // Effective availability for THIS member — never read the global flag
+  // directly at a UI site. An admin can restrict one member while the feature
+  // stays on for everyone else, and only the wallet payload knows that.
   bool _directProviderPaymentEnabled = false;
+  // Last-known global switch, kept so the effective value can be recomputed
+  // when either input changes, and as the fallback for a backend too old to
+  // send the member-scoped value.
+  bool _globalDirectPayEnabled = false;
+
+  /// Recompute [_directProviderPaymentEnabled] from the member-scoped wallet
+  /// value, falling back to the global switch, and revert an in-progress
+  /// provider selection if the option just went away — otherwise the form could
+  /// submit a target the server will now refuse. Call from inside setState.
+  void _applyDirectPayAvailability() {
+    final effective = _wallet.directPayAvailable ?? _globalDirectPayEnabled;
+    if (effective == _directProviderPaymentEnabled) return;
+    _directProviderPaymentEnabled = effective;
+    if (!effective && _payoutTarget == 'provider') {
+      _payoutTarget = 'member';
+      _selectedProviderId = null;
+      _selectedProviderName = null;
+      _serviceDate = DateTime.now();
+    }
+  }
 
   // The selected pet's plan tier, shown as a badge on the Submit form so the
   // member sees which plan their reimbursement cap comes from. Null when no pet
@@ -115,6 +138,8 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
       _claims = current.claims;
       _providers = current.providers;
       _reimbLoaded = true;
+      // Seeded before _globalDirectPayEnabled is read below; the call after it
+      // resolves the effective value from both.
       if (current.wallet.pets.isNotEmpty) {
         _selectedPetId = current.wallet.pets.first.petId;
       }
@@ -122,7 +147,8 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     // The shell's MobileConfigRequested fetch usually already completed by the
     // time a member navigates here — read the bloc's last-known value directly
     // rather than the current MemberState, which has likely moved on by now.
-    _directProviderPaymentEnabled = bloc.directProviderPaymentEnabled;
+    _globalDirectPayEnabled = bloc.directProviderPaymentEnabled;
+    _applyDirectPayAvailability();
     bloc.add(ReimbursementsLoadRequested());
     // Refresh the direct-to-provider flag on open so the "Pay the provider
     // directly" option reflects the current admin setting, not a value cached
@@ -417,21 +443,13 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
             // while the form is open (e.g. the shell's fetch was still in
             // flight when this screen mounted).
             if (state.directProviderPaymentEnabled !=
-                _directProviderPaymentEnabled) {
+                _globalDirectPayEnabled) {
               setState(() {
-                _directProviderPaymentEnabled =
-                    state.directProviderPaymentEnabled;
-                // If direct-to-provider just became unavailable, revert any
-                // in-progress provider selection so the form can't submit a
-                // now-invalid target (mirrors the chooser's own onChanged
-                // reset). Falls back to the "Reimburse me" path.
-                if (!_directProviderPaymentEnabled &&
-                    _payoutTarget == 'provider') {
-                  _payoutTarget = 'member';
-                  _selectedProviderId = null;
-                  _selectedProviderName = null;
-                  _serviceDate = DateTime.now();
-                }
+                _globalDirectPayEnabled = state.directProviderPaymentEnabled;
+                // Only takes effect when the wallet hasn't supplied a
+                // member-scoped value — a restricted member stays restricted
+                // however the global switch moves.
+                _applyDirectPayAvailability();
               });
             }
           } else if (state is MemberLoaded) {
@@ -478,6 +496,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               _providers = state.providers;
               _reimbLoaded = true;
               _reimbError = null;
+              // The wallet is where per-member availability arrives, so this is
+              // the load that can restrict a member mid-session.
+              _applyDirectPayAvailability();
               if (_selectedPetId == null && state.wallet.pets.isNotEmpty) {
                 _selectedPetId = state.wallet.pets.first.petId;
               }

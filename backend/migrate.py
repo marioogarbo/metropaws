@@ -359,4 +359,20 @@ with engine.connect() as conn:
     """))
     conn.commit()
 
+# Migration: per-member direct-pay override (2026-08-13). The global
+# direct_provider_payment_enabled switch was all-or-nothing — one member abusing
+# the flow meant turning it off for everyone. These columns let an admin restrict
+# a single member (Agreement §5.7 "Authorization Restricted", grounds in §17)
+# while the feature stays on for the rest. NULL = follow the global switch, so
+# every existing row keeps today's behaviour with no backfill.
+with engine.connect() as conn:
+    conn.execute(text("""
+        ALTER TABLE members
+            ADD COLUMN IF NOT EXISTS direct_pay_enabled BOOLEAN,
+            ADD COLUMN IF NOT EXISTS direct_pay_note TEXT,
+            ADD COLUMN IF NOT EXISTS direct_pay_updated_by_admin_id VARCHAR REFERENCES users(id),
+            ADD COLUMN IF NOT EXISTS direct_pay_updated_at TIMESTAMPTZ
+    """))
+    conn.commit()
+
 print("Migration complete.")

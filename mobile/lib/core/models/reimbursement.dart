@@ -78,7 +78,20 @@ class Wallet {
   final List<WalletPet> pets;
   final List<ServiceType> serviceTypes;
 
-  const Wallet({this.pets = const [], this.serviceTypes = const []});
+  /// Whether THIS member may file a direct-to-provider request — the global
+  /// setting already resolved against their per-member override, server-side.
+  ///
+  /// Null when the backend predates the per-member override: that build has no
+  /// such field, so callers fall back to the global flag from
+  /// /settings/mobile-config. Deliberately not defaulted to false — that would
+  /// hide the option for everyone the moment the app shipped ahead of the API.
+  final bool? directPayAvailable;
+
+  const Wallet({
+    this.pets = const [],
+    this.serviceTypes = const [],
+    this.directPayAvailable,
+  });
 
   factory Wallet.fromJson(Map<String, dynamic> json) => Wallet(
         pets: (json['pets'] as List<dynamic>? ?? [])
@@ -87,6 +100,7 @@ class Wallet {
         serviceTypes: (json['service_types'] as List<dynamic>? ?? [])
             .map((e) => ServiceType.fromJson(e as Map<String, dynamic>))
             .toList(),
+        directPayAvailable: json['direct_pay_available'] as bool?,
       );
 }
 

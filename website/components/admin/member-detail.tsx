@@ -14,6 +14,7 @@ import {
 import QRCode from "react-qr-code";
 import { cn } from "@/lib/utils";
 import type { Member, Pet } from "@/app/admin/(protected)/users/page";
+import { MemberDirectPayControl } from "@/components/admin/member-direct-pay-control";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -353,6 +354,13 @@ export function MemberDetail({
           </p>
         </div>
       </div>
+
+      <MemberDirectPayControl
+        memberId={member.id}
+        directPayEnabled={member.direct_pay_enabled}
+        directPayNote={member.direct_pay_note}
+        directPayUpdatedAt={member.direct_pay_updated_at}
+      />
 
       {/* Pets */}
       {member.pets.length === 0 ? (

@@ -26,7 +26,15 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    member = relationship("Member", back_populates="user", uselist=False)
+    # foreign_keys is explicit because members now has a SECOND FK to users
+    # (direct_pay_updated_by_admin_id) — without it SQLAlchemy can't tell which
+    # column joins this pair and fails at mapper configuration, i.e. on import.
+    member = relationship(
+        "Member",
+        back_populates="user",
+        uselist=False,
+        foreign_keys="Member.user_id",
+    )
     clinic_partner = relationship("ClinicPartner", back_populates="user", uselist=False)
 
 
@@ -55,9 +63,22 @@ class Member(Base):
     # Agreement step). Null for legacy members created before this was added.
     agreement_accepted_at = Column(DateTime(timezone=True), nullable=True)
     agreement_version = Column(String, nullable=True)
+    # Per-member override of the global direct_provider_payment_enabled setting.
+    # NULL = follow the global switch (the default for everyone), True = allowed
+    # even while the global switch is off (pilot), False = restricted regardless.
+    # This is the "Authorization Restricted" member status of Agreement §5.7, and
+    # §17 supplies the grounds — so the reason is recorded, not just the flag.
+    direct_pay_enabled = Column(Boolean, nullable=True)
+    direct_pay_note = Column(Text, nullable=True)
+    direct_pay_updated_by_admin_id = Column(String, ForeignKey("users.id"), nullable=True)
+    direct_pay_updated_at = Column(DateTime(timezone=True), nullable=True)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    user = relationship("User", back_populates="member")
+    # Explicit foreign_keys on both User-facing relationships — see User.member.
+    user = relationship("User", back_populates="member", foreign_keys=[user_id])
+    direct_pay_updated_by = relationship(
+        "User", foreign_keys=[direct_pay_updated_by_admin_id]
+    )
     plan = relationship("Plan")
     pets = relationship("Pet", back_populates="member", cascade="all, delete-orphan")
     services = relationship("MemberService", back_populates="member", cascade="all, delete-orphan")

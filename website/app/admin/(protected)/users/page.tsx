@@ -41,6 +41,11 @@ export interface Member {
   is_founding: boolean;
   joined_at: string;
   pets: Pet[];
+  // Per-member override of the global Direct-to-Provider Payments switch.
+  // null/undefined = follows the global setting.
+  direct_pay_enabled?: boolean | null;
+  direct_pay_note?: string | null;
+  direct_pay_updated_at?: string | null;
 }
 
 export default async function AdminUsersPage() {

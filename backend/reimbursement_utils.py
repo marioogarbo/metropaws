@@ -47,6 +47,24 @@ def is_direct_pay_eligible_category(name: str | None) -> bool:
     return not is_emergency_category(name)
 
 
+def is_direct_pay_available(member: models.Member, global_enabled: bool) -> bool:
+    """Whether this member may use payout_target=provider right now.
+
+    The global `direct_provider_payment_enabled` setting is the default; a
+    per-member override wins when set. NULL override — every member until an
+    admin says otherwise — follows the global switch, so turning the feature on
+    still reaches everyone, and restricting one abuser no longer means turning it
+    off for all. See Member.direct_pay_enabled.
+
+    Takes the resolved global as an argument rather than reading the setting
+    itself: the value lives in routers.settings, and a utils module reaching back
+    into a router would invert the dependency.
+    """
+    if member.direct_pay_enabled is not None:
+        return member.direct_pay_enabled
+    return global_enabled
+
+
 def plan_wallet_centavos(db: Session, plan_id: str | None) -> int:
     """The plan's annual Preventive Wellness Wallet — the pool non-emergency
     claims draw from. Per-category PlanService.reimbursement_cap_centavos is

@@ -117,9 +117,15 @@ def submit_reimbursement(
 
     provider: models.ReimbursementProvider | None = None
     if is_provider_target:
-        # Defense in depth — the mobile UI already hides this option when the
-        # flag is off, but a claim must never be accepted from a stale client.
-        if not settings_router.get_direct_provider_payment_enabled(db):
+        # Defense in depth — the mobile UI already hides this option when it
+        # isn't available, but a claim must never be accepted from a stale
+        # client. Resolves the member's override against the global switch, so a
+        # restricted member is refused even while the feature is on for everyone
+        # else. The message stays neutral either way: whether the member is
+        # restricted is between MetroPaws and support, not an app error string.
+        if not rutils.is_direct_pay_available(
+            member, settings_router.get_direct_provider_payment_enabled(db)
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="Direct-to-provider payments aren't available right now.",
@@ -507,4 +513,10 @@ def get_wallet(
         service_types=[
             schemas.ServiceTypeOut.model_validate(st) for st in service_types
         ],
+        # Member-scoped, unlike /settings/mobile-config — that endpoint is
+        # unauthenticated and can only ever carry the global switch. This is the
+        # value the app should gate the direct-pay option on.
+        direct_pay_available=rutils.is_direct_pay_available(
+            member, settings_router.get_direct_provider_payment_enabled(db)
+        ),
     )

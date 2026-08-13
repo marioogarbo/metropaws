@@ -263,6 +263,40 @@ def update_member_admin(
     return member
 
 
+@router.put("/members/{member_id}/direct-pay", response_model=schemas.MemberOut)
+def update_member_direct_pay(
+    member_id: str,
+    payload: schemas.MemberDirectPayUpdate,
+    current_user: models.User = Depends(auth_utils.require_admin),
+    db: Session = Depends(get_db),
+):
+    """Restrict, force-allow, or reset one member's direct-to-provider access.
+
+    Separate from update_member_admin because that endpoint applies
+    `exclude_none=True` — which cannot express "set this back to NULL", the
+    value that means "follow the global switch". Here None is a real choice.
+    """
+    member = (
+        db.query(models.Member)
+        .options(
+            joinedload(models.Member.pets),
+            joinedload(models.Member.services).joinedload(models.MemberService.service_type),
+        )
+        .filter(models.Member.id == member_id)
+        .first()
+    )
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    member.direct_pay_enabled = payload.direct_pay_enabled
+    member.direct_pay_note = (payload.direct_pay_note or "").strip() or None
+    member.direct_pay_updated_by_admin_id = current_user.id
+    member.direct_pay_updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(member)
+    return member
+
+
 @router.delete("/members/{member_id}", status_code=204)
 def delete_member_admin(
     member_id: str,

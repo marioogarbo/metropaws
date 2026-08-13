@@ -225,11 +225,25 @@ class MemberOut(BaseModel):
     qr_token: str
     is_founding: bool = False
     previous_plan_tier: Optional[str] = None
+    # None = follows the global direct-pay switch; True/False = admin override.
+    direct_pay_enabled: Optional[bool] = None
+    direct_pay_note: Optional[str] = None
+    direct_pay_updated_at: Optional[datetime] = None
     joined_at: datetime
     pets: List[PetOut] = []
     services: List[MemberServiceOut] = []
 
     model_config = {"from_attributes": True}
+
+
+class MemberDirectPayUpdate(BaseModel):
+    """Admin override of a member's direct-to-provider eligibility.
+
+    `direct_pay_enabled` is deliberately tri-state: None restores "follow the
+    global switch" rather than pinning the member to today's global value.
+    """
+    direct_pay_enabled: Optional[bool] = None
+    direct_pay_note: Optional[str] = None
 
 
 class MemberSummary(BaseModel):
@@ -240,6 +254,11 @@ class MemberSummary(BaseModel):
     plan_type: Optional[str] = None
     qr_token: str
     is_founding: bool = False
+    # Carried on the summary because the admin member detail page reads the
+    # members LIST rather than a per-member endpoint.
+    direct_pay_enabled: Optional[bool] = None
+    direct_pay_note: Optional[str] = None
+    direct_pay_updated_at: Optional[datetime] = None
     joined_at: datetime
     pets: List[PetOut] = []
     services: List[MemberServiceOut] = []
@@ -1022,6 +1041,11 @@ class WalletPetOut(BaseModel):
 class WalletOut(BaseModel):
     pets: List[WalletPetOut] = []
     service_types: List[ServiceTypeOut] = []
+    # Whether THIS member may file a direct-to-provider request — the global
+    # setting resolved against their per-member override. /settings/mobile-config
+    # is unauthenticated and can only carry the global switch, so this is the
+    # value the app gates the option on.
+    direct_pay_available: bool = False
 
 
 class NotificationOut(BaseModel):
