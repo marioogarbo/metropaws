@@ -1,22 +1,23 @@
 /**
- * Temporary switch for the two member documents the client pulled on
- * 2026-08-03: the Membership Agreement (served by /terms-of-service — the ToS
- * page doubles as the agreement) and the Member Manual PDF. The agreement
- * wording no longer matches the business model and is being rewritten, so
- * neither document should be readable until the new versions land.
+ * Switch for the two member documents the client pulled on 2026-08-03: the
+ * Membership Agreement (served by /terms-of-service — that page doubles as the
+ * agreement) and the Member Manual PDF. Both were republished on 2026-08-13
+ * from the revised documents — Agreement Rev. 5A and Member Manual Rev. 3C —
+ * so the flags are off.
  *
- * Why the URLs stay alive instead of 404ing: the Android app on Google Play
- * links to both from its sign-up consent checkbox, its registration screen and
- * the Account section of the dashboard. Those links are compiled into installs
- * we can't change, so removing the routes would put dead links inside a live
- * app's consent flow. Under revision, both paths serve a notice page instead.
+ * Why the URLs stay alive rather than 404ing when a document is pulled: the
+ * Android app on Google Play links to both from its sign-up consent checkbox,
+ * its registration screen and the Account section of the dashboard. Those links
+ * are compiled into installs we can't change, so removing the routes would put
+ * dead links inside a live app's consent flow. Under revision, both paths serve
+ * a notice page instead.
  *
- * To restore a document: flip its flag back to false, redeploy, and put the
- * footer link back in front of members. Nothing else needs undoing — the ToS
- * content and the PDF are untouched in the repo.
+ * To pull a document again: flip its flag to true and redeploy. The footer
+ * link, the sign-up checkbox, the privacy-policy cross-link and the PDF rewrite
+ * in next.config.ts all follow the flag — nothing else needs touching.
  */
-export const AGREEMENT_UNDER_REVISION = true;
-export const MANUAL_UNDER_REVISION = true;
+export const AGREEMENT_UNDER_REVISION = false;
+export const MANUAL_UNDER_REVISION = false;
 
 /** Public path the app and the site footer use for the Member Manual PDF. */
 export const MEMBER_MANUAL_PATH = "/docs/member-manual.pdf";

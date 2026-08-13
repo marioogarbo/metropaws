@@ -38,8 +38,9 @@ const inputBase =
 const inputError = "border-red-400 focus:ring-red-400";
 
 // Version of the membership agreement + privacy terms shown at sign-up.
-// Must match CURRENT_AGREEMENT_VERSION on the backend.
-const AGREEMENT_VERSION = "2026-07";
+// Tracks the revision of the published agreement (MP-CON-001 Rev. 5A), so that
+// a member's acceptance record names the document they actually read.
+const AGREEMENT_VERSION = "2026-08-rev5a";
 
 // While the Membership Agreement is being rewritten, sign-up asks members to
 // accept the Privacy Policy alone — there's no sense binding anyone to wording

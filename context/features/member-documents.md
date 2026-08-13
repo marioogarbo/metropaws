@@ -1,40 +1,96 @@
-# Member documents — agreement and manual, frozen for rewriting
+# Member documents — agreement and manual, restored
 
-**Status:** active freeze as of 2026-08-03. Blocked on new documents from the
-client (Romy).
+**Status:** restored 2026-08-13. The freeze that ran from 2026-08-03 is over —
+Romy supplied both revised documents.
 **Owns:** [`website/lib/legal-documents.ts`](../../website/lib/legal-documents.ts),
 [`website/app/terms-of-service/page.tsx`](../../website/app/terms-of-service/page.tsx),
 [`website/app/member-manual/page.tsx`](../../website/app/member-manual/page.tsx),
 [`website/components/document-under-revision.tsx`](../../website/components/document-under-revision.tsx),
 [`website/next.config.ts`](../../website/next.config.ts),
 [`website/components/register-form.tsx`](../../website/components/register-form.tsx),
-[`website/components/site-footer.tsx`](../../website/components/site-footer.tsx)
+[`website/components/site-footer.tsx`](../../website/components/site-footer.tsx),
+[`website/components/legal-page-layout.tsx`](../../website/components/legal-page-layout.tsx)
 
-## What happened
+## What is published now
 
-On **2026-08-03**, reviewing the app-launch announcement email, Romy said the
-Membership Agreement no longer matches the business model and has to be
-rewritten — *"yung nasa agreement yun ang irerevise natin ksi di n cya aligned
-s business model natin"* — and asked to take it down in the meantime:
-*"the notification message is already fine with me. but we temporarily disable
-the agreement and manual in the meantime."*
-
-So this is a **temporary freeze, not a removal.** Both documents are expected
-back once Romy supplies the revised versions. Nothing was deleted: the terms
-text and the PDF are still in the repo, behind two flags.
-
-## The two documents
-
-| Document | Lives at | Note |
+| Document | Lives at | Version |
 | --- | --- | --- |
-| Membership Agreement | `/terms-of-service` | The ToS page **is** the agreement — [`mobile/lib/core/constants/api_constants.dart`](../../mobile/lib/core/constants/api_constants.dart) sets `agreementUrl = tosUrl`. There is no separate agreement page. |
-| Member Manual | `/docs/member-manual.pdf` | Static file in `website/public/docs/`. Last content update in the website repo was `4909324 docs: update member manual PDF to Membership Agreement Rev5A`, so the PDF itself carries agreement revisions — which is why both had to go dark together. |
+| Membership Agreement | `/terms-of-service` | MP-CON-001 **Rev. 5A** — Service Authorization, Annual and Monthly Activation Edition |
+| Member Manual | `/docs/member-manual.pdf` | **Rev. 3C** — Authorization & Wellness Benefit Edition, 1,452,321 bytes |
+
+The ToS page **is** the agreement —
+[`mobile/lib/core/constants/api_constants.dart`](../../mobile/lib/core/constants/api_constants.dart)
+sets `agreementUrl = tosUrl`. There is no separate agreement page. The page is
+titled "Membership Agreement" now (it used to say "Terms of Service"), which is
+what the app, the sign-up checkbox and the footer already called it.
+
+**The manual slot used to hold the wrong document.** Until this restore,
+`public/docs/member-manual.pdf` was 238,337 bytes — byte-for-byte the size of
+the *Membership Agreement* Rev5A PDF, from the commit
+`4909324 docs: update member manual PDF to Membership Agreement Rev5A`. Anyone
+who opened the Member Manual from the app got the agreement. That is fixed: the
+file is now the actual Member Manual Rev 3C.
+
+## What Rev. 5A changed in the agreement
+
+The published terms before this were a generic 13-clause ToS (partner clinic
+access, QR check-in, annual billing). That is the wording Romy said no longer
+matched the business model. Rev. 5A is a different document — 26 clauses plus
+two schedules — and the model it describes is:
+
+- **Service Authorization, not reimbursement.** MetroPaws pays the verified
+  provider directly after matched service completion. Reimbursement survives
+  only as a written exception (§12).
+- **Advance notice is mandatory** for planned services (§7): 1 business day for
+  consultation, 2 for vaccination/deworming and grooming.
+- **Monthly plans vest.** Digital access after the first cleared payment;
+  full planned-service eligibility only after a run of consecutive payments
+  (§5.5). Annual payers skip vesting (§5.9).
+- **Wellness Wallet terminology is gone**, replaced by benefit limits that are
+  explicitly "not cash, stored value, a deposit account, legal tender or an
+  amount withdrawable by the Member" (§2).
+
+### Known defect in the source PDF — §5.5 vesting table
+
+Rev. 5A as supplied on 2026-08-13 is otherwise identical to the July Rev. 5A;
+the **only** change is the Full Planned-Service Eligibility column, and it
+contradicts itself — the word and the numeral disagree:
+
+| Plan | July Rev. 5A | August Rev. 5A (published) |
+| --- | --- | --- |
+| Standard | After two (2) consecutive monthly payments | After **two (6)** consecutive monthly payments |
+| De Luxe | After three (3) consecutive monthly payments | After **three (8)** consecutive monthly payments |
+| Premium | After four (4) consecutive monthly payments | After **four (10)** consecutive monthly payments |
+
+The intent is plainly 6 / 8 / 10 — the numerals were raised and the words were
+not. The website transcribes the PDF **verbatim**, because the site has to match
+the controlled document members sign. This needs a reissued PDF from Romy, not a
+website-side edit. Until then a member could argue the lower number: under
+Philippine law an ambiguity in a contract of adhesion is read against the
+drafter.
+
+Emergency Support Control was left alone (3 / 3 / 4 consecutive payments).
+
+### What was deliberately not published
+
+The PDF is a controlled template and carries internal drafting notes that must
+not go on a public page:
+
+- the cover's IMPORTANT LEGAL REVIEW NOTE ("should be reviewed and finalized by
+  a licensed Philippine lawyer before public issuance")
+- the Revision History table (Rev. 0–5 marked Superseded)
+- Schedule C, implementation notes for app configuration
+- the FINAL CONTROL NOTE
+- the blank member-information/signature form in §26, replaced by a short note
+  explaining how digital acceptance is recorded
+
+Schedules A and B *are* published — A is the member-facing rules summary, and B
+is the exact statement the sign-up checkbox stands for.
 
 ## The core constraint — the shipped app links to both URLs
 
 The Android build live on Google Play links to these two paths from three
-places, and those links are compiled into installs that cannot be changed
-without a new release that members then have to install:
+places, compiled into installs that cannot be changed without a new release:
 
 | Where | Links to |
 | --- | --- |
@@ -42,130 +98,100 @@ without a new release that members then have to install:
 | [`mobile/lib/features/auth/screens/register_screen.dart:669-699`](../../mobile/lib/features/auth/screens/register_screen.dart) | the same three |
 | [`mobile/lib/features/member/screens/member_dashboard_screen.dart:3954-3966`](../../mobile/lib/features/member/screens/member_dashboard_screen.dart) | the same three, in the Account section |
 
-**Therefore both URLs must keep resolving.** 404ing them would put dead links
-inside a live app's sign-up consent flow — the class of defect Play review has
-already rejected this app for twice (see
-[`../sessions/2026-07-30-play-store-launch.md`](../sessions/2026-07-30-play-store-launch.md)).
-Both paths serve a notice page instead.
+**Both URLs must keep resolving, and the manual must keep the exact filename**
+`/docs/member-manual.pdf`. A new name breaks every installed app. This is why
+the freeze served a notice page instead of 404ing, and why the replacement PDF
+was dropped in at the same path.
 
-This also means **the replacement manual must keep the exact filename**
-`/docs/member-manual.pdf`. A new name breaks every installed app.
+## How the switch works
 
-The Flutter app was deliberately left untouched, so the freeze needed no new
-AAB and no Play review.
+Both flags live in `website/lib/legal-documents.ts` and are now `false`. Every
+surface follows them, so pulling a document again is a two-line change:
 
-## What the freeze does
-
-Both flags live in `website/lib/legal-documents.ts`.
-
-| Surface | Frozen behaviour |
-| --- | --- |
-| `/terms-of-service` | `DocumentUnderRevision` notice, `robots: noindex`. `TermsContent` stays in the file, unrendered. |
-| `/docs/member-manual.pdf` | `beforeFiles` rewrite in `next.config.ts` → `/member-manual`, which renders the same notice. The PDF stays in `public/`, shadowed. `beforeFiles` is the only rewrite phase that runs ahead of the static-file handler. |
-| Site footer | Member Manual and Terms of Service links removed. Privacy Policy stays. |
-| Sign-up checkbox (website) | Privacy Policy only. |
-| Sign-up checkbox (Android app) | **Not changed** — still asks for the Membership Agreement. See below. |
-| Privacy Policy page | ToS cross-link hidden (`crossLink` is now optional on `LegalPageLayout`). |
-
-The Privacy Policy is **never** part of this freeze — Play requires a live
-privacy policy, and it is a separate document that the client did not question.
-
-## Consent during the freeze
-
-Sign-up still requires consent and still records it, but members who join
-during the freeze never saw the Membership Agreement, so recording the real
-agreement version against them would be a false consent record. They get
-`agreement_version = "2026-08-privacy-only"`
-(`PRIVACY_ONLY_CONSENT_VERSION`), which makes them queryable later:
-
-```sql
-SELECT id, email, agreement_accepted_at FROM members
-WHERE agreement_version = '2026-08-privacy-only';
-```
-
-The backend takes `agreement_version` as a free-form string and stores it
-verbatim ([`backend/routers/auth.py`](../../backend/routers/auth.py)), so this
-needed no API change.
-
-### The app never got this change (verified 2026-08-06)
-
-**Only the website sign-up was updated.** The shipped Android app still asks
-members to accept the Membership Agreement, and still records the pre-freeze
-version:
-
-| | Website | Android app |
+| Surface | Under revision | Restored (now) |
 | --- | --- | --- |
-| Consent copy | "Please accept the Privacy Policy to continue." ([`register-form.tsx:52-54`](../../website/components/register-form.tsx)) | "Please accept the Membership Agreement and Privacy Policy to continue." ([`register_screen.dart:129-130`](../../mobile/lib/features/auth/screens/register_screen.dart)) |
-| Version recorded | `2026-08-privacy-only` | `2026-07.2` ([`register_screen.dart:24`](../../mobile/lib/features/auth/screens/register_screen.dart)) |
+| `/terms-of-service` | notice page, `robots: noindex` | full agreement, indexable |
+| `/docs/member-manual.pdf` | `beforeFiles` rewrite in `next.config.ts` → `/member-manual` notice | the real PDF (`beforeFiles` is empty) |
+| `/member-manual` | the notice | 307 → `/docs/member-manual.pdf`, so stale links still work |
+| Site footer | Member Manual and Terms of Service links removed | both back, agreement labelled "Membership Agreement" |
+| Sign-up checkbox (website) | Privacy Policy only | Membership Agreement **and** Privacy Policy |
+| Privacy Policy page | ToS cross-link hidden | "Read our Membership Agreement" |
 
-Two consequences, both real:
+`beforeFiles` is the only rewrite phase that runs ahead of the static-file
+handler — that is what let the notice shadow a PDF that was still sitting in
+`public/`.
 
-1. **The consent record is false for app sign-ups.** The member is asked to
-   accept a document whose link serves the "under revision" notice, and the
-   backend stores it as though the full agreement was accepted.
-2. **The SQL above does not find them.** App sign-ups during the freeze are
-   indistinguishable from pre-freeze members, so the re-consent decision in the
-   restore checklist cannot be scoped from the database alone. Anyone acting on
-   that query must also treat every `2026-07.2` row created after 2026-08-03 as
-   suspect.
+The Flutter app was never touched by the freeze, so neither the freeze nor this
+restore needed a new AAB or Play review.
 
-Fixing it needs a new AAB, so it cannot ship the way the website fix did. It
-is worth resolving before any guide walks new members through that screen (see
-[`../sessions/2026-08-07-getting-started-guide.md`](../sessions/2026-08-07-getting-started-guide.md)).
+## Consent versions — still drifting, deliberately
 
-**Pre-existing drift worth knowing** (verified 2026-08-03, not introduced by
-the freeze): the three surfaces do not agree on the version string, even
-though the website comment claims they must.
+`AGREEMENT_VERSION` in `register-form.tsx` is now **`2026-08-rev5a`**, so web
+sign-ups from today record acceptance of the document they actually read. The
+other two surfaces were left alone, because changing them is not a website
+deploy:
 
-| Surface | Value |
-| --- | --- |
-| `website/components/register-form.tsx` → `AGREEMENT_VERSION` | `2026-07` |
-| `backend/routers/auth.py` → `CURRENT_AGREEMENT_VERSION` | `2026-07.2` |
-| `mobile/.../register_screen.dart` → `_agreementVersion` | `2026-07.2` |
+| Surface | Value | To change it |
+| --- | --- | --- |
+| `website/components/register-form.tsx` → `AGREEMENT_VERSION` | `2026-08-rev5a` | done |
+| `backend/routers/auth.py` → `CURRENT_AGREEMENT_VERSION` | `2026-07.2` | needs `deploy.ps1` |
+| `mobile/.../register_screen.dart` → `_agreementVersion` | `2026-07.2` | needs a new AAB + Play review |
 
-Harmless today because nothing validates it, but it means web sign-ups and app
-sign-ups carry different version strings for the same document. Fix it when the
-new agreement lands, since all three have to be touched anyway.
+Nothing validates the string — the backend stores
+`payload.agreement_version` verbatim ([`backend/routers/auth.py`](../../backend/routers/auth.py))
+and only falls back to its own constant when the client sends none. So the
+website change is safe on its own, but the three will not agree until the
+backend and app ship.
 
-## Bringing them back
+## Open items
 
-1. **Get both documents from Romy** — the revised agreement text and the
-   replacement manual PDF. Confirm which revision number supersedes Rev5A.
-2. **Replace the agreement text** in `website/app/terms-of-service/page.tsx`:
-   rewrite `TermsContent`, and update the `sections` array to match the new
-   headings — it drives both the table of contents and the scroll-spy
-   `IntersectionObserver`, so a stale entry silently breaks the ToC. Update
-   `lastUpdated` (currently `"June 1, 2026"`).
-3. **Replace the PDF** at `website/public/docs/member-manual.pdf` — same path,
-   same filename (see the constraint above).
-4. **Flip both flags** to `false` in `website/lib/legal-documents.ts`.
-5. **Agree one version string** and set it in all three places listed above.
-   Bumping it is what marks the new document as a new acceptance.
-6. **Decide on re-consent** for members who joined during the freeze (the SQL
-   above) and for existing members bound to the retired wording. That is a
-   client/legal decision, not a code one — there is currently no re-consent
-   prompt anywhere in the app.
-7. **Deploy:** push `main` on the monorepo for version control, then
-   fast-forward `metropaws-website`'s `master` with a commit carrying
-   `main:website`'s tree — that repo is still Vercel's production source (see
-   [`../../MONOREPO_MIGRATION_PLAN.md`](../../MONOREPO_MIGRATION_PLAN.md)).
-   The backend only needs `deploy.ps1` if `CURRENT_AGREEMENT_VERSION` changed.
-   The app needs a new AAB only if its own consent copy or version string
-   changed.
-8. `website/app/member-manual/page.tsx` can stay — with the flag off it
-   redirects to the real PDF, so stale links keep working. Delete it only if
-   you also drop `MANUAL_NOTICE_PATH`.
+1. **Fix the §5.5 word/numeral mismatch** (see above). The agreement is HTML, so
+   the website side is a three-word edit in `app/terms-of-service/page.tsx` once
+   Romy confirms 6 / 8 / 10 — but the controlled PDF has to be reissued too, or
+   the site and the signed document diverge.
+2. **Legal review.** The PDF's own cover says it should be reviewed by a
+   licensed Philippine lawyer before public issuance. It is now public.
+3. **Backend + app version strings** (table above).
+4. **Members who joined during the freeze.** Website sign-ups between
+   2026-08-03 and 2026-08-13 recorded `2026-08-privacy-only`:
 
-## Verified 2026-08-03
+   ```sql
+   SELECT id, email, agreement_accepted_at FROM members
+   WHERE agreement_version = '2026-08-privacy-only';
+   ```
 
-Checked against a real production build (`npm run build` + `next start`), both
-flag states:
+   **App sign-ups in that window are not in that result.** The shipped app kept
+   asking for the Membership Agreement and kept recording `2026-07.2`, even
+   though the link served the notice page — so its consent records for that
+   window are false, and indistinguishable from pre-freeze members. Anyone
+   acting on the query must also treat every `2026-07.2` row created after
+   2026-08-03 as suspect.
+5. **Re-consent** for those members and for existing members bound to the
+   retired wording. Client/legal decision, not a code one — there is no
+   re-consent prompt anywhere in the app.
+6. **Vesting is documented but not enforced.** §5.5 describes consecutive-payment
+   gating that the backend does not implement. Check before the agreement is
+   quoted at a member.
 
-- Frozen: `/docs/member-manual.pdf` returns `text/html` containing the notice —
-  first bytes `<!DOCTYPE`, not `%PDF`. `/terms-of-service` serves the notice
-  with no clause text present. Register page links only to `/privacy-policy`.
-- Restored: the same path returns `application/pdf`, 238,337 bytes; the full
-  terms render; footer links and the two-document checkbox come back.
-- The rewrite is present in `.next/routes-manifest.json` under `beforeFiles`,
-  which is what Vercel applies ahead of the filesystem — so the shadowing holds
-  in production, not just under `next start`.
+## Verified 2026-08-13
+
+Against a real production build (`npm run build` + `next start -p 3111`):
+
+- `/docs/member-manual.pdf` → `200`, `application/pdf`, `1452321` bytes, first
+  bytes `%PDF-1.7`. `/member-manual` → `307` to the PDF.
+- `/terms-of-service` → `200`, `<title>Membership Agreement | MetroPaws Wellness
+  Club</title>`, clause text present, 29 ToC anchors, 4 rule tables, none of the
+  internal notes above, none of the retired "Partner Clinic Access" wording.
+- Footer renders Member Manual / Privacy Policy / Membership Agreement.
+- `/register` asks for the Membership Agreement and the Privacy Policy again.
+- `routes-manifest.json` `rewrites.beforeFiles` is `[]`.
+- `npm run lint` reports nothing for any file touched here (the 50 pre-existing
+  errors are elsewhere, plus stale copies under `website/.claude/worktrees/`).
+
+## Layout note
+
+The agreement runs to 29 ToC entries, which overflows the viewport. The sticky
+sidebar nav in `legal-page-layout.tsx` now scrolls
+(`max-h-[calc(100svh-8rem)] overflow-y-auto overscroll-contain`) instead of
+pushing entries out of reach. The Privacy Policy shares that component and is
+unaffected at 11 entries.

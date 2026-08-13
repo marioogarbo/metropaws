@@ -126,8 +126,11 @@ export function LegalPageLayout({
         <div className="md:grid md:grid-cols-[220px_1fr] md:gap-16 lg:gap-20">
           {/* Desktop sidebar TOC */}
           <aside className="hidden md:block">
+            {/* The agreement runs to 29 clauses, so the list can outgrow the
+                viewport — let it scroll inside the sticky column instead of
+                pushing entries out of reach. */}
             <nav
-              className="sticky top-24 flex flex-col gap-0.5"
+              className="sticky top-24 flex flex-col gap-0.5 max-h-[calc(100svh-8rem)] overflow-y-auto overscroll-contain"
               aria-label="Page sections"
             >
               <p className="text-xs font-semibold uppercase tracking-widest text-(--color-gold) mb-4">

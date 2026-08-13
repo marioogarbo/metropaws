@@ -177,7 +177,7 @@ function FooterContent() {
                 rel="noopener noreferrer"
                 className="text-white/90 text-sm hover:text-(--color-gold) transition-colors duration-150"
               >
-                Terms of Service
+                Membership Agreement
               </Link>
             )}
           </div>

@@ -38,7 +38,7 @@ export default function PrivacyPolicyPage() {
           crossLink={
             AGREEMENT_UNDER_REVISION
               ? undefined
-              : { label: "Read our Terms of Service", href: "/terms-of-service" }
+              : { label: "Read our Membership Agreement", href: "/terms-of-service" }
           }
         >
           <PrivacyContent />
