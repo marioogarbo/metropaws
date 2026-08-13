@@ -116,6 +116,42 @@ Deduction happens at **`approved`**, not at `paid` — `USED_STATUSES =
 (approved, paid)` in [`reimbursement_utils.py`](../../backend/reimbursement_utils.py).
 Marking paid afterwards does not deduct twice.
 
+### Open decision — the future-date rule on direct-pay requests
+
+Raised by Mario, 2026-08-13: *"I think we should offer or remove the must future
+date."* Agreed that emergency stays pay-then-reimburse — that part is working as
+intended and is not in question.
+
+Today's rule for `payout_target=provider`: date must fall in **today → +60 days**.
+Same-day already works; it is *past* dates that are rejected. The rule exists
+because this object was designed as a pre-authorization, and Rev. 5A §6/§7 do
+require authorization *before* the visit — so simply deleting the rule pushes the
+product further from the agreement, not closer, and lets members bypass advance
+notice entirely.
+
+But the trap above is real: a service that already happened, which MetroPaws
+agreed to settle directly with the provider, currently cannot be recorded by
+anyone. Three ways out:
+
+| Option | Effect | Cost |
+| --- | --- | --- |
+| **A. Drop the past-date rejection** for provider-target | Members can file after the fact | One line. But advance authorization becomes unenforceable, contradicting §6/§7, and the member-facing flow stops meaning "pre-authorization" |
+| **B. Admin-only retro path** — an admin endpoint that records a direct provider settlement for a past date | Back-office correction, member flow unchanged | New endpoint + admin UI. Maps cleanly onto §12's "written management-approved circumstance" |
+| **C. Grace window** — allow provider-target a few days into the past | Covers the common "filed the day after" case | One constant. Still erodes §6, just less |
+
+**Recommendation: B.** Retro-recording a settlement is a staff correction, not a
+member self-service action, and §12 already provides the contractual language for
+it. It also closes the "no admin-side create endpoint" half of the trap, which A
+and C leave open — under A, a member who never files still leaves the benefit
+undeducted with no staff remedy.
+
+Whichever is chosen, note the knock-on: `_validate_service_date` currently
+enforces direction by a single `allow_future` boolean. A third case (admin,
+either direction) wants that replaced with something clearer than a flag
+parameter — see the repo's clean-functions guidance on flag arguments.
+
+Not built. Decide with Romy alongside the authorization-artifact question above.
+
 ## 2. Vesting is contractual but unenforced
 
 **Agreement §5.4, §5.5, §5.8.**
