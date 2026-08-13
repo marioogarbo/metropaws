@@ -381,6 +381,59 @@ an admin override path for §5.1's "written exception". Worth doing before
 volume picks up — it is a money leak, not a wording mismatch. Check existing rows
 for pre-activation dates when it ships.
 
+## 12. No category is recognised as Emergency, so that pool is unreachable
+
+Found 2026-08-14 while testing per-member direct pay on dev. The claim form
+showed **"Emergency Stabilization"** selected *and* offered "Pay the provider
+directly" — which the design forbids — with the balance line reading "Preventive
+Wellness Wallet".
+
+Both routing decisions hang on one exact-match set:
+
+```python
+EMERGENCY_CATEGORY_NAMES = {"emergency"}   # reimbursement_utils.py
+```
+
+Dev's `service_types` are `Emergency Stabilization`, `Full Grooming`,
+`General Consultation`, `Grooming`, `Semi-Annual Exam`, `Vaccines`.
+**None equals `"emergency"`**, so `is_emergency_category` returns False for every
+one of them. Two consequences, both about money:
+
+1. **The Emergency Wallet is dead.** Standard ₱300 / Deluxe ₱900 / Premium
+   ₱1,500 can never be drawn against. Emergency claims consume the far larger
+   Preventive Wellness pool (₱2,000 / ₱4,000 / ₱7,000) instead — members receive
+   more than the plan intends, and the two-pool model (client decision
+   2026-07-16) is not actually running.
+2. **Emergency is direct-pay eligible**, because
+   `is_direct_pay_eligible_category` is defined as *not* emergency. Mario
+   confirmed on 2026-08-13 that emergency must stay pay-then-reimburse. It
+   doesn't.
+
+`seed.py` explains the mismatch: it defines *both* session categories
+(`Emergency Stabilization`) and separate wallet-bucket categories
+(`Preventive Wellness`, `Emergency`) — and the seed only inserts a category when
+the name is absent. Dev has the six session categories and neither bucket, so
+the one name the code looks for was never there.
+
+The grooming equivalent is fine — `_GROOMING_CATEGORY_NAMES` is
+`{"grooming", "full grooming"}` and matches both real categories. Emergency is
+the set that drifted.
+
+**⚠️ Check production before anything else.** Not verified here — prod DB is
+off-limits without an explicit ask. Look at the admin Plans/categories list: if
+prod also lacks a category named exactly `Emergency`, every emergency claim ever
+paid came out of the preventive pool.
+
+**Fix options:**
+
+| | Approach | Notes |
+| --- | --- | --- |
+| Quick | Add `"emergency stabilization"` to the set | One line, restores both behaviours today. Still name-matched, so the next rename breaks it again |
+| Proper | `ServiceType.is_emergency` boolean, admin-editable | Kills the whole class of bug. The existing comment says the flag was deliberately avoided to mirror the grooming pattern — that reasoning has now cost us the pool |
+
+Do the quick fix if prod is affected and money is moving; schedule the flag
+either way. No app release needed — this is backend and data only.
+
 ## Suggested order when this gets picked up
 
 1. **Decide item 1 with Romy.** Authorization-first or reimbursement-first? Every
@@ -389,12 +442,14 @@ for pre-activation dates when it ships.
 2. **Item 5, member-facing strings only.** Cheap, visible, no dependency.
 3. **Item 2.** Confirm whether vesting is real. If not, amend §5.5 — which is
    the same conversation as item 10, so raise them together.
-4. **Item 11** — pre-activation claims. Small backend fix, and it is the only
-   item here that leaks money rather than credibility.
-5. **Item 6**, referral + birthday bonus. Self-contained.
-6. **Item 7** (pet records) is independent of item 1 and Romy has already asked
+4. **Item 12** — check prod for the Emergency category FIRST. If it is missing
+   there too, emergency claims are draining the preventive pool right now.
+5. **Item 11** — pre-activation claims. Small backend fix; leaks money the
+   same way item 12 does, just more slowly.
+6. **Item 6**, referral + birthday bonus. Self-contained.
+7. **Item 7** (pet records) is independent of item 1 and Romy has already asked
    for it — scope it alongside item 5.
-7. Items 3, 4, 8, 9 follow item 1 and are not worth scoping before it.
+8. Items 3, 4, 8, 9 follow item 1 and are not worth scoping before it.
 
 ## Source documents
 
