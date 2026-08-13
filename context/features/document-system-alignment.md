@@ -55,30 +55,66 @@ The agreement's own Revision Basis line is "Replacement of Wellness Wallet and
 routine reimbursement with advance Service Authorization and direct Provider
 Settlement". The system is the thing being replaced.
 
-There is **no Service Authorization entity at all**.
-[`backend/models.py`](../../backend/models.py) has `Reimbursement` (line 499),
-`ReimbursementStatus` (485) and `ReimbursementProvider` (288). It has no service
-request, no authorization, no validity period, no approved-amount-before-service.
-`Booking` (203) exists but is behind `booking_enabled` in
-[`backend/routers/settings.py:22`](../../backend/routers/settings.py) and is a
-different concept — an appointment with a `ClinicPartner`, not an authorization.
+**Correction (2026-08-13, after Romy asked how the app deducts when MetroPaws
+pays the provider): more of this is built than first recorded.** There is no
+entity *named* Service Authorization, but `Reimbursement` with
+`payout_target = provider` is one in all but name — its own docstring calls it
+"a pre-authorization request to pay a verified ReimbursementProvider directly
+for an upcoming scheduled service". The flow that exists:
 
-`ReimbursementProvider` already carries payout details, so **direct provider
-settlement is half-built**: MetroPaws can already pay a provider. What is
-missing is the front half — the request, the eligibility check, the
-authorization artifact, and the rule that the member must not pay the covered
-amount (§11, final bullet).
+| Rev. 5A §6 stage | Built? | Where |
+| --- | --- | --- |
+| Service Request | ✅ member files with a **future** appointment date | `POST /reimbursements`, `payout_target=provider` |
+| Eligibility Review | ✅ pool, plan year, category, duplicate-receipt checks | [`reimbursement_utils.py`](../../backend/reimbursement_utils.py) |
+| Provider Verification | ⚠️ admin vets the provider once, on creation — not per request | `/admin/providers` → `ReimbursementProvider` |
+| Authorization | ⚠️ approval sets an approved amount, but issues **no reference number or QR** and no explicit validity window | `PUT /admin/reimbursements/{id}/review` |
+| Service Completion | ❌ no provider-side confirmation | — |
+| Provider Settlement | ✅ offline, recorded by admin | `PUT /admin/reimbursements/{id}/mark-paid` |
+
+So the gap is narrower than "not built": it is **switched off, unnamed, and
+missing the artifact**. `direct_provider_payment_enabled` defaults to false
+([`backend/routers/settings.py:27`](../../backend/routers/settings.py)) and was
+verified false in production on 2026-08-13 via the public
+`GET /settings/mobile-config`. Admin toggle: `/admin/settings` →
+"Direct-to-Provider Payments".
+
+Real remaining gaps on this item: no authorization reference/QR, no validity
+expiry, no provider acceptance step, no service-completion confirmation, and
+emergency categories are excluded from direct pay by design
+(`is_direct_pay_eligible_category`) even though §13 contemplates them.
+
+`Booking` (models.py:203) is a different concept — an appointment with a
+`ClinicPartner`, behind its own `booking_enabled` flag, also false in production.
 
 **Exposure:** a member who reads §6, does not obtain authorization, and gets
 told to pay and claim, is being run under a process the contract calls the
 exception. And §12's "no reimbursement is guaranteed merely because the Member
 paid a provider" now sits over a product whose only path is to pay and claim.
 
-**Cheaper fix:** unclear, and this is the decision to make first. Building
-Service Authorization is a real feature across backend, app and admin. Amending
-§6/§12 to describe reimbursement as the normal path is a document edit. Do not
-start building until Romy confirms which model the business is actually running
-in the next 6 months.
+**Cheaper fix:** given the correction above, turning the flag on gets most of
+§6 operating today. The decision to make with Romy is whether direct-to-provider
+becomes the *default* path (which is what §6 says) or stays an option alongside
+reimbursement — and whether the missing authorization artifact (reference/QR,
+expiry, provider acceptance) is worth building or worth striking from §6.
+
+### The operational trap — no retro-recording
+
+`_validate_service_date(allow_future=True)` **rejects a past appointment date**
+for a provider-target request
+([`backend/routers/reimbursements.py:68`](../../backend/routers/reimbursements.py)),
+and the window is today → +60 days (`PROVIDER_MAX_FUTURE_DAYS`). There is also
+no admin-side create endpoint — `POST /reimbursements` requires
+`require_member`, so only the member can file, from the app.
+
+**Consequence: if MetroPaws pays a provider before the member files, the benefit
+cannot be deducted.** The request can't be back-dated and an admin can't create
+it. The only remaining route is a member-payout claim, which would pay the
+member for money MetroPaws already spent. Sequence is therefore mandatory:
+member files → admin approves → MetroPaws pays → admin marks paid.
+
+Deduction happens at **`approved`**, not at `paid` — `USED_STATUSES =
+(approved, paid)` in [`reimbursement_utils.py`](../../backend/reimbursement_utils.py).
+Marking paid afterwards does not deduct twice.
 
 ## 2. Vesting is contractual but unenforced
 
@@ -182,14 +218,46 @@ The manual also prints a 7-tier rewards catalogue (250 → 5,000 pts). The
 catalogue is whatever an admin entered — verify it against the manual before the
 manual is handed to a member. The manual hedges these as "Sample", which helps.
 
-## 7. Wellness Score is promised and does not exist
+## 7. The Digital Pet Passport stores a photo, not a record
+
+**Manual §5. Agreement §14.** Raised by Romy on 2026-08-13: *"panu iuupload yung
+mga records ng pets ng members, say vaccination and others?"*
+
+The manual publishes a Pet Passport feature table promising a Vaccination Record
+that "tracks vaccination history and upcoming due dates", plus grooming and
+consultation records and reminder support.
+
+What exists on `Pet` ([`backend/models.py:72`](../../backend/models.py)) is a
+single `vax_card_url` — **one image of the vaccination card**. No vaccine name,
+no date administered, no next-due date, therefore no reminders. Eight identity
+photo slots are modelled in detail; the medical record is one file field.
+
+| Manual promises | Reality |
+| --- | --- |
+| Vaccination Record with history + due dates | one `vax_card` image per pet |
+| Grooming / Consultation Record | `ServiceLog` — admin-only, free-text notes + service type |
+| Reminder Support | nothing |
+
+**Who can upload:** only the member, from the app, when adding or editing a pet
+(`POST` / `PATCH /pets`, multipart field `vax_card` —
+[`backend/routers/pets.py:47`](../../backend/routers/pets.py)). **Staff cannot.**
+`PUT /admin/members/{member_id}/pets/{pet_id}`
+([`backend/routers/admin.py:647`](../../backend/routers/admin.py)) takes a JSON
+`PetUpdate` body — no file upload, so there is no admin path to attach records on
+a member's behalf.
+
+Smallest useful build, if Romy wants staff-side records: a `PetRecord` table
+(pet, type, date, next-due, file, notes) plus an admin upload endpoint. That
+alone would satisfy the manual's table without touching item 1.
+
+## 8. Wellness Score is promised and does not exist
 
 **Agreement §14.** Names a "Wellness Score" and constrains it — it "reflects
 verified engagement only and does not guarantee health". `grep -ri
 "wellness_score" backend` returns nothing. Either build it or strike the mention;
 a defined term with no referent is loose drafting in a live contract.
 
-## 8. Schedule C — the app requirements we published against ourselves
+## 9. Schedule C — the app requirements we published against ourselves
 
 Schedule C is internal and deliberately **not** on the public page (see
 [`member-documents.md`](./member-documents.md)), but it is the document's own
@@ -207,7 +275,7 @@ checklist for the app, and it is a fair summary of what item 1 would require:
 §22 also says the platform should record "device or IP information where
 available" at acceptance. It does not.
 
-## 9. §5.5 — the site is one edit ahead of the PDF
+## 10. §5.5 — the site is one edit ahead of the PDF
 
 Carried from [`member-documents.md`](./member-documents.md): the published page
 reads six / eight / ten; MP-CON-001 as supplied reads "two (6)", "three (8)",
@@ -223,9 +291,11 @@ and the site is wrong. Deliberately not chased yet — Mario's call on 2026-08-1
    built or amended.
 2. **Item 5, member-facing strings only.** Cheap, visible, no dependency.
 3. **Item 2.** Confirm whether vesting is real. If not, amend §5.5 — which is
-   the same conversation as item 9, so raise them together.
+   the same conversation as item 10, so raise them together.
 4. **Item 6**, referral + birthday bonus. Self-contained.
-5. Items 3, 4, 7, 8 follow item 1 and are not worth scoping before it.
+5. **Item 7** (pet records) is independent of item 1 and Romy has already asked
+   for it — scope it alongside item 5.
+6. Items 3, 4, 8, 9 follow item 1 and are not worth scoping before it.
 
 ## Source documents
 
