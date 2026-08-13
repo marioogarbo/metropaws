@@ -170,9 +170,16 @@ backend and app ship.
 5. **Re-consent** for those members and for existing members bound to the
    retired wording. Client/legal decision, not a code one — there is no
    re-consent prompt anywhere in the app.
-6. **Vesting is documented but not enforced.** §5.5 describes consecutive-payment
-   gating that the backend does not implement. Check before the agreement is
-   quoted at a member.
+6. **The system does not implement what these documents describe.** Rev. 5A is
+   built on advance Service Authorization and direct provider settlement; the
+   product runs pay-then-claim reimbursement, which the agreement calls the
+   exception. Vesting, advance notice, member status labels and Wellness Score
+   are contractual and absent, and "Wallet" — retired in both documents — still
+   appears 388 times in the code. Full register with citations and a suggested
+   order in
+   [`document-system-alignment.md`](./document-system-alignment.md). Mario's
+   instruction on 2026-08-13: the documents are the real deal, close the gaps
+   ASAP, but not this session.
 
 ## Verified 2026-08-13
 
