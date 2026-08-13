@@ -297,6 +297,16 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     }
   }
 
+  void _showHowClaimsWork() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) =>
+          _HowClaimsWorkSheet(directPayAvailable: _directProviderPaymentEnabled),
+    );
+  }
+
   Future<void> _pickReceipt() async {
     final picked = await _pickReceiptData();
     if (picked == null || !mounted) return;
@@ -409,6 +419,13 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
             ],
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: 'How claims work',
+            onPressed: _showHowClaimsWork,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           indicatorColor: gold,
@@ -519,6 +536,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               onRetry: () =>
                   context.read<MemberBloc>().add(ReimbursementsLoadRequested()),
               onResubmit: _resubmit,
+              onHowItWorks: _showHowClaimsWork,
             ),
             _buildSubmitTab(_wallet, _providers, loading),
           ],
@@ -637,6 +655,10 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Sits above the first field because the costly mistake — picking
+            // the wrong payment path — is made before anything is filled in.
+            _HowItWorksPrompt(onTap: _showHowClaimsWork),
+            const SizedBox(height: 20),
             // ── Section 1: what happened ─────────────────────────────
             const _SectionHeader('What happened'),
             const SizedBox(height: 12),
@@ -998,12 +1020,14 @@ class _ClaimsTab extends StatelessWidget {
     required this.error,
     required this.onRetry,
     required this.onResubmit,
+    required this.onHowItWorks,
   });
   final List<Reimbursement> claims;
   final bool loading;
   final String? error;
   final VoidCallback onRetry;
   final void Function(Reimbursement) onResubmit;
+  final VoidCallback onHowItWorks;
 
   @override
   Widget build(BuildContext context) {
@@ -1016,11 +1040,20 @@ class _ClaimsTab extends StatelessWidget {
       return const _LoadingState();
     }
     if (claims.isEmpty) {
-      return const MpEmptyState(
+      // First-timers land here, so this is the best moment to explain the two
+      // paths — before they pick the wrong one on the Submit tab.
+      return MpEmptyState(
         icon: Icons.receipt_long_outlined,
         title: 'No claims yet',
-        message: 'Submit a receipt from the Submit tab to request a '
-            'reimbursement.',
+        message: 'Use your benefit by filing a claim from the Submit tab. '
+            'Not sure how it works?',
+        action: SizedBox(
+          width: 240,
+          child: MpButton(
+            label: 'How claims work',
+            onPressed: onHowItWorks,
+          ),
+        ),
       );
     }
 
@@ -1307,6 +1340,440 @@ class _ReceiptAttachment extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── How claims work ─────────────────────────────────────────────────────────
+
+/// Slim inline entry to the instructions, for members who never think to look
+/// for a help icon in the app bar.
+class _HowItWorksPrompt extends StatelessWidget {
+  const _HowItWorksPrompt({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final gold = isDark ? AppColors.gold : AppColors.goldDark;
+
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: gold.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: gold.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.help_outline_rounded, size: 18, color: gold),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'First time claiming? See how it works',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Member-facing instructions for the two claim paths.
+///
+/// Romy asked on 2026-08-13 whether the app tells members what to do; it
+/// didn't. The two paths are easy to confuse and the mistake is expensive in
+/// opposite directions — file "Reimburse me" after MetroPaws already agreed to
+/// pay the clinic and the member waits for money they shouldn't receive; try
+/// "Pay the provider directly" after the visit and it can't be filed at all,
+/// because the server rejects a past appointment date.
+class _HowClaimsWorkSheet extends StatelessWidget {
+  const _HowClaimsWorkSheet({required this.directPayAvailable});
+
+  /// Hides the direct-to-provider half when the member can't use it — telling
+  /// someone to use an option they'll never see is worse than saying nothing.
+  final bool directPayAvailable;
+
+  // Mirror the backend defaults (REIMBURSEMENT_* env vars). Kept here as named
+  // constants so a change on the server has one obvious place to land.
+  static const int _providerMaxFutureDays = 60;
+  static const int _groomingCooldownDays = 90;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final gold = isDark ? AppColors.gold : AppColors.goldDark;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (ctx, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                children: [
+                  Text('How claims work', style: theme.textTheme.displaySmall),
+                  const SizedBox(height: 8),
+                  Text(
+                    directPayAvailable
+                        ? 'There are two ways to use your benefit. Pick the one '
+                            'that matches what already happened.'
+                        : 'Use your benefit by paying the clinic first, then '
+                            'claiming it back.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  _HowPathCard(
+                    accent: gold,
+                    badge: directPayAvailable ? '1' : null,
+                    title: 'Reimburse me',
+                    subtitle: 'You already paid the clinic or groomer',
+                    steps: const [
+                      'Pay the provider yourself and keep the official receipt.',
+                      'Open Submit, choose your pet and the service category.',
+                      'Choose “Reimburse me”, then enter the amount you paid, '
+                          'the provider’s name and the date of the visit.',
+                      'Attach a photo or PDF of the receipt, then submit.',
+                      'Once approved, MetroPaws sends the money to your saved '
+                          'payout method.',
+                    ],
+                    note: 'Set up your payout method before you file — we need '
+                        'somewhere to send it. The visit date can’t be in the '
+                        'future. There’s no deadline: you can claim a visit '
+                        'from a few days or a few weeks ago, as long as your '
+                        'plan year is still running.',
+                  ),
+
+                  if (directPayAvailable) ...[
+                    const SizedBox(height: 16),
+                    _HowPathCard(
+                      accent: gold,
+                      badge: '2',
+                      title: 'Pay the provider directly',
+                      subtitle: 'Arrange it before the visit',
+                      steps: [
+                        'Ask before the appointment — not after.',
+                        'Open Submit, choose your pet and the service category.',
+                        'Choose “Pay the provider directly”, pick the provider '
+                            'from the list, then set the appointment date and '
+                            'the expected amount.',
+                        'Attach a quote, estimate or booking confirmation, '
+                            'then submit.',
+                        'Wait for approval before the appointment. MetroPaws '
+                            'pays the provider directly — don’t pay the covered '
+                            'amount yourself.',
+                      ],
+                      note: 'The appointment must still be ahead of you, and no '
+                          'more than about $_providerMaxFutureDays days away. '
+                          'If the visit already happened, or the option isn’t '
+                          'shown for the category you picked, use “Reimburse '
+                          'me” instead.',
+                    ),
+                  ],
+
+                  const SizedBox(height: 28),
+                  Text('After you submit', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  const _HowStatusRow(
+                    label: 'Pending',
+                    meaning: 'We’ve received it and it’s queued for review.',
+                  ),
+                  const _HowStatusRow(
+                    label: 'Under review',
+                    meaning: 'Someone is checking the details and the receipt.',
+                  ),
+                  const _HowStatusRow(
+                    label: 'Needs info',
+                    meaning:
+                        'Something was unclear — open the claim and resubmit '
+                        'with a clearer file or corrected details.',
+                  ),
+                  const _HowStatusRow(
+                    label: 'Approved',
+                    meaning:
+                        'Accepted, and the amount is deducted from your pet’s '
+                        'remaining benefit.',
+                  ),
+                  const _HowStatusRow(
+                    label: 'Paid',
+                    meaning: 'The money has been released.',
+                  ),
+                  const _HowStatusRow(
+                    label: 'Rejected',
+                    meaning:
+                        'Not eligible. The reason is shown on the claim.',
+                    last: true,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'You’ll be notified in the app and by email whenever the '
+                    'status changes.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+                  Text('What holds a claim up', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  const _HowBullet(
+                    'A blurry or partial receipt. Make sure the provider, date '
+                    'and amount are all readable.',
+                  ),
+                  const _HowBullet(
+                    'Claiming more than your pet has left. Each pet has its own '
+                    'benefit for the plan year, and claims still waiting for '
+                    'review are already counted against it.',
+                  ),
+                  const _HowBullet(
+                    'The same visit filed twice. One claim per provider, date '
+                    'and amount.',
+                  ),
+                  _HowBullet(
+                    'Grooming filed too often — it can be claimed roughly once '
+                    'every $_groomingCooldownDays days per pet.',
+                  ),
+                  const _HowBullet(
+                    'An expired plan. Renew first, then file.',
+                  ),
+
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Text(
+                      'Questions? csr@metropaws.ph',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: gold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HowPathCard extends StatelessWidget {
+  const _HowPathCard({
+    required this.accent,
+    required this.badge,
+    required this.title,
+    required this.subtitle,
+    required this.steps,
+    required this.note,
+  });
+
+  final Color accent;
+  /// Numbered only when both paths are shown — a lone "1" implies a missing 2.
+  final String? badge;
+  final String title;
+  final String subtitle;
+  final List<String> steps;
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (badge != null) ...[
+                Container(
+                  width: 26,
+                  height: 26,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    badge!,
+                    style: theme.textTheme.labelLarge?.copyWith(color: accent),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          for (int i = 0; i < steps.length; i++)
+            Padding(
+              padding: EdgeInsets.only(bottom: i == steps.length - 1 ? 0 : 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '${i + 1}.',
+                      style: theme.textTheme.labelLarge?.copyWith(color: accent),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(steps[i], style: theme.textTheme.bodyMedium),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(note, style: theme.textTheme.bodyMedium),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HowStatusRow extends StatelessWidget {
+  const _HowStatusRow({
+    required this.label,
+    required this.meaning,
+    this.last = false,
+  });
+
+  final String label;
+  final String meaning;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(bottom: last ? 0 : 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 104,
+            child: Text(label, style: theme.textTheme.labelLarge),
+          ),
+          Expanded(
+            child: Text(
+              meaning,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HowBullet extends StatelessWidget {
+  const _HowBullet(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Container(
+              width: 4,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.onSurfaceVariant,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ),
+        ],
       ),
     );
   }
