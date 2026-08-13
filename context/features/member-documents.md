@@ -50,24 +50,25 @@ two schedules — and the model it describes is:
   explicitly "not cash, stored value, a deposit account, legal tender or an
   amount withdrawable by the Member" (§2).
 
-### Known defect in the source PDF — §5.5 vesting table
+### The §5.5 vesting table — the site does not match the PDF here
 
 Rev. 5A as supplied on 2026-08-13 is otherwise identical to the July Rev. 5A;
-the **only** change is the Full Planned-Service Eligibility column, and it
-contradicts itself — the word and the numeral disagree:
+the **only** change is the Full Planned-Service Eligibility column, and as
+supplied it contradicts itself — the numerals were raised and the words were
+not:
 
-| Plan | July Rev. 5A | August Rev. 5A (published) |
-| --- | --- | --- |
-| Standard | After two (2) consecutive monthly payments | After **two (6)** consecutive monthly payments |
-| De Luxe | After three (3) consecutive monthly payments | After **three (8)** consecutive monthly payments |
-| Premium | After four (4) consecutive monthly payments | After **four (10)** consecutive monthly payments |
+| Plan | July Rev. 5A | August Rev. 5A as supplied | Published on the site |
+| --- | --- | --- | --- |
+| Standard | After two (2) | After **two (6)** consecutive monthly payments | After **six (6)** |
+| De Luxe | After three (3) | After **three (8)** consecutive monthly payments | After **eight (8)** |
+| Premium | After four (4) | After **four (10)** consecutive monthly payments | After **ten (10)** |
 
-The intent is plainly 6 / 8 / 10 — the numerals were raised and the words were
-not. The website transcribes the PDF **verbatim**, because the site has to match
-the controlled document members sign. This needs a reissued PDF from Romy, not a
-website-side edit. Until then a member could argue the lower number: under
-Philippine law an ambiguity in a contract of adhesion is read against the
-drafter.
+Mario decided on 2026-08-13 to publish the numerals as the intent and make the
+words agree, rather than reproduce the contradiction on a public page — an
+ambiguity in a contract of adhesion is read against the drafter under Philippine
+law. **So the website is deliberately one edit ahead of the controlled PDF.**
+Romy still has to reissue MP-CON-001 with 6 / 8 / 10 spelled out, or the signed
+document and the published agreement stay out of step.
 
 Emergency Support Control was left alone (3 / 3 / 4 consecutive payments).
 
@@ -145,10 +146,10 @@ backend and app ship.
 
 ## Open items
 
-1. **Fix the §5.5 word/numeral mismatch** (see above). The agreement is HTML, so
-   the website side is a three-word edit in `app/terms-of-service/page.tsx` once
-   Romy confirms 6 / 8 / 10 — but the controlled PDF has to be reissued too, or
-   the site and the signed document diverge.
+1. **Get MP-CON-001 reissued** with §5.5 reading six / eight / ten (see above).
+   The site already says that; the PDF does not. Confirm with Romy that 6 / 8 /
+   10 was the intent — if the *words* were right and the numerals were the typo,
+   the site is wrong and the edit reverses.
 2. **Legal review.** The PDF's own cover says it should be reviewed by a
    licensed Philippine lawyer before public issuance. It is now public.
 3. **Backend + app version strings** (table above).

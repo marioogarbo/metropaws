@@ -344,19 +344,19 @@ function TermsContent() {
             [
               "Standard",
               "After first cleared payment and completed onboarding",
-              "After two (6) consecutive monthly payments",
+              "After six (6) consecutive monthly payments",
               "Minimum three (3) consecutive payments or as specifically approved",
             ],
             [
               "De Luxe",
               "After first cleared payment and completed onboarding",
-              "After three (8) consecutive monthly payments",
+              "After eight (8) consecutive monthly payments",
               "Minimum three (3) consecutive payments or as specifically approved",
             ],
             [
               "Premium",
               "After first cleared payment and completed onboarding",
-              "After four (10) consecutive monthly payments",
+              "After ten (10) consecutive monthly payments",
               "Minimum four (4) consecutive payments or as specifically approved",
             ],
           ]}
