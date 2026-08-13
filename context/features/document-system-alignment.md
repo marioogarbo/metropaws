@@ -238,17 +238,44 @@ photo slots are modelled in detail; the medical record is one file field.
 | Grooming / Consultation Record | `ServiceLog` — admin-only, free-text notes + service type |
 | Reminder Support | nothing |
 
-**Who can upload:** only the member, from the app, when adding or editing a pet
-(`POST` / `PATCH /pets`, multipart field `vax_card` —
-[`backend/routers/pets.py:47`](../../backend/routers/pets.py)). **Staff cannot.**
-`PUT /admin/members/{member_id}/pets/{pet_id}`
-([`backend/routers/admin.py:647`](../../backend/routers/admin.py)) takes a JSON
-`PetUpdate` body — no file upload, so there is no admin path to attach records on
-a member's behalf.
+### Nobody can upload a vaccination card after registration
 
-Smallest useful build, if Romy wants staff-side records: a `PetRecord` table
-(pet, type, date, next-due, file, notes) plus an admin upload endpoint. That
-alone would satisfy the manual's table without touching item 1.
+Confirmed 2026-08-13, Mario's report. **The member can only attach the card
+during pet registration. If they skip that step, there is no way back in.**
+
+The gap is UI-only — every other layer works:
+
+| Layer | State |
+| --- | --- |
+| Backend `PUT /pets/{id}` | ✅ accepts `vax_card` ([`pets.py:164,220`](../../backend/routers/pets.py)) |
+| `ApiService.uploadVaxCard` | ✅ exists ([`api_service.dart:678`](../../mobile/lib/core/services/api_service.dart)) — **dead code, zero callers** |
+| Registration (`add_pet_screen`) | ✅ `_pickVax` at line 229, skippable |
+| Pet profile (`pet_profile_screen`) | ❌ `_VaxSection` (line 579) is a `StatelessWidget` that only *views* |
+
+Worse, the empty state reads *"Contact your clinic to upload your vaccination
+record"* ([`pet_profile_screen.dart:~620`](../../mobile/lib/features/member/screens/pet_profile_screen.dart)).
+Clinics **cannot** upload — the clinic scanner only reads `vax_card_url` to show
+a "💉 Vax ✓" badge. The copy sends members down a path that does not exist.
+
+**Staff cannot upload either.** `PUT /admin/members/{member_id}/pets/{pet_id}`
+([`admin.py:647`](../../backend/routers/admin.py)) takes a JSON `PetUpdate` body,
+no file. So a member who skipped the step has no route at all: not the app, not
+the clinic, not support.
+
+**Deliberately not built — Mario, 2026-08-13.** Deferred to focus on claims.
+
+When picked up, it is small: make `_VaxSection` stateful and mirror
+`_PhotoCompletionSection` (line 918), which already solves this exact problem for
+identity photo slots 4–8 — pick, size-check, upload, hand the refreshed `Pet`
+back through `onPetUpdated`. Reuse `uploadPetPhotoSlot`, which is generic over
+the field name and already returns `Pet`; `uploadVaxCard` returns `void` and
+should be deleted or made to delegate. Fix the empty-state copy at the same time.
+Match registration and stay images-only (`ImagePicker.pickImage`) even though the
+backend also allows PDF, unless a file picker is worth adding.
+
+The larger gap remains: still a single image, not a record. A `PetRecord` table
+(pet, type, date, next-due, file, notes) plus an admin upload endpoint is what
+the manual's table actually describes.
 
 ## 8. Wellness Score is promised and does not exist
 
