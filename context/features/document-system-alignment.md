@@ -347,6 +347,40 @@ and the site is wrong. Deliberately not chased yet — Mario's call on 2026-08-1
 
 ---
 
+## 11. A claim dated before the plan started is neither blocked nor deducted
+
+Found 2026-08-13 while answering "can a member claim an emergency days after the
+visit?" (yes — see below). Chasing the bounds on a backdated claim surfaced this.
+
+**Agreement §5.1:** *"No service obtained before the official Membership
+Effective Date is retroactively payable unless MetroPaws approves a written
+exception."* §5.8 repeats it for monthly subscribers.
+
+The submit path has **no check on `service_date` against
+`pet.plan_activated_at`** ([`reimbursements.py:97-355`](../../backend/routers/reimbursements.py)).
+Activation is consulted in exactly one place —
+[`reimbursement_utils.wallet_usage:87`](../../backend/reimbursement_utils.py),
+which *excludes* pre-activation claims from the used/pending totals so they don't
+count against the allowance.
+
+Combined, those two facts produce a hole rather than a guard:
+
+1. A claim dated before activation is **accepted** — nothing rejects it.
+2. It is **excluded from `wallet_usage`**, so the "insufficient balance" check
+   can never fail on it, whatever the amount.
+3. Approving it **still** doesn't consume the wallet — the same exclusion applies.
+
+So a pre-membership service can be approved and paid without ever reducing the
+benefit, and a member could in principle file several. Only an admin noticing the
+date during review stops it. The exclusion was almost certainly written to be
+*protective* ("old claims shouldn't eat this year's allowance"); the missing
+submission gate turns it into the opposite.
+
+**Fix is small:** reject `service_date < plan_activated_at` at submission, with
+an admin override path for §5.1's "written exception". Worth doing before
+volume picks up — it is a money leak, not a wording mismatch. Check existing rows
+for pre-activation dates when it ships.
+
 ## Suggested order when this gets picked up
 
 1. **Decide item 1 with Romy.** Authorization-first or reimbursement-first? Every
@@ -355,10 +389,12 @@ and the site is wrong. Deliberately not chased yet — Mario's call on 2026-08-1
 2. **Item 5, member-facing strings only.** Cheap, visible, no dependency.
 3. **Item 2.** Confirm whether vesting is real. If not, amend §5.5 — which is
    the same conversation as item 10, so raise them together.
-4. **Item 6**, referral + birthday bonus. Self-contained.
-5. **Item 7** (pet records) is independent of item 1 and Romy has already asked
+4. **Item 11** — pre-activation claims. Small backend fix, and it is the only
+   item here that leaks money rather than credibility.
+5. **Item 6**, referral + birthday bonus. Self-contained.
+6. **Item 7** (pet records) is independent of item 1 and Romy has already asked
    for it — scope it alongside item 5.
-6. Items 3, 4, 8, 9 follow item 1 and are not worth scoping before it.
+7. Items 3, 4, 8, 9 follow item 1 and are not worth scoping before it.
 
 ## Source documents
 
