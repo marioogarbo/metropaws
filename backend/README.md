@@ -113,6 +113,27 @@ API docs available at `http://localhost:8000/docs`
 
 ---
 
+## Tests
+
+```bash
+uv pip install --python .venv\Scripts\python.exe -e ".[dev]"   # first time
+python -m pytest                                                # run them
+python -m pytest --cov=. --cov-report=term-missing              # with coverage
+```
+
+The suite is hermetic — `tests/conftest.py` pins `DATABASE_URL` to in-memory
+SQLite before any project module is imported, so tests can never reach the dev
+or production database, and the whole run takes a few seconds.
+
+`tests/routes_snapshot.json` pins every URL the API exposes. If a change adds or
+renames a route on purpose, regenerate it and read the diff before committing:
+
+```bash
+python -m tests.generate_routes_snapshot
+```
+
+---
+
 ## Docker
 
 ### Build & push to Docker Hub

@@ -14,3 +14,6 @@ uploads/
 .gitignore
 .render-service-id.*
 *.ps1
+tests/
+.pytest_cache/
+.coverage

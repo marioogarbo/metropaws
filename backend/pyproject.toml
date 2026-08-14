@@ -21,3 +21,17 @@ dependencies = [
     "openpyxl>=3.1.5",
     "fpdf2==2.8.1",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The backend is a flat set of modules imported as `import models` etc., so the
+# package root has to be on sys.path for the tests to import the same way the
+# app does.
+pythonpath = ["."]
+addopts = "-q"

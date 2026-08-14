@@ -109,9 +109,12 @@ def database_target() -> str:
     if not url:
         return "unset"
     parts = urlsplit(url)
-    host = parts.hostname or "?"
+    if not parts.hostname:
+        # No host to name (SQLite, for instance) — the scheme is the whole story
+        # and, unlike the raw URL, cannot carry a password.
+        return parts.scheme or "unknown"
     port = f":{parts.port}" if parts.port else ""
-    return f"{host}{port}{parts.path}"
+    return f"{parts.hostname}{port}{parts.path}"
 
 
 def describe() -> str:
