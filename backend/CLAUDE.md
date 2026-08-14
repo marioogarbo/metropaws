@@ -33,6 +33,7 @@ HTTP Request → FastAPI Router → Depends(auth) → Business Logic → SQLAlch
 | `pricing_utils.py` | Plan pricing rules — the multi-pet **Pack Discount** (`pack_discount_quote`). The ONLY place plan prices are adjusted; checkout and `GET /payments/quotes` both call it. |
 | `plan_term_utils.py` | Plan term math + **upgrade/renewal eligibility** (`plan_status`, `purchase_eligibility`, `benefits_untouched`). The ONLY place those rules live; checkout, activate-plan, quotes, wallet, and the claim expiry gate all call it. |
 | `seed.py` | One-time script to create default `ServiceType` rows and the admin user — not part of the app lifecycle |
+| `migrate.py` | **Idempotent schema migrations, one named function per step, run in `MIGRATIONS` order.** Nothing executes on import — run `python migrate.py` explicitly, and mind which DB `APP_ENV` resolves to. Add a step as a new function *and* register it in `MIGRATIONS`; `tests/test_migrate.py` fails if you forget, or if the module regains an import-time side effect. `deploy.ps1` does **not** run it |
 | `notify_app_launch.py` | One-off CLI broadcast of the Android launch announcement to members + Founding 50 reservations. Reads the admin XLSX exports (no DB access) and picks the audience variant per person. **Deduped on `_mailbox_key` (canonical inbox, folding Gmail dots/`+tags`), not on the raw address** — a member who also reserved early is emailed once, with the members-export row winning so the copy is right. Ledger of delivered inboxes means a re-run resumes instead of double-sending; the send loop re-checks too. Same person on two *different* addresses (matched by phone) is reported for a human decision, never auto-dropped. Dry-run by default; `--send` confirms first. |
 | `routers/auth.py` | Registration, login, `/me`, forgot/reset password |
 | `routers/members.py` | Member profile CRUD + in-app notifications (list / unread-count / mark-read) |
@@ -128,7 +129,7 @@ Members claim money back for services paid out-of-pocket (see `docs/REIMBURSEMEN
 ### New database table
 1. Add the ORM model to `models.py`. Follow the `gen_uuid` primary key pattern.
 2. `models.Base.metadata.create_all(bind=engine)` in `main.py` auto-creates the table on next startup — no migration file needed for new tables.
-3. If modifying an existing table, use Alembic (`alembic` is already in `requirements.txt` but not yet initialized). Do not rely on `create_all` to alter existing columns.
+3. If modifying an existing table, add a step to `migrate.py` — a named function using `ADD COLUMN IF NOT EXISTS` (or a guarded `DO $$`), registered in `MIGRATIONS`. Do not rely on `create_all` to alter existing columns. Run it against dev **and** prod before the deploy that needs the column. (`alembic` is in `requirements.txt` but has never been initialized.)
 
 ### New service type (business domain)
 Add it via the admin API (`POST /admin/service-types`) or in `seed.py`. Do not hardcode service type names in application logic.
