@@ -28,7 +28,6 @@ Usage (from the ``backend`` directory):
 """
 
 import argparse
-import os
 import re
 import sys
 import time
@@ -40,7 +39,7 @@ from typing import Callable
 
 import openpyxl
 
-import config  # noqa: F401 — importing it populates the environment
+import config
 
 from email_utils import (  # noqa: E402 — env must be loaded before the mail config is read
     AUDIENCE_FOUNDING_MEMBER,
@@ -282,10 +281,10 @@ def _record_sent(ledger: Path, recipient: Recipient) -> None:
 # ── Modes ─────────────────────────────────────────────────────────────────────
 def _mail_transport() -> str:
     """Human-readable transport summary. Exits if no sender is configured."""
-    sender = os.getenv("EMAIL_FROM") or os.getenv("SMTP_USER")
+    sender = config.env("EMAIL_FROM") or config.env("SMTP_USER")
     if not sender:
-        raise SystemExit("No sender configured - set EMAIL_FROM (or SMTP_USER) in .env")
-    transport = "ZeptoMail API" if os.getenv("ZEPTOMAIL_TOKEN") else "SMTP"
+        raise SystemExit("No sender configured - set EMAIL_FROM (or SMTP_USER) in .env.dev")
+    transport = "ZeptoMail API" if config.env("ZEPTOMAIL_TOKEN") else "SMTP"
     return f"{transport}, from {sender}"
 
 

@@ -17,9 +17,9 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-import os
-
 import httpx
+
+import config
 
 
 # Fail fast instead of hanging the request when the SMTP host is unreachable
@@ -39,7 +39,7 @@ def _send_via_zeptomail(
     attachments=None,
 ):
     """Send through ZeptoMail's transactional HTTP API. Raises on failure."""
-    token = os.getenv("ZEPTOMAIL_TOKEN", "").strip()
+    token = config.env("ZEPTOMAIL_TOKEN", "").strip()
     # The console shows the full header value; accept it with or without prefix.
     if not token.lower().startswith("zoho-enczapikey"):
         token = f"Zoho-enczapikey {token}"
@@ -60,7 +60,7 @@ def _send_via_zeptomail(
             for (filename, content, mime_type) in attachments
         ]
 
-    url = os.getenv("ZEPTOMAIL_API_URL", _ZEPTOMAIL_URL_DEFAULT)
+    url = config.env("ZEPTOMAIL_API_URL", _ZEPTOMAIL_URL_DEFAULT)
     resp = httpx.post(
         url,
         json=payload,
@@ -82,10 +82,10 @@ def _send_via_smtp(
     attachments=None,
 ):
     """Send through plain SMTP (local dev fallback). Raises on failure."""
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_host = config.env("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = config.env_int("SMTP_PORT", 587)
+    smtp_user = config.env("SMTP_USER")
+    smtp_password = config.env("SMTP_PASSWORD")
 
     if not all([smtp_user, smtp_password]):
         raise ValueError("SMTP credentials not configured")
@@ -120,12 +120,12 @@ def _send_email(to_email: str, subject: str, html_body: str, from_name=None, att
     ``attachments`` is a list of ``(filename, content_bytes, mime_type)``.
     Raises on any failure — callers decide whether to swallow.
     """
-    from_name = from_name or os.getenv("EMAIL_FROM_NAME", "MetroPaws")
-    from_addr = os.getenv("EMAIL_FROM") or os.getenv("SMTP_USER")
+    from_name = from_name or config.env("EMAIL_FROM_NAME", "MetroPaws")
+    from_addr = config.env("EMAIL_FROM") or config.env("SMTP_USER")
     if not from_addr:
         raise ValueError("No sender address configured (EMAIL_FROM or SMTP_USER)")
 
-    if os.getenv("ZEPTOMAIL_TOKEN"):
+    if config.env("ZEPTOMAIL_TOKEN"):
         _send_via_zeptomail(to_email, subject, html_body, from_name, from_addr, attachments)
     else:
         _send_via_smtp(to_email, subject, html_body, from_name, from_addr, attachments)

@@ -23,11 +23,11 @@ Legacy pets with ``plan_id`` set but ``plan_activated_at`` NULL (manual/seeded
 grants) are treated as ACTIVE WITH NO EXPIRY: they can upgrade while untouched
 and never hit the expiry gate; the first re-grant stamps a real date.
 """
-import os
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+import config
 import models
 import reimbursement_utils
 
@@ -55,8 +55,10 @@ ELIGIBILITY_MESSAGES = {
 
 
 def renewal_window_days() -> int:
+    # Tolerant on purpose (see pricing_utils._default_percent_from_env): a bad
+    # value here must not block every purchase.
     try:
-        return int(os.getenv("RENEWAL_WINDOW_DAYS", str(_DEF_RENEWAL_WINDOW_DAYS)))
+        return int(config.env("RENEWAL_WINDOW_DAYS", str(_DEF_RENEWAL_WINDOW_DAYS)))
     except ValueError:
         return _DEF_RENEWAL_WINDOW_DAYS
 

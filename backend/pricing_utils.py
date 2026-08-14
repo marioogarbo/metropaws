@@ -27,11 +27,11 @@ redeploy — see pack_discount_settings() and routers/settings.py's
 GET/PUT /settings/pack-discount. PACK_DISCOUNT_PERCENT (env) is consulted only
 as the fresh-install default, before an admin has ever saved a value.
 """
-import os
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+import config
 import models
 
 PACK_DISCOUNT_ENABLED_KEY = "pack_discount_enabled"
@@ -61,15 +61,17 @@ _ACTIVE_WINDOW_DAYS = 365
 
 
 def _default_percent_from_env() -> int:
+    # Deliberately tolerant rather than config.env_int, which raises: a typo in
+    # a pricing setting must not take checkout down with it.
     try:
-        return int(os.getenv("PACK_DISCOUNT_PERCENT", str(_DEF_PERCENT)))
+        return int(config.env("PACK_DISCOUNT_PERCENT", str(_DEF_PERCENT)))
     except ValueError:
         return _DEF_PERCENT
 
 
 def _max_plan_pets() -> int:
     try:
-        return int(os.getenv("PACK_DISCOUNT_MAX_PLAN_PETS", str(_DEF_MAX_PLAN_PETS)))
+        return int(config.env("PACK_DISCOUNT_MAX_PLAN_PETS", str(_DEF_MAX_PLAN_PETS)))
     except ValueError:
         return _DEF_MAX_PLAN_PETS
 

@@ -9,14 +9,15 @@ Docs: https://developers.paymongo.com/reference/checkout-session-resource
 import base64
 import hashlib
 import hmac
-import os
 import httpx
+
+import config
 
 PAYMONGO_BASE = "https://api.paymongo.com/v1"
 
 
 def _auth_headers() -> dict:
-    key = os.getenv("PAYMONGO_SECRET_KEY")
+    key = config.env("PAYMONGO_SECRET_KEY")
     if not key:
         raise RuntimeError("PAYMONGO_SECRET_KEY is not set")
     encoded = base64.b64encode(f"{key}:".encode()).decode()
@@ -109,7 +110,7 @@ def get_paid_payment_method(session_id: str) -> str | None:
     determined. Best-effort and SYNCHRONOUS so receipt generation (also sync)
     can call it; any failure returns None so a receipt still renders.
     """
-    key = os.getenv("PAYMONGO_SECRET_KEY")
+    key = config.env("PAYMONGO_SECRET_KEY")
     if not key or not session_id:
         return None
     try:
@@ -134,7 +135,7 @@ def get_paid_payment_method(session_id: str) -> str | None:
 
 def verify_webhook_signature(payload: bytes, signature_header: str) -> bool:
     """PayMongo signature header: 't=<unix>,te=<test_sig>,li=<live_sig>'."""
-    secret = os.getenv("PAYMONGO_WEBHOOK_SECRET")
+    secret = config.env("PAYMONGO_WEBHOOK_SECRET")
     if not secret:
         raise RuntimeError("PAYMONGO_WEBHOOK_SECRET is not set")
     try:
