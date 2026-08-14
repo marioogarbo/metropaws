@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 
 import config
 import models
+from datetime_utils import aware
 
 PACK_DISCOUNT_ENABLED_KEY = "pack_discount_enabled"
 PACK_DISCOUNT_PERCENT_KEY = "pack_discount_percent"
@@ -148,11 +149,7 @@ def pack_discount_quote(
     def _is_active(activated) -> bool:
         if activated is None:
             return True
-        # Postgres returns tz-aware datetimes; guard the naive case anyway so
-        # a driver/backend quirk can never crash the money path.
-        if activated.tzinfo is None:
-            activated = activated.replace(tzinfo=timezone.utc)
-        return activated >= cutoff
+        return aware(activated) >= cutoff
 
     anchor_prices = [price for (activated, price) in rows if _is_active(activated)]
 

@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 import config
 import models
 import reimbursement_utils
+from datetime_utils import aware
 
 PLAN_TERM_DAYS = 365
 
@@ -63,18 +64,12 @@ def renewal_window_days() -> int:
         return _DEF_RENEWAL_WINDOW_DAYS
 
 
-def _aware(dt: datetime) -> datetime:
-    """Postgres returns tz-aware datetimes; guard the naive case so a driver
-    quirk can never crash the money path (same guard as pricing_utils)."""
-    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
-
-
 def plan_term(pet: models.Pet) -> tuple[datetime, datetime] | None:
     """(activated_at, expires_at) of the pet's current plan term, or None when
     the pet has no plan OR a legacy plan with no activation date (no expiry)."""
     if not pet.plan_id or pet.plan_activated_at is None:
         return None
-    start = _aware(pet.plan_activated_at)
+    start = aware(pet.plan_activated_at)
     return start, start + timedelta(days=PLAN_TERM_DAYS)
 
 

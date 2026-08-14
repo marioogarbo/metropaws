@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 import models
+from datetime_utils import aware
 
 
 _FOUNDING_BONUS = [
@@ -119,7 +120,7 @@ def grant_plan_to_member(db: Session, member: models.Member, plan: models.Plan) 
         )
         if existing:
             existing.total_sessions += ps.sessions
-            if not existing.expires_at or existing.expires_at < expires_at:
+            if not existing.expires_at or aware(existing.expires_at) < expires_at:
                 existing.expires_at = expires_at
         else:
             db.add(
@@ -130,6 +131,13 @@ def grant_plan_to_member(db: Session, member: models.Member, plan: models.Plan) 
                     expires_at=expires_at,
                 )
             )
+
+    # Flush so the founding-bonus loop below sees the rows just added. The
+    # session uses autoflush=False, so without this the lookup misses pending
+    # inserts and adds a SECOND row for the same category. That is exactly the
+    # duplication migrate.deduplicate_pet_services had to clean up on the pet
+    # side, and member_services has no unique constraint to catch it.
+    db.flush()
 
     if getattr(member, "is_founding", False):
         for svc_name, bonus in _FOUNDING_BONUS:
