@@ -49,7 +49,7 @@ MUST read `backend/CLAUDE.md` before modifying any API call or data model assump
 
 Key backend files to cross-reference when changing API contracts:
 
-- `backend/schemas.py` — all request/response shapes (Pydantic models)
+- `backend/schemas/` — all request/response shapes (Pydantic models), one module per subject
 - `backend/models.py` — ORM table definitions / DB schema
 - `backend/routers/auth.py` — `/register`, `/login`, `/me`, forgot/reset password
 - `backend/routers/members.py` — member profile CRUD

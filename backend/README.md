@@ -26,7 +26,7 @@ backend/
 ├── auth.py           # JWT creation & password hashing
 ├── database.py       # SQLAlchemy engine & session
 ├── models.py         # ORM table definitions
-├── schemas.py        # Pydantic request/response models
+├── schemas/          # Pydantic request/response models, one module per subject
 ├── email_utils.py    # Password reset email sender
 ├── seed.py           # Seeds service types + default admin
 ├── routers/

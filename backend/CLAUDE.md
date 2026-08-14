@@ -24,7 +24,7 @@ HTTP Request → FastAPI Router → Depends(auth) → Business Logic → SQLAlch
 | `config.py` | **Environment selection + settings access.** `APP_ENV` (`dev` default / `prod`) picks `.env.dev` or `.env.prod`; `.env.local` overrides both; real environment variables beat every file, which is how Docker and Render are configured. Import it before any other project module and read settings through `require` / `env` / `env_int` / `env_bool` — several modules read config at import time, so the import order is what guarantees correctness. |
 | `database.py` | SQLAlchemy engine + `SessionLocal` + `get_db` dependency |
 | `models.py` | All ORM table definitions — single source of truth for the DB schema |
-| `schemas.py` | All Pydantic request/response models — single source of truth for API contracts |
+| `schemas/` | **All Pydantic request/response models — single source of truth for API contracts.** One module per subject (`auth`, `services`, `pets`, `members`, `plans`, `bookings`, `clinics`, `providers`, `payments`, `reimbursements`, `paw_points`, `content`, `directory`, `reservations`, `settings`, `notifications`, plus shared `validators`). `__init__.py` re-exports every name, so `import schemas` / `schemas.PetOut` works unchanged. Imports are layered one way — `validators → services → pets, plans → members → bookings → clinics`, and `providers → reimbursements`; if two modules need each other, the shared shape belongs in the lower one. |
 | `auth.py` | JWT encode/decode, password hashing, and the three FastAPI dependency guards: `get_current_user`, `require_admin`, `require_member` |
 | `email_utils.py` | Outbound email — password reset, reimbursement claim status updates, **payment receipt (`send_payment_receipt_email`, PDF attached)**, and the **Android launch announcement (`build_app_launch_email` / `send_app_launch_email`)**. Sends via the **ZeptoMail HTTP API** when `ZEPTOMAIL_TOKEN` is set (**required in prod** — Render's free tier blocks outbound SMTP ports 25/465/587); falls back to plain SMTP for local dev. `_branded_shell()` is the shared logo header + card + footer chrome — build new templates on it rather than re-inlining the markup. |
 | `invoice_utils.py` | **Payment receipt PDF generation + send** (fpdf2, branded, `assets/metropaws-logo.png` + bundled Montserrat). `notify_payment_receipt` = best-effort/never-raises (auto path); `generate_and_send` = raises (admin resend). |
@@ -120,7 +120,7 @@ Members claim money back for services paid out-of-pocket (see `docs/REIMBURSEMEN
 ## Adding New Features — Patterns to Follow
 
 ### New endpoint
-1. Add Pydantic schemas to `schemas.py` (request + response).
+1. Add Pydantic schemas to the matching module in `schemas/` (request + response), and re-export them from `schemas/__init__.py`.
 2. Add the route to the appropriate router in `routers/`. Use the correct auth dependency.
 3. Register the router in `main.py` only if it's a new router file.
 4. Never put business logic in `main.py`.
