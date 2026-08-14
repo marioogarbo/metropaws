@@ -39,7 +39,6 @@ switch ($Env) {
 
 $RENDER_REGION = "singapore"       # closest to PH / AU
 $RENDER_PLAN   = "free"
-$RENDER_PORT   = 8000
 
 $VERSION      = "$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $FULL_IMAGE   = "$DOCKER_USERNAME/$($IMAGE_NAME):$VERSION"
@@ -126,6 +125,8 @@ Write-Host "Owner ID : $OWNER_ID" -ForegroundColor Gray
 # ── Build env var array for Render (full replace from $ENV_FILE) ──────────────
 # RENDER_API_KEY is a deploy credential, not an app runtime var, so it is excluded.
 $renderEnvKeys = @(
+    # Tells the running service which environment it is (config.py startup banner).
+    "APP_ENV",
     "DATABASE_URL", "SECRET_KEY", "ALGORITHM", "ACCESS_TOKEN_EXPIRE_MINUTES",
     "UPLOAD_DIR", "BASE_URL", "FRONTEND_URL", "ALLOWED_ORIGINS",
     "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_NAME", "EMAIL_FROM",

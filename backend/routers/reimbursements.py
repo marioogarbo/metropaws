@@ -5,12 +5,12 @@ Admin review/approve/mark-paid live in routers/admin.py. See
 docs/REIMBURSEMENT_FEATURE_PLAN.md.
 """
 import hashlib
-import os
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session, joinedload
 
+import config
 from database import get_db
 import models, schemas, auth as auth_utils
 import plan_term_utils
@@ -22,14 +22,14 @@ router = APIRouter(prefix="/members/me", tags=["reimbursements"])
 
 ALLOWED_RECEIPT_TYPES = {"image/jpeg", "image/png", "application/pdf"}
 # Per-claim sanity ceiling (typo / abuse guard). Env is in pesos for readability.
-MAX_CLAIM_CENTAVOS = int(os.getenv("REIMBURSEMENT_MAX_CLAIM_PHP", "20000")) * 100
+MAX_CLAIM_CENTAVOS = config.env_int("REIMBURSEMENT_MAX_CLAIM_PHP", 20000) * 100
 # Anti-spam: max claims a member can submit per rolling 24h.
-MAX_CLAIMS_PER_DAY = int(os.getenv("REIMBURSEMENT_MAX_PER_DAY", "20"))
+MAX_CLAIMS_PER_DAY = config.env_int("REIMBURSEMENT_MAX_PER_DAY", 20)
 # Grooming can be reimbursed at most once per this many days per pet (anti
 # look-alike-pet fraud — mirrors the grooming booking 90-day return rule).
 # Measured on the service date, so two grooming visits must be >= this far
 # apart. Set to 0 to disable.
-GROOMING_COOLDOWN_DAYS = int(os.getenv("REIMBURSEMENT_GROOMING_COOLDOWN_DAYS", "90"))
+GROOMING_COOLDOWN_DAYS = config.env_int("REIMBURSEMENT_GROOMING_COOLDOWN_DAYS", 90)
 # Categories treated as "grooming" for the cooldown above (case-insensitive).
 _GROOMING_CATEGORY_NAMES = {"grooming", "full grooming"}
 # Widest real timezone offset (UTC+14). Used to backstop the future-date check
@@ -38,7 +38,7 @@ _MAX_TZ_OFFSET = timedelta(hours=14)
 # How far ahead a payout_target=provider claim's appointment date may be — this
 # is a pre-authorization request filed before the visit, not a completed-visit
 # reimbursement, so it needs a forward-looking (not backward-looking) date rule.
-PROVIDER_MAX_FUTURE_DAYS = int(os.getenv("REIMBURSEMENT_PROVIDER_MAX_FUTURE_DAYS", "60"))
+PROVIDER_MAX_FUTURE_DAYS = config.env_int("REIMBURSEMENT_PROVIDER_MAX_FUTURE_DAYS", 60)
 
 
 def _receipt_hash(upload: UploadFile) -> str:

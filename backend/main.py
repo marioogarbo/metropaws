@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
+import config  # must precede every project import — it populates the environment
 
 from database import engine
 import models
@@ -30,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-upload_dir = os.getenv("UPLOAD_DIR", "uploads")
+upload_dir = config.env("UPLOAD_DIR", "uploads")
 os.makedirs(upload_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 

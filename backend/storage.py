@@ -20,14 +20,16 @@ import uuid
 import httpx
 from fastapi import UploadFile, HTTPException
 
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
-# 8 MB default — comfortably fits phone photos and multi-page receipt PDFs.
-MAX_FILE_BYTES = int(os.getenv("MAX_FILE_BYTES", str(8 * 1024 * 1024)))
+import config
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "uploads")
+UPLOAD_DIR = config.env("UPLOAD_DIR", "uploads")
+BASE_URL = config.env("BASE_URL", "http://localhost:8000")
+# 8 MB default — comfortably fits phone photos and multi-page receipt PDFs.
+MAX_FILE_BYTES = config.env_int("MAX_FILE_BYTES", 8 * 1024 * 1024)
+
+SUPABASE_URL = config.env("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = config.env("SUPABASE_SERVICE_KEY")
+SUPABASE_BUCKET = config.env("SUPABASE_BUCKET", "uploads")
 
 # Extension -> MIME. Flutter's http.MultipartFile.fromBytes sends
 # "application/octet-stream" (it does not sniff the bytes), so we resolve the

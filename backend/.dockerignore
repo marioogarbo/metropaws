@@ -1,4 +1,8 @@
+# Secrets never enter the image — Render and `docker run --env-file` supply
+# configuration as real environment variables at runtime.
 .env
+.env.*
+
 .venv
 __pycache__
 *.pyc
@@ -8,3 +12,5 @@ __pycache__
 uploads/
 .git
 .gitignore
+.render-service-id.*
+deploy.ps1

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from email_utils import send_reset_email
 from routers.settings import get_founding_50_enabled, get_founding_50_limit, get_founding_50_claimed
 from collections import defaultdict
-import os
+import config
 import time
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -182,9 +182,9 @@ def forgot_password(payload: schemas.ForgotPasswordRequest, db: Session = Depend
     db.commit()
 
     # Send email
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    frontend_url = config.env("FRONTEND_URL", "http://localhost:3000")
     reset_link = f"{frontend_url}/reset-password?token={token}"
-    email_from_name = os.getenv("EMAIL_FROM_NAME", "MetroPaws")
+    email_from_name = config.env("EMAIL_FROM_NAME", "MetroPaws")
 
     try:
         send_reset_email(user.email, reset_link, email_from_name)

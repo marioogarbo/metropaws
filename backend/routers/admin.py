@@ -4,7 +4,7 @@ from sqlalchemy import func
 from typing import Optional
 from datetime import datetime, timezone
 import logging
-import os
+import config
 from database import get_db
 import models, schemas, auth as auth_utils
 import reimbursement_utils as rutils
@@ -12,7 +12,7 @@ import invoice_utils
 
 # When "true", the admin who approved a claim may NOT also mark it paid
 # (segregation of duties). Off by default so single-admin setups still work.
-_ENFORCE_DUAL_CONTROL = os.getenv("REIMBURSEMENT_ENFORCE_DUAL_CONTROL", "false").lower() == "true"
+_ENFORCE_DUAL_CONTROL = config.env_bool("REIMBURSEMENT_ENFORCE_DUAL_CONTROL", False)
 
 from paw_points_utils import award_points
 

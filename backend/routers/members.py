@@ -10,7 +10,7 @@ import asyncio
 import logging
 import qrcode
 import io
-import os
+import config
 
 logger = logging.getLogger("metropaws.members")
 
@@ -36,7 +36,7 @@ def list_reimbursement_providers(db: Session = Depends(get_db)):
         .all()
     )
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = config.env("BASE_URL", "http://localhost:8000")
 
 
 @router.get("/me", response_model=schemas.MemberOut)

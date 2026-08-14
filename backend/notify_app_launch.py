@@ -39,9 +39,8 @@ from pathlib import Path
 from typing import Callable
 
 import openpyxl
-from dotenv import load_dotenv
 
-load_dotenv()
+import config  # noqa: F401 — importing it populates the environment
 
 from email_utils import (  # noqa: E402 — env must be loaded before the mail config is read
     AUDIENCE_FOUNDING_MEMBER,

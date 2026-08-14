@@ -22,6 +22,7 @@ FastAPI backend for the MetroPaws Wellness Club — handles membership, pet reco
 ```
 backend/
 ├── main.py           # App entry point, router registration
+├── config.py         # Environment selection & settings access
 ├── auth.py           # JWT creation & password hashing
 ├── database.py       # SQLAlchemy engine & session
 ├── models.py         # ORM table definitions
@@ -48,24 +49,31 @@ pip install -r requirements.txt
 
 ### 2. Configure environment
 
-Copy the example below into a `.env` file in this directory:
+Nothing to do — `.env.dev` is already in this directory and is what a local run
+uses by default. `APP_ENV` picks the environment:
+
+| `APP_ENV` | File read | Database |
+|---|---|---|
+| _unset_ / `dev` | `.env.dev` | DEV Supabase project |
+| `prod` | `.env.prod` | **LIVE** — only ever set this deliberately |
+
+Every process prints its target on startup, so you can always see which
+database you are about to touch:
+
+```
+[config] APP_ENV=dev  db=aws-1-....pooler.supabase.com:6543/postgres  config=.env.dev
+```
+
+For machine-specific settings, create a `.env.local` (gitignored). It is read
+first and beats `.env.dev`, so you can point at your own database or fix
+`BASE_URL` without editing a file the Render services also use:
 
 ```env
-DATABASE_URL=postgresql://user:password@host:5432/dbname
-SECRET_KEY=your-secret-key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
-
-UPLOAD_DIR=uploads
 BASE_URL=http://localhost:8000
-FRONTEND_URL=http://localhost:3000
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your@gmail.com
-SMTP_PASSWORD=your-app-password
-EMAIL_FROM=your@gmail.com
 ```
+
+`.env.example` documents every supported variable. See `config.py` for the
+loading rules.
 
 ### 3. Seed the database
 
@@ -77,6 +85,13 @@ python seed.py
 
 ```bash
 uvicorn main:app --reload --port 8000
+```
+
+To point a one-off command at production, set `APP_ENV` for that command only —
+never as a persistent shell or machine variable:
+
+```powershell
+$env:APP_ENV='prod'; python migrate.py; $env:APP_ENV=$null
 ```
 
 API docs available at `http://localhost:8000/docs`
@@ -96,10 +111,14 @@ This builds a `linux/amd64` image, tags it with a timestamp and as `latest`, the
 ### Run the image locally
 
 ```powershell
-docker run -p 8000:8000 --env-file .env -v ${PWD}/uploads:/app/uploads marioogarbo/metropaws-backend:latest
+docker run -p 8000:8000 --env-file .env.dev -v ${PWD}/uploads:/app/uploads marioogarbo/metropaws-backend:latest
 ```
 
 > The `uploads/` directory is mounted as a volume so uploaded files persist across container restarts.
+
+> Env files are excluded from the image (`.dockerignore`). Configuration always
+> arrives as real environment variables at runtime — `--env-file` locally,
+> Render's env vars in deployment — and those override anything on disk.
 
 ---
 

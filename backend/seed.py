@@ -1,10 +1,8 @@
 """Run once to seed default service types and an admin account."""
+import config
 from database import SessionLocal, engine
-import models, os
+import models
 from auth import hash_password
-from dotenv import load_dotenv
-
-load_dotenv()
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -178,10 +176,8 @@ for key, default_val in [
         db.add(models.AppSetting(key=key, value=default_val))
 db.commit()
 
-admin_email = os.getenv("SEED_ADMIN_EMAIL", "admin@metropaws.ph")
-admin_password = os.getenv("SEED_ADMIN_PASSWORD")
-if not admin_password:
-    raise ValueError("Set SEED_ADMIN_PASSWORD in .env before running seed.py")
+admin_email = config.env("SEED_ADMIN_EMAIL", "admin@metropaws.ph")
+admin_password = config.require("SEED_ADMIN_PASSWORD")
 
 if not db.query(models.User).filter(models.User.email == admin_email).first():
     admin_user = models.User(
@@ -237,7 +233,7 @@ CLINICS = [
 # Demo/dev data only. Requires SEED_CLINIC_PASSWORD to be set explicitly —
 # without it the whole block is skipped, so prod never gets sample clinic
 # logins with a password that lives in this repo.
-clinic_password = os.getenv("SEED_CLINIC_PASSWORD")
+clinic_password = config.env("SEED_CLINIC_PASSWORD")
 if not clinic_password:
     print("SEED_CLINIC_PASSWORD not set — skipping sample clinic accounts.")
 else:

@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -8,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 import auth as auth_utils
+import config
 import models
 import paymongo
 import plan_term_utils
@@ -47,15 +47,12 @@ async def create_checkout(
         raise HTTPException(status_code=404, detail="Plan not found")
 
     # Checkout Session success/cancel URLs must be http(s); they target the
-    # backend return pages below, which deep-link back into the app.
-    success_base = os.getenv(
-        "PAYMONGO_SUCCESS_REDIRECT",
-        "https://metropaws-backend.onrender.com/payments/return/success",
-    )
-    failure_base = os.getenv(
-        "PAYMONGO_FAILURE_REDIRECT",
-        "https://metropaws-backend.onrender.com/payments/return/failed",
-    )
+    # backend return pages below, which deep-link back into the app. They
+    # default to this environment's own BASE_URL so a dev run never sends a
+    # member back to the production service.
+    base_url = config.env("BASE_URL", "http://localhost:8000").rstrip("/")
+    success_base = config.env("PAYMONGO_SUCCESS_REDIRECT", f"{base_url}/payments/return/success")
+    failure_base = config.env("PAYMONGO_FAILURE_REDIRECT", f"{base_url}/payments/return/failed")
 
     pet = (
         db.query(models.Pet)

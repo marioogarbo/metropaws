@@ -21,6 +21,7 @@ HTTP Request → FastAPI Router → Depends(auth) → Business Logic → SQLAlch
 | File | What it owns |
 |---|---|
 | `main.py` | App factory, middleware, static file mount, router registration, DB table creation on startup |
+| `config.py` | **Environment selection + settings access.** `APP_ENV` (`dev` default / `prod`) picks `.env.dev` or `.env.prod`; `.env.local` overrides both; real environment variables beat every file, which is how Docker and Render are configured. Import it before any other project module and read settings through `require` / `env` / `env_int` / `env_bool` — several modules read config at import time, so the import order is what guarantees correctness. |
 | `database.py` | SQLAlchemy engine + `SessionLocal` + `get_db` dependency |
 | `models.py` | All ORM table definitions — single source of truth for the DB schema |
 | `schemas.py` | All Pydantic request/response models — single source of truth for API contracts |
@@ -173,12 +174,21 @@ Every paid plan payment emails the member a **branded PDF receipt**. It's genera
 
 ## Environment Variables
 
-All config is loaded from `.env` via `python-dotenv`. Never hardcode values.
+All config goes through `config.py`. Never hardcode values, and never call
+`load_dotenv()` or read `os.getenv` at module level in new code — use
+`config.require(...)` for settings the app cannot start without and
+`config.env` / `config.env_int` / `config.env_bool` for the rest.
+
+`APP_ENV` selects the environment: unset or `dev` → `.env.dev` (DEV Supabase),
+`prod` → `.env.prod` (LIVE). A bare `uvicorn main:app` therefore targets dev;
+production takes a deliberate `APP_ENV=prod`. Every process prints its resolved
+target (`[config] APP_ENV=… db=… config=…`) on startup.
 
 | Variable | Required | Default | Notes |
 |---|---|---|---|
+| `APP_ENV` | No | `dev` | Which environment this process is. `dev` → `.env.dev`, `prod` → `.env.prod`. Set explicitly on the deployed services so their startup banner is truthful |
 | `DATABASE_URL` | Yes | — | Full PostgreSQL connection string |
-| `SECRET_KEY` | Yes | `"fallback-secret-key"` | Must be changed in production |
+| `SECRET_KEY` | Yes | — | App refuses to start without it |
 | `ALGORITHM` | No | `HS256` | JWT signing algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | No | `10080` | 7 days |
 | `UPLOAD_DIR` | No | `uploads` | Relative path; must be volume-mounted in Docker |
@@ -212,7 +222,7 @@ All config is loaded from `.env` via `python-dotenv`. Never hardcode values.
 | `INVOICE_DOC_TITLE` | No | `PAYMENT RECEIPT` | Document heading. Use `OFFICIAL RECEIPT` only with a real BIR OR series |
 | `INVOICE_VAT_PERCENT` | No | `0` | `0` hides tax lines; e.g. `12` shows a VAT-inclusive breakdown (net + VAT) |
 
-`.env` is excluded from Docker images via `.dockerignore`. Pass secrets at runtime via `--env-file .env` or Cloud Run secret manager.
+All env files (`.env`, `.env.*`) are excluded from Docker images via `.dockerignore` — secrets must never be baked into an image that is pushed to Docker Hub. Pass them at runtime instead: `--env-file .env.dev` locally, Render env vars in deployment (`deploy.ps1` pushes them from `.env.<env>`).
 
 ---
 
@@ -233,7 +243,8 @@ The image targets `linux/amd64`. The app runs as a non-root `app` user inside th
 ## What Not to Do
 
 - **Do not add Alembic auto-migrate on startup.** `create_all` is intentional — it only creates missing tables, it never drops or alters. Use explicit migrations for schema changes.
-- **Do not store secrets in the image.** `.env` is gitignored and dockerignored for a reason.
+- **Do not store secrets in the image.** Every `.env*` file is gitignored and dockerignored for a reason. `.env.example` is the one committed file and holds placeholders only.
+- **Do not add a plain `.env`.** Environments are explicit: `.env.dev` / `.env.prod`, selected by `APP_ENV`, with `.env.local` for personal overrides. A generic `.env` is what previously made an innocent `import main` run `create_all` against production.
 - **Do not change `MemberService.total_sessions` to log a service.** Only `used_sessions` is incremented.
 - **Do not bypass `require_admin` on admin routes.** All `/admin/*` routes must stay behind this guard.
 - **Do not trust the client's reported MIME type for file saves.** The current code re-derives the extension from the validated MIME — keep it that way.
