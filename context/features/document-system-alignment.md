@@ -437,6 +437,13 @@ paid came out of the preventive pool.
 Do the quick fix if prod is affected and money is moving; schedule the flag
 either way. No app release needed — this is backend and data only.
 
+**A test now pins the broken behaviour** (2026-08-14):
+`test_emergency_stabilization_does_not_match_the_emergency_pool` in
+`backend/tests/test_reimbursement_utils.py` asserts that
+`"Emergency Stabilization"` does *not* match the pool, with a docstring saying it
+documents the gap rather than endorses it. Whichever fix is chosen, that test
+will fail and has to be updated deliberately — which is the point.
+
 ## Suggested order when this gets picked up
 
 1. **Decide item 1 with Romy.** Authorization-first or reimbursement-first? Every

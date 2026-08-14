@@ -74,6 +74,11 @@ says. If a fact is derivable by reading a file, link to that file instead.
   table instead of reusing `reimbursement_providers`, why "Providers" was the
   wrong name for the admin page, and why this page ships without a hardcoded
   fallback list.
+- [`features/deployment-topology.md`](features/deployment-topology.md) —
+  which repo and branch deploys to which host, which frontend calls which
+  backend (staging points at *dev*), why production deploys from `master` and not
+  `main`, the CORS allowlist that follows and why the mobile app is exempt from
+  it, plus the operating rules for `deploy.ps1` and `APP_ENV`.
 
 ### Sessions
 - [`sessions/2026-07-30-play-store-launch.md`](sessions/2026-07-30-play-store-launch.md) —
@@ -97,3 +102,10 @@ says. If a fact is derivable by reading a file, link to that file instead.
   published). Found: pre-activation claims aren't deducted, no category matches
   "Emergency" so that pool is unreachable, and a skipped vaccination card can
   never be added.
+- [`sessions/2026-08-14-backend-config-and-cleanup.md`](sessions/2026-08-14-backend-config-and-cleanup.md) —
+  deleted `backend/.env` and made `APP_ENV` decide the environment (dev by
+  default), added 125 hermetic tests, and split the three largest backend files
+  into packages without changing a single caller. Found: live credentials were
+  being baked into every Docker image, `ALLOWED_ORIGINS` was deployed but never
+  read, and nearly half of ruff's findings are wrong for FastAPI. Deployed to
+  dev; production still runs the old build.
