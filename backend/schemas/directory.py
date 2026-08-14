@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-import directory_taxonomy
+from domain import directory_taxonomy
 
 
 def _clean_services(v):

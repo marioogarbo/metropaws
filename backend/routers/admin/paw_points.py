@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 import models, schemas, auth as auth_utils
 from database import get_db
-from paw_points_utils import award_points
+from domain.paw_points_utils import award_points
 
 router = APIRouter(tags=["admin"])
 

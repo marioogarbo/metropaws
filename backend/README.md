@@ -29,12 +29,7 @@ backend/
 ├── paymongo.py             # PayMongo REST client
 ├── storage.py              # The one upload path (Supabase Storage, local fallback)
 ├── datetime_utils.py       # Timezone guard shared by the money paths
-├── plan_utils.py           # Granting a plan's benefits
-├── plan_term_utils.py      # Plan term, upgrade/renewal eligibility
-├── pricing_utils.py        # Pack Discount
-├── reimbursement_utils.py  # Wallet pools and usage
-├── paw_points_utils.py     # Points earning
-├── directory_taxonomy.py   # Directory service vocabulary
+├── domain/                 # Business rules, independent of HTTP
 ├── routers/                # HTTP layer; admin/ is a package, one module per subject
 ├── schemas/                # Pydantic request/response models, one per subject
 ├── email_utils/            # Outbound email: transport, layout, one per template

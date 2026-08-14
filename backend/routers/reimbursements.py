@@ -13,9 +13,9 @@ from sqlalchemy.orm import Session, joinedload
 import config
 from database import get_db
 import models, schemas, auth as auth_utils
-import plan_term_utils
+from domain import plan_term_utils
 import storage
-import reimbursement_utils as rutils
+from domain import reimbursement_utils as rutils
 from routers import settings as settings_router
 
 router = APIRouter(prefix="/members/me", tags=["reimbursements"])

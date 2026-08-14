@@ -1,7 +1,7 @@
 # Direct-to-provider payments
 
 **Status:** live in production since 2026-08-14. Global switch **on**.
-**Owns:** [`backend/reimbursement_utils.py`](../../backend/reimbursement_utils.py),
+**Owns:** [`backend/domain/reimbursement_utils.py`](../../backend/domain/reimbursement_utils.py),
 [`backend/routers/reimbursements.py`](../../backend/routers/reimbursements.py),
 [`backend/routers/settings.py`](../../backend/routers/settings.py),
 [`backend/models.py`](../../backend/models.py) (`Member.direct_pay_*`,

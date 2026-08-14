@@ -65,7 +65,7 @@ for an upcoming scheduled service". The flow that exists:
 | Rev. 5A §6 stage | Built? | Where |
 | --- | --- | --- |
 | Service Request | ✅ member files with a **future** appointment date | `POST /reimbursements`, `payout_target=provider` |
-| Eligibility Review | ✅ pool, plan year, category, duplicate-receipt checks | [`reimbursement_utils.py`](../../backend/reimbursement_utils.py) |
+| Eligibility Review | ✅ pool, plan year, category, duplicate-receipt checks | [`domain/reimbursement_utils.py`](../../backend/domain/reimbursement_utils.py) |
 | Provider Verification | ⚠️ admin vets the provider once, on creation — not per request | `/admin/providers` → `ReimbursementProvider` |
 | Authorization | ⚠️ approval sets an approved amount, but issues **no reference number or QR** and no explicit validity window | `PUT /admin/reimbursements/{id}/review` |
 | Service Completion | ❌ no provider-side confirmation | — |
@@ -116,7 +116,7 @@ member for money MetroPaws already spent. Sequence is therefore mandatory:
 member files → admin approves → MetroPaws pays → admin marks paid.
 
 Deduction happens at **`approved`**, not at `paid` — `USED_STATUSES =
-(approved, paid)` in [`reimbursement_utils.py`](../../backend/reimbursement_utils.py).
+(approved, paid)` in [`domain/reimbursement_utils.py`](../../backend/domain/reimbursement_utils.py).
 Marking paid afterwards does not deduct twice.
 
 ### Open decision — the future-date rule on direct-pay requests
@@ -200,7 +200,7 @@ that status before getting a service.
 
 `Member` ([`backend/models.py:33`](../../backend/models.py)) has **no status
 column**. Membership state is derived from `Payment` rows and
-[`plan_term_utils.py`](../../backend/plan_term_utils.py). Nothing surfaces
+[`domain/plan_term_utils.py`](../../backend/domain/plan_term_utils.py). Nothing surfaces
 anything resembling that vocabulary.
 
 Making a member responsible for reading a status the product never shows is a
@@ -232,7 +232,7 @@ in the app on the same day. Two distinct pieces of work:
 ## 6. PawPoints — 4 of 9 earning activities are missing
 
 **Manual §9.** The manual publishes a 9-row earning table. `POINTS_BY_TIER` in
-[`backend/paw_points_utils.py:5`](../../backend/paw_points_utils.py) implements
+[`backend/domain/paw_points_utils.py:5`](../../backend/domain/paw_points_utils.py) implements
 5, and `PawPointsActivityType`
 ([`backend/models.py:429`](../../backend/models.py)) matches.
 
@@ -362,7 +362,7 @@ exception."* §5.8 repeats it for monthly subscribers.
 The submit path has **no check on `service_date` against
 `pet.plan_activated_at`** ([`reimbursements.py:97-355`](../../backend/routers/reimbursements.py)).
 Activation is consulted in exactly one place —
-[`reimbursement_utils.wallet_usage:87`](../../backend/reimbursement_utils.py),
+[`reimbursement_utils.wallet_usage:87`](../../backend/domain/reimbursement_utils.py),
 which *excludes* pre-activation claims from the used/pending totals so they don't
 count against the allowance.
 

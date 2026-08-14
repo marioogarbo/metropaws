@@ -10,11 +10,11 @@ import auth as auth_utils
 import config
 import models
 import paymongo
-import plan_term_utils
-import pricing_utils
+from domain import plan_term_utils
+from domain import pricing_utils
 import schemas
 from database import get_db
-from plan_utils import grant_plan_to_member, grant_plan_to_pet
+from domain.plan_utils import grant_plan_to_member, grant_plan_to_pet
 from routers.settings import get_payments_enabled
 
 logger = logging.getLogger("metropaws.payments")

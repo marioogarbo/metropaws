@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 
 import config
 import models
-import reimbursement_utils
+from domain import reimbursement_utils
 from datetime_utils import aware
 
 PLAN_TERM_DAYS = 365

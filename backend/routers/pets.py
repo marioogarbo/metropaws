@@ -3,9 +3,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from database import get_db
 import models, schemas, auth as auth_utils
-import plan_term_utils
+from domain import plan_term_utils
 import storage
-from plan_utils import grant_plan_to_pet
+from domain.plan_utils import grant_plan_to_pet
 from routers.settings import get_payments_enabled
 from datetime import datetime
 

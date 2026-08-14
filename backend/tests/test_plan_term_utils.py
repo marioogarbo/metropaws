@@ -8,7 +8,7 @@ matching pricing_utils.
 from datetime import date
 
 import models
-import plan_term_utils
+from domain import plan_term_utils
 
 PREMIUM_PRICE = 4999
 STANDARD_PRICE = 2999

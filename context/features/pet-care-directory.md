@@ -6,7 +6,7 @@
 
 | Piece | Path |
 | --- | --- |
-| Service vocabulary (backend) | `backend/directory_taxonomy.py` |
+| Service vocabulary (backend) | `backend/domain/directory_taxonomy.py` |
 | Model | `backend/models.py` → `DirectoryProvider` |
 | Schemas | `backend/schemas.py` → `DirectoryProvider{Create,Update,Out}` |
 | Routes | `backend/routers/directory.py` |
@@ -109,7 +109,7 @@ The displayed category line is the slugs' labels joined with " / ", which
 reproduces the client's strings exactly.
 
 **The vocabulary lives in two places and must stay in sync:** the backend
-validates against it (`backend/directory_taxonomy.py`), the website renders
+validates against it (`backend/domain/directory_taxonomy.py`), the website renders
 labels and chips from it (`website/lib/directory-taxonomy.ts`). Both files carry
 a comment pointing at the other. Adding a service type is a two-line change in
 both — deliberately a code change, because a new slug that no chip maps to would

@@ -7,7 +7,7 @@ refuses a valid claim.
 from datetime import date
 
 import models
-import reimbursement_utils as rutils
+from domain import reimbursement_utils as rutils
 
 GROOMING_CLAIM_CENTAVOS = 150_000
 EMERGENCY_CLAIM_CENTAVOS = 500_000

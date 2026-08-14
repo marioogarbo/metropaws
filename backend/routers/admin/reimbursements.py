@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 import config
 import models, schemas, auth as auth_utils
-import reimbursement_utils as rutils
+from domain import reimbursement_utils as rutils
 from database import get_db
 
 # When "true", the admin who approved a claim may NOT also mark it paid

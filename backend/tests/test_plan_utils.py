@@ -11,7 +11,7 @@ Note the asymmetry with grant_plan_to_member, which genuinely does top up.
 from datetime import datetime, timedelta, timezone
 
 import models
-import plan_utils
+from domain import plan_utils
 
 PREMIUM_PRICE = 4999
 STANDARD_PRICE = 2999
