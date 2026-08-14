@@ -7,8 +7,8 @@ old shape. Running the whole file against an up-to-date database is a no-op.
 Nothing happens on import — run it explicitly, and mind which database
 ``APP_ENV`` resolves to:
 
-    python migrate.py                          # dev, the default
-    cmd /c "set APP_ENV=prod&& python migrate.py"
+    python -m scripts.migrate                          # dev, the default
+    cmd /c "set APP_ENV=prod&& python -m scripts.migrate"
 
 ``deploy.ps1`` does NOT run this. A deploy that needs a new column has to be
 migrated first, or every query touching that table fails.

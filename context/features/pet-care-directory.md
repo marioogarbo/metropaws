@@ -10,7 +10,7 @@
 | Model | `backend/models.py` → `DirectoryProvider` |
 | Schemas | `backend/schemas.py` → `DirectoryProvider{Create,Update,Out}` |
 | Routes | `backend/routers/directory.py` |
-| Seed | `backend/seed_directory.py` |
+| Seed | `backend/scripts/seed_directory.py` |
 | Service vocabulary (website) | `website/lib/directory-taxonomy.ts` |
 | Fetch + helpers | `website/lib/directory.ts` |
 | Public page | `website/app/find-pet-care/page.tsx` + `components/directory-{hero,list,notes,service-mark}.tsx` |
@@ -85,7 +85,7 @@ class DirectoryProvider(Base):
     updated_at  = Column(DateTime(timezone=True), onupdate=func.now())
 ```
 
-`create_all` on startup creates it — no `migrate.py` entry needed, per the
+`create_all` on startup creates it — no `scripts/migrate.py` entry needed, per the
 backend's "new table" rule. Nothing here is a schema change to an existing table.
 
 ### Why `services` is a tag list, not the free-text category
@@ -265,7 +265,7 @@ card renders the placeholder as muted text rather than as a fake phone link.
 
 ## Seeding
 
-`backend/seed_directory.py` — idempotent, inserts by name only if absent, so a
+`backend/scripts/seed_directory.py` — idempotent, inserts by name only if absent, so a
 re-run after the client edits rows in admin does not clobber their edits. Run
 against dev, then prod, before the first deploy that exposes the page.
 
@@ -818,8 +818,8 @@ hamburger, but that changes the header everywhere and is a design call.
    (`create_all` runs at import). Empty table, additive, nothing else touched.
    No action needed, but do not be surprised to find it there.
 2. Deploy the backend image (`.\deploy.ps1`) — new router, no new env vars, no
-   `migrate.py` entry (new table, so `create_all` handles it).
-3. Run `python seed_directory.py` against **prod** (dev is already seeded with
+   `scripts/migrate.py` entry (new table, so `create_all` handles it).
+3. Run `python -m scripts.seed_directory` against **prod** (dev is already seeded with
    all 19, all `is_partner=false`).
 4. Deploy the website. `/find-pet-care` is statically prerendered with the
    standard 1h ISR window; admin edits purge it immediately via

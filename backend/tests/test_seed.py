@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 import models
-import seed
+from scripts import seed
 
 SEED_SOURCE = Path(seed.__file__)
 INERT = (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.ClassDef, ast.Assign, ast.AnnAssign)

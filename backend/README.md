@@ -21,20 +21,37 @@ FastAPI backend for the MetroPaws Wellness Club — handles membership, pet reco
 
 ```
 backend/
-├── main.py           # App entry point, router registration
-├── config.py         # Environment selection & settings access
-├── auth.py           # JWT creation & password hashing
-├── database.py       # SQLAlchemy engine & session
-├── models.py         # ORM table definitions
-├── schemas/          # Pydantic request/response models, one module per subject
-├── email_utils/      # Outbound email: transport, shared layout, one module per template
-├── seed.py           # Seeds service types + default admin
-├── routers/
-│   ├── auth.py       # /register, /login, /forgot-password, /reset-password, /me
-│   ├── members.py    # Member profile & QR token
-│   ├── pets.py       # Pet CRUD, photo & vax card uploads
-│   └── admin.py      # Service types, session logging
-└── uploads/          # Uploaded files (vax cards, pet photos)
+├── main.py                 # App entry point, middleware, router registration
+├── config.py               # Environment selection (APP_ENV) & settings access
+├── database.py             # SQLAlchemy engine, session, get_db dependency
+├── auth.py                 # JWT encode/decode + the three access guards
+├── models.py               # ORM table definitions
+├── paymongo.py             # PayMongo REST client
+├── storage.py              # The one upload path (Supabase Storage, local fallback)
+├── datetime_utils.py       # Timezone guard shared by the money paths
+├── plan_utils.py           # Granting a plan's benefits
+├── plan_term_utils.py      # Plan term, upgrade/renewal eligibility
+├── pricing_utils.py        # Pack Discount
+├── reimbursement_utils.py  # Wallet pools and usage
+├── paw_points_utils.py     # Points earning
+├── directory_taxonomy.py   # Directory service vocabulary
+├── routers/                # HTTP layer; admin/ is a package, one module per subject
+├── schemas/                # Pydantic request/response models, one per subject
+├── email_utils/            # Outbound email: transport, layout, one per template
+├── invoice_utils/          # Receipt PDF: business, formatting, render, delivery
+├── scripts/                # One-off CLI, not part of the app lifecycle
+├── tests/
+├── assets/                 # Logo + bundled Montserrat weights for the PDF
+└── uploads/                # Local upload fallback (NOT durable on Render)
+```
+
+Anything under `scripts/` is run deliberately and never imported by the app:
+
+```powershell
+python -m scripts.migrate          # schema migrations, idempotent
+python -m scripts.seed             # reference data, idempotent
+python -m scripts.seed_directory   # pet care directory listings
+python -m scripts.notify_app_launch   # one-off broadcast, dry run by default
 ```
 
 ---
@@ -78,7 +95,7 @@ loading rules.
 ### 3. Seed the database
 
 ```bash
-python seed.py
+python -m scripts.seed
 ```
 
 ### 4. Run the server
@@ -102,7 +119,7 @@ For a **one-off command against production**, scope the variable to the child
 process rather than setting it in your shell:
 
 ```powershell
-cmd /c "set APP_ENV=prod&& python migrate.py"
+cmd /c "set APP_ENV=prod&& python -m scripts.migrate"
 ```
 
 > Do not use `$env:APP_ENV='prod'; …; $env:APP_ENV=$null`. Ctrl+C aborts the

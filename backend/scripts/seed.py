@@ -8,8 +8,8 @@ safe and is how you top a database up after adding a new default.
 Nothing happens on import. Run it explicitly, and mind which database
 ``APP_ENV`` resolves to:
 
-    python seed.py                          # dev, the default
-    cmd /c "set APP_ENV=prod&& python seed.py"
+    python -m scripts.seed                          # dev, the default
+    cmd /c "set APP_ENV=prod&& python -m scripts.seed"
 
 Sample clinic logins are created only when SEED_CLINIC_PASSWORD is set, so
 production never gets accounts whose password lives in this repo.

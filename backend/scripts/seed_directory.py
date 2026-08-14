@@ -4,7 +4,7 @@ Idempotent, matched on name: a re-run inserts only what is missing and never
 overwrites a row, so running it again after the client has edited hours or a
 phone number in the admin panel does not clobber their work.
 
-    python seed_directory.py
+    python -m scripts.seed_directory
 
 Run against dev, then prod, before the deploy that exposes /find-pet-care.
 

@@ -31,7 +31,7 @@ contract is the exposure this register exists to track.
 The money is right. Plan fees and benefit pools agree exactly across the manual,
 the seed data and the site:
 
-| Plan | Manual §4 / §2 | [`backend/seed.py`](../../backend/seed.py) |
+| Plan | Manual §4 / §2 | [`backend/scripts/seed.py`](../../backend/scripts/seed.py) |
 | --- | --- | --- |
 | Standard | ₱2,999/yr · ₱2,000 wellness + ₱300 emergency | `price: 2999` · `200_000` / `30_000` centavos |
 | Deluxe | ₱5,999/yr · ₱4,000 + ₱900 | `price: 5999` · `400_000` / `90_000` |
@@ -215,7 +215,7 @@ Member", which is precisely what the word *wallet* implies.
 
 **388 occurrences of "wallet"** across backend, website and mobile. Not just
 internals — member-facing plan features in
-[`backend/seed.py`](../../backend/seed.py) read "₱2,000 Preventive Wellness
+[`backend/scripts/seed.py`](../../backend/scripts/seed.py) read "₱2,000 Preventive Wellness
 Wallet", "₱300 Emergency Wallet", and the tagline *"Your wallet goes where your
 pet needs it most."*
 
@@ -412,7 +412,7 @@ one of them. Two consequences, both about money:
    confirmed on 2026-08-13 that emergency must stay pay-then-reimburse. It
    doesn't.
 
-`seed.py` explains the mismatch: it defines *both* session categories
+`scripts/seed.py` explains the mismatch: it defines *both* session categories
 (`Emergency Stabilization`) and separate wallet-bucket categories
 (`Preventive Wellness`, `Emergency`) — and the seed only inserts a category when
 the name is absent. Dev has the six session categories and neither bucket, so

@@ -8,7 +8,7 @@ back.
 import ast
 from pathlib import Path
 
-import migrate
+from scripts import migrate
 
 MIGRATE_SOURCE = Path(migrate.__file__)
 

@@ -12,19 +12,19 @@ re-run after a crash or a timeout skips whoever already got the email.
 Usage (from the ``backend`` directory):
 
     # Who would be emailed, and with which variant — sends nothing
-    python notify_app_launch.py
+    python -m scripts.notify_app_launch
 
     # Write the audience variants to HTML files to open in a browser
-    python notify_app_launch.py --preview previews
+    python -m scripts.notify_app_launch --preview previews
 
     # Send every variant to one address to check how it lands in a real inbox
-    python notify_app_launch.py --test you@example.com
+    python -m scripts.notify_app_launch --test you@example.com
 
     # The real broadcast
-    python notify_app_launch.py --send
+    python -m scripts.notify_app_launch --send
 
     # Missed one address, or a send failed after the ledger was written
-    python notify_app_launch.py --send --only someone@example.com --resend
+    python -m scripts.notify_app_launch --send --only someone@example.com --resend
 """
 
 import argparse
@@ -51,8 +51,10 @@ from email_utils import (  # noqa: E402 — env must be loaded before the mail c
 
 # Export filenames are date-stamped (``..._2026-08-03.xlsx``), so the newest one
 # sorts last by name. Looked up in this directory and in the repo root.
-_SCRIPT_DIR = Path(__file__).resolve().parent
-_SEARCH_DIRS = (_SCRIPT_DIR, _SCRIPT_DIR.parent)
+# Anchored on the backend directory rather than on __file__: this script moved
+# into scripts/ once already, and a relative-to-here path would quietly start
+# looking for the exports somewhere else.
+_SEARCH_DIRS = (config.BACKEND_DIR, config.BACKEND_DIR.parent)
 _MEMBERS_GLOB = "metropaws_members_*.xlsx"
 _RESERVATIONS_GLOB = "metropaws_founding_reservations_*.xlsx"
 
@@ -77,7 +79,7 @@ _UNDELIVERABLE_DOMAINS = frozenset(
 
 _AUDIENCES = (AUDIENCE_FOUNDING_MEMBER, AUDIENCE_MEMBER, AUDIENCE_FOUNDING_RESERVATION)
 
-_DEFAULT_LEDGER = _SCRIPT_DIR / "notify_app_launch_sent.log"
+_DEFAULT_LEDGER = config.BACKEND_DIR / "notify_app_launch_sent.log"
 _DEFAULT_SLEEP_SECONDS = 0.6
 _SAMPLE_NAME = "Maria"
 
