@@ -9,7 +9,8 @@ dropping an endpoint the mobile app depends on.
 import json
 
 from app import main
-from tests.test_app_routes import SNAPSHOT_PATH, route_table
+from tests.api_surface import route_table
+from tests.test_app_routes import SNAPSHOT_PATH
 
 routes = route_table(main.app)
 SNAPSHOT_PATH.write_text(json.dumps(routes, indent=2) + "\n", encoding="utf-8")

@@ -253,6 +253,8 @@ The image targets `linux/amd64`. The app runs as a non-root `app` user inside th
 ## What Not to Do
 
 - **Do not add Alembic auto-migrate on startup.** `create_all` is intentional — it only creates missing tables, it never drops or alters. Use explicit migrations for schema changes.
+- **Do not loosen the pins in `requirements.txt`.** That file is what the image installs, and the image is what production runs. It carried `>=` ranges until 2026-08-14, so every build silently resolved to whatever was newest: local had FastAPI 0.136.1 while a fresh image got 0.141.1 — a release that changed how `app.routes` is represented, which is what the tests were reading. Bump a version deliberately, run the suite, then deploy. `pyproject.toml` and `uv.lock` are kept in step.
+- **Do not read `app.routes` to enumerate endpoints.** It is an internal representation and it changed shape between minor FastAPI versions, returning almost nothing without erroring. Use `tests/api_surface.py`, which derives the table from the OpenAPI schema — the published contract.
 - **Do not store secrets in the image.** Every `.env*` file is gitignored and dockerignored for a reason. `.env.example` is the one committed file and holds placeholders only.
 - **Do not add a plain `.env`.** Environments are explicit: `.env.dev` / `.env.prod`, selected by `APP_ENV`, with `.env.local` for personal overrides. A generic `.env` is what previously made an innocent `import main` run `create_all` against production.
 - **Do not change `MemberService.total_sessions` to log a service.** Only `used_sessions` is incremented.

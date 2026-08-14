@@ -17,9 +17,9 @@ from app import auth as auth_utils
 from app import main
 from app import models
 from app.database import get_db
+from tests.api_surface import DOCS_ROUTES, route_table, routes_under
 
 PARAM = re.compile(r"\{[^}]+\}")
-BODYLESS_METHODS = ("GET", "DELETE")
 
 
 @pytest.fixture
@@ -46,21 +46,10 @@ def _auth(user: models.User) -> dict:
     return {"Authorization": f"Bearer {_token(user)}"}
 
 
-def _routes(prefix: str) -> list[tuple[str, str]]:
-    """(method, concrete path) for every route under `prefix`."""
-    found = []
-    for route in main.app.routes:
-        path = getattr(route, "path", "")
-        if not path.startswith(prefix):
-            continue
-        for method in sorted(getattr(route, "methods", None) or ()):
-            if method in ("HEAD", "OPTIONS"):
-                continue
-            found.append((method, PARAM.sub("sample-value", path)))
-    return sorted(set(found))
-
-
-ADMIN_ROUTES = _routes("/admin")
+ADMIN_ROUTES = [
+    (method, PARAM.sub("sample-value", path))
+    for method, path in routes_under(main.app, "/admin")
+]
 
 
 def test_there_are_admin_routes_to_guard():
@@ -203,15 +192,12 @@ def test_the_unauthenticated_surface_is_exactly_what_we_intend(client):
     shows up here as an addition, which is the failure worth catching — the
     per-route tests above only cover /admin."""
     reachable = set()
-    for route in main.app.routes:
-        path = getattr(route, "path", "")
-        for method in sorted(getattr(route, "methods", None) or ()):
-            if method in ("HEAD", "OPTIONS"):
-                continue
-            response = client.request(method, PARAM.sub("sample-value", path))
-            # Anything other than 401 answered without credentials, whatever it
-            # then said about the request itself.
-            if response.status_code != 401:
-                reachable.add(f"{method} {path}")
+    for entry in route_table(main.app) + sorted(DOCS_ROUTES):
+        method, path = entry.split(" ", 1)
+        response = client.request(method, PARAM.sub("sample-value", path))
+        # Anything other than 401 answered without credentials, whatever it
+        # then said about the request itself.
+        if response.status_code != 401:
+            reachable.add(entry)
 
     assert reachable == PUBLIC_SURFACE

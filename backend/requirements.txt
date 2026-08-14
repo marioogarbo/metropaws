@@ -1,15 +1,25 @@
-fastapi>=0.115.0
-uvicorn[standard]>=0.34.0
+# Pinned exactly, because this file is what the Docker image installs and the
+# image is what production runs. It used to carry `>=` ranges for fastapi,
+# uvicorn, pydantic and httpx, so every build silently resolved to whatever was
+# newest that day: on 2026-08-14 the local venv had FastAPI 0.136.1 while a
+# freshly built image got 0.141.1, a release that changed how app.routes is
+# represented. Nothing broke in production, but nothing had tested it either.
+#
+# uv.lock is the full resolution; this file is the subset pip installs. Bump a
+# version here deliberately, run the suite, then deploy.
+fastapi==0.141.1
+starlette==1.5.0          # transitive via fastapi; pinned so builds are reproducible
+uvicorn[standard]==0.46.0
 sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 python-jose[cryptography]==3.3.0
 bcrypt==4.2.1
 python-multipart==0.0.12
 python-dotenv==1.0.1
-pydantic[email]>=2.11.0
+pydantic[email]==2.13.4
 pillow==11.0.0
 qrcode[pil]==8.0
 alembic==1.14.0
-httpx>=0.27.0
+httpx==0.28.1
 openpyxl==3.1.5
 fpdf2==2.8.1

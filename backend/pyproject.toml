@@ -4,21 +4,25 @@ version = "0.1.0"
 description = "A RESTful API for managing pet information, appointments, and user authentication for a pet care service."
 readme = "README.md"
 requires-python = ">=3.13"
+# Kept in step with requirements.txt, which is what the Docker image installs.
+# Pinned exactly rather than with ranges: an unpinned fastapi meant local and
+# production ran different versions without anyone choosing that.
 dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.34.0",
+    "fastapi==0.141.1",
+    "starlette==1.5.0",
+    "uvicorn[standard]==0.46.0",
     "sqlalchemy==2.0.36",
     "psycopg2-binary==2.9.10",
     "python-jose[cryptography]==3.3.0",
     "bcrypt==4.2.1",
     "python-multipart==0.0.12",
     "python-dotenv==1.0.1",
-    "pydantic[email]>=2.11.0",
+    "pydantic[email]==2.13.4",
     "pillow==11.0.0",
     "qrcode[pil]==8.0",
     "alembic==1.14.0",
-    "httpx>=0.28.1",
-    "openpyxl>=3.1.5",
+    "httpx==0.28.1",
+    "openpyxl==3.1.5",
     "fpdf2==2.8.1",
 ]
 
