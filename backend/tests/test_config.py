@@ -134,6 +134,24 @@ def test_env_bool_treats_everything_else_as_false(monkeypatch, raw):
     assert config.env_bool("FLAG_SETTING") is False
 
 
+def test_env_list_splits_on_commas(monkeypatch):
+    monkeypatch.setenv("LIST_SETTING", "one,two,three")
+
+    assert config.env_list("LIST_SETTING") == ["one", "two", "three"]
+
+
+def test_env_list_trims_and_drops_blanks(monkeypatch):
+    monkeypatch.setenv("LIST_SETTING", " one , ,two,  ")
+
+    assert config.env_list("LIST_SETTING") == ["one", "two"]
+
+
+def test_env_list_is_empty_when_unset(monkeypatch):
+    monkeypatch.delenv("LIST_SETTING", raising=False)
+
+    assert config.env_list("LIST_SETTING") == []
+
+
 def test_env_bool_uses_the_default_when_unset(monkeypatch):
     monkeypatch.delenv("FLAG_SETTING", raising=False)
 

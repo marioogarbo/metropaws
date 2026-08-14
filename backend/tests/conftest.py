@@ -10,6 +10,10 @@ import os
 os.environ["APP_ENV"] = "dev"
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SECRET_KEY"] = "test-only-secret"
+# Pinned so the app under test has a known CORS state rather than inheriting
+# whatever .env.dev happens to list today.
+os.environ["ALLOWED_ORIGINS"] = ""
+os.environ["ALLOWED_ORIGIN_REGEX"] = ""
 
 from datetime import date, datetime, timedelta, timezone  # noqa: E402
 from itertools import count  # noqa: E402

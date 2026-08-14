@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import sys
 
 import config  # must precede every project import — it populates the environment
 
@@ -21,10 +22,38 @@ app = FastAPI(
     version="1.0.0",
 )
 
+def cors_settings() -> tuple[list[str], str | None]:
+    """Which browser origins may call this API, as (origins, origin_regex).
+
+    This governs the website's browser-side calls only — admin login, password
+    reset, and the public founding/pricing forms. The Flutter app is
+    unaffected: native HTTP sends no Origin header, so CORS never applies to
+    it. Next.js server actions are server-to-server and equally unaffected.
+
+    ALLOWED_ORIGIN_REGEX covers Vercel preview deployments, whose hostname
+    changes on every push and so cannot be listed.
+
+    With neither set this falls back to allowing everything, loudly. A missing
+    variable locking admins out of production would be a worse failure than a
+    permissive default, and the warning makes the state obvious in the logs.
+    """
+    origins = config.env_list("ALLOWED_ORIGINS")
+    origin_regex = config.env("ALLOWED_ORIGIN_REGEX") or None
+    if not origins and not origin_regex:
+        print("[cors] no ALLOWED_ORIGINS set — allowing every origin", file=sys.stderr)
+        return ["*"], None
+    return origins, origin_regex
+
+
+cors_origins, cors_origin_regex = cors_settings()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
+    # Browsers reject credentialed requests against a wildcard origin, so this
+    # is only meaningful once an explicit list is configured.
+    allow_credentials=cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

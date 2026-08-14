@@ -92,6 +92,13 @@ def env_int(name: str, default: int) -> int:
         raise RuntimeError(f"{name}={raw!r} is not a whole number.") from exc
 
 
+def env_list(name: str) -> list[str]:
+    """Read a comma-separated setting. Blank entries are dropped, so trailing
+    commas and stray spaces in an env file are harmless."""
+    raw = os.getenv(name) or ""
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
 def env_bool(name: str, default: bool = False) -> bool:
     raw = os.getenv(name)
     if raw is None or raw.strip() == "":

@@ -128,7 +128,7 @@ $renderEnvKeys = @(
     # Tells the running service which environment it is (config.py startup banner).
     "APP_ENV",
     "DATABASE_URL", "SECRET_KEY", "ALGORITHM", "ACCESS_TOKEN_EXPIRE_MINUTES",
-    "UPLOAD_DIR", "BASE_URL", "FRONTEND_URL", "ALLOWED_ORIGINS",
+    "UPLOAD_DIR", "BASE_URL", "FRONTEND_URL", "ALLOWED_ORIGINS", "ALLOWED_ORIGIN_REGEX",
     "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_NAME", "EMAIL_FROM",
     # ZeptoMail HTTP API (required in prod: Render free tier blocks SMTP ports)
     "ZEPTOMAIL_TOKEN", "ZEPTOMAIL_API_URL",
