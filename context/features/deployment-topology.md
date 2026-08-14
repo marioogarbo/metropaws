@@ -81,7 +81,10 @@ variable locking admins out of production is the worse failure.
   variable must be added to its `$renderEnvKeys` allowlist or it is silently
   dropped on the next deploy.
 - **`deploy.ps1` does not run migrations.** Run `migrate.py` against the target
-  database *first*, or the deployed API 500s on the affected tables.
+  database *first*, or the deployed API 500s on the affected tables. Since
+  2026-08-14 it does nothing on import and has to be invoked explicitly
+  (`python migrate.py`); before that, merely importing it migrated whatever
+  `APP_ENV` pointed at.
 - **Never redirect `deploy.ps1`'s stderr.** `2>&1` or `2>$null` turns Docker's
   progress output into an ErrorRecord and its `$ErrorActionPreference = "Stop"`
   aborts the script after a successful build.

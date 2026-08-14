@@ -104,8 +104,9 @@ says. If a fact is derivable by reading a file, link to that file instead.
   never be added.
 - [`sessions/2026-08-14-backend-config-and-cleanup.md`](sessions/2026-08-14-backend-config-and-cleanup.md) —
   deleted `backend/.env` and made `APP_ENV` decide the environment (dev by
-  default), added 125 hermetic tests, and split the three largest backend files
-  into packages without changing a single caller. Found: live credentials were
-  being baked into every Docker image, `ALLOWED_ORIGINS` was deployed but never
-  read, and nearly half of ruff's findings are wrong for FastAPI. Deployed to
+  default), added a hermetic test suite, and split the four largest backend
+  files into packages without changing a single caller. Found: live credentials
+  were being baked into every Docker image, `ALLOWED_ORIGINS` was deployed but
+  never read, `migrate.py` ran every migration on import, and a `__file__`-based
+  asset path broke every receipt while the whole suite stayed green. Deployed to
   dev; production still runs the old build.

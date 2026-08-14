@@ -220,19 +220,116 @@ when a receipt PDF or PayMongo call fails in production.
 The browser login is the meaningful one: it exercises the new CORS, the split
 `routers/admin/` and the split `schemas/` together, in a real deployment.
 
+---
+
+## Second pass — after the merge and push
+
+`main` was merged, pushed, and deployed to dev before this part started, so it
+is on its own branch (`refactor/backend-organize`). Work chosen against the
+Clean Code catalog rather than by file size, which changed what got done.
+
+### 6. `config` is now the only way the environment is read
+
+26 `os.getenv` calls across six modules became `config.*` (G11, G35). Grepping
+`os.getenv` outside `config.py` returns nothing.
+
+`pricing_utils` and `plan_term_utils` deliberately did **not** move to
+`config.env_int`, and now say why in the code: `env_int` raises on an
+unparseable value, which is correct for a startup setting and wrong for a live
+pricing tunable — a typo there must not take checkout down. Same read,
+different and documented policy.
+
+### 7. `migrate.py` no longer migrates on import
+
+It was 378 lines of top-level statements: `create_all` plus 16 bare
+`with engine.connect()` blocks. **Eighteen statements ran at import**, so
+`import migrate` applied every migration to whatever `APP_ENV` resolved to —
+the same hazard as the prod-pointing `.env`, with nothing in the module's shape
+to warn you.
+
+Now one named function per step with a docstring, a `MIGRATIONS` tuple, and
+`main()` behind a `__main__` guard. It prints the target database and each step
+as it runs, instead of silence until "Migration complete."
+
+Verified: the SQL was lifted by line span, never retyped — 31 statements before,
+31 after, identical text and order; import-time statements 18 → 0; then run
+against dev end to end, where it is a no-op on an up-to-date schema.
+`tests/test_migrate.py` pins all of it, including that every step is registered
+in `MIGRATIONS` (an unregistered one would silently never run).
+
+### 8. `invoice_utils` became a package, and the move broke every receipt
+
+Split into `business` / `formatting` / `render` / `delivery`. The interesting
+part is the bug it exposed, described in finding 6 below.
+
+## Findings (second pass)
+
+### 6. A `__file__`-relative path broke silently, and the whole suite passed
+
+`invoice_utils._ASSETS_DIR` was
+`os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")`. Moving the
+module one directory deeper into a package made it resolve to
+`backend/invoice_utils/assets/`, so **every receipt render would have raised
+`FileNotFoundError`** looking for the bundled Montserrat weights.
+
+**All 130 tests passed anyway** — nothing in the suite had ever rendered a PDF.
+What caught it was rendering a receipt from fixed inputs before and after the
+move and diffing the bytes; the "after" run simply failed.
+
+Two things to keep from this:
+
+- **Anchor asset paths on `config.BACKEND_DIR`, never on `__file__`.** A module
+  can move; the backend directory is the stable reference.
+- **A green suite is not evidence for a move.** Byte-comparing the real output —
+  OpenAPI for routers and schemas, rendered HTML for emails, rendered PDF for
+  receipts — is what actually caught things this session. Twice.
+
+`tests/test_invoice_utils.py` now renders receipts (plain, discounted, no-pet)
+and asserts the fonts and logo resolve.
+
+### 7. Most F1 / G30 violations here are not worth fixing
+
+Measured across the backend, excluding route handlers whose parameters are the
+HTTP interface: **19 functions take more than 3 arguments** (F1) and **7 exceed
+60 lines** (G30). Deliberately left alone, so this doesn't get re-litigated:
+
+- The 10-argument email senders (`send_payment_receipt_email`,
+  `send_claim_status_email`) read fine because every call site uses keyword
+  arguments. The prescribed dataclass fix would relocate the same ten fields.
+- The longest functions are template builders (`build_app_launch_email`, 123
+  lines) — linear and cohesive; splitting fragments a template.
+- The genuine F1 case is `invoice_utils.render`, which threads the same context
+  through six drawing functions. That one is worth a context object.
+
+### 8. The money-path functions are long *and* untested
+
+`routers/admin/plans._apply_service_caps` (80 lines), `plan_utils.grant_plan_to_pet`
+(79) and `pricing_utils.pack_discount_quote` (70) are the real G30 candidates,
+but only the last has direct test coverage. Restructuring the first two without
+tests first would be how you cause an incident, not prevent one. Tests before
+refactor, in that order.
+
 ## Left open
 
-1. **`main` is 12 commits ahead of `origin/main`** and unpushed.
-2. **Production backend is not deployed.** It still runs `allow_origins=["*"]`
+1. **Production backend is not deployed.** It still runs `allow_origins=["*"]`
    and the pre-split code. The CORS change reaches real members only then.
-3. **Old Docker Hub tags still contain live credentials.** Delete the tags or
+2. **Old Docker Hub tags still contain live credentials.** Delete the tags or
    rotate the keys — the `.dockerignore` fix only protects new images.
-4. **`staging-metropaws-website`'s `master` and `staging` branches** are still on
+3. **`refactor/backend-organize` is unmerged and unpushed** — the three commits
+   in the second pass above. `main` itself is pushed and level with `origin`.
+4. **Tests for `_apply_service_caps` and `grant_plan_to_pet`**, before either is
+   restructured (finding 8).
+5. A context object for `invoice_utils.render`'s six drawing functions (F1,
+   finding 7) — the one argument-count fix that earns its keep.
+6. **`staging-metropaws-website`'s `master` and `staging` branches** are still on
    the 2026-07-11 commit; only `main` was moved.
-5. **GitHub is showing a billing failure** on the account ("We are having a
+7. **GitHub is showing a billing failure** on the account ("We are having a
    problem billing your account"). Unrelated to this work.
-6. `founding_reservations_backup.csv` / `.json` still enter the Docker image.
-7. `email_utils.notify_status` is the one uncovered branch — it needs a mail
+8. `founding_reservations_backup.csv` / `.json` still enter the Docker image.
+9. `email_utils.notify_status` is the one uncovered branch — it needs a mail
    double to test meaningfully.
-8. Deleting the broadcast ledger re-armed the double-send risk in
-   `notify_app_launch.py` (see §2).
+10. Deleting the broadcast ledger re-armed the double-send risk in
+    `notify_app_launch.py` (see §2).
+11. `email_utils` `claims` and `receipts` still inline their own HTML shell
+    instead of `layout._branded_shell` (finding 2) — a product decision, since
+    fixing it changes what members see.
