@@ -201,7 +201,7 @@ reset never runs and every later command in that terminal targets production.
 | `BASE_URL` | No | `http://localhost:8000` | Used to build file URLs returned to clients |
 | `FRONTEND_URL` | No | `http://localhost:3000` | Used to construct password reset links in emails |
 | `ALLOWED_ORIGINS` | No | — | Comma-separated browser origins allowed by CORS. Governs the **website's browser-side calls only** (admin login, password reset, founding/pricing forms) — the mobile app sends no `Origin`, so CORS never applies to it, and Next.js server actions are server-to-server. Unset (together with the regex below) allows every origin and logs `[cors] no ALLOWED_ORIGINS set` |
-| `ALLOWED_ORIGIN_REGEX` | No | — | Pattern for origins whose hostname changes per deploy (Vercel previews). Set in dev, deliberately unset in prod |
+| `ALLOWED_ORIGIN_REGEX` | No | — | Pattern for origins whose hostname changes per deploy (Vercel previews). **Scope it to the Vercel account slug** (`…-mario-garbos-projects.vercel.app`) — a bare `*.vercel.app` would admit anyone's deployment. Set in both envs: previews reach prod too, because `website/lib/api.ts` falls back to the production API when `NEXT_PUBLIC_API_URL` is unset |
 | `MAX_FILE_BYTES` | No | `5242880` (pets) / `8388608` (storage.py) | Upload limit. Set to `8388608` (8 MB) for receipts. |
 | `SUPABASE_URL` | Yes (for durable uploads) | — | Supabase project URL; enables Supabase Storage in `storage.py` |
 | `SUPABASE_SERVICE_KEY` | Yes (for durable uploads) | — | Supabase service-role key (server-side only — never ship to client) |
