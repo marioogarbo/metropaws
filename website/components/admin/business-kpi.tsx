@@ -169,7 +169,11 @@ export function BusinessKpi({ kpis }: { kpis: BusinessKpis }) {
         <KpiTile
           label="Benefit Utilization"
           value={`${kpis.utilization.used_pct}%`}
-          sub={`${kpis.utilization.used_sessions}/${kpis.utilization.total_sessions} sessions`}
+          sub={
+            kpis.utilization.granted_php > 0
+              ? `${formatPeso(kpis.utilization.used_php)} of ${formatPeso(kpis.utilization.granted_php)}`
+              : "No active plans"
+          }
           icon={<Activity size={14} />}
           delay={180}
         />

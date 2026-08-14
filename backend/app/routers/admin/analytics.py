@@ -4,16 +4,88 @@ Every figure here is derived from live data — nothing is stored or cached.
 Money is returned as whole pesos throughout, even where it is stored in
 centavos, so the dashboard never has to know which is which.
 """
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app import models, auth as auth_utils
 from app.database import get_db
+from app.domain import plan_term_utils, reimbursement_utils
 
 router = APIRouter(tags=["admin"])
+
+
+def benefit_utilization(db: Session) -> dict:
+    """How much of the granted benefit money members have actually claimed.
+
+    Peso-based, because benefit is consumed by reimbursement claims: the
+    numerator is approved + paid claim amounts and the denominator is the wallet
+    pools (preventive + emergency) granted to pets whose plan term is still
+    running. That is the same money the app's Benefit Wallet shows, windowed the
+    same way as ``reimbursement_utils.wallet_usage`` — only claims dated on or
+    after the pet's activation count, since every grant replaces the previous
+    term's benefits.
+
+    This replaced a sessions ratio (``sum(used_sessions)/sum(total_sessions)``)
+    that read 0% permanently: ``used_sessions`` is only ever incremented by the
+    clinic QR scan and the admin deploy-service endpoints, neither of which is
+    part of the reimbursement-based member flow.
+    """
+    term_start_cutoff = datetime.now(timezone.utc) - timedelta(
+        days=plan_term_utils.PLAN_TERM_DAYS
+    )
+    # Legacy manual grants (plan_id set, activation date NULL) are active with no
+    # expiry and no claim window — plan_term_utils is the authority on that.
+    in_current_term = or_(
+        models.Pet.plan_activated_at.is_(None),
+        models.Pet.plan_activated_at >= term_start_cutoff,
+    )
+    on_or_after_activation = or_(
+        models.Pet.plan_activated_at.is_(None),
+        models.Reimbursement.service_date >= func.date(models.Pet.plan_activated_at),
+    )
+
+    granted_centavos = (
+        db.query(
+            func.coalesce(
+                func.sum(
+                    models.Plan.reimbursement_wallet_centavos
+                    + models.Plan.emergency_wallet_centavos
+                ),
+                0,
+            )
+        )
+        .select_from(models.Pet)
+        .join(models.Plan, models.Plan.id == models.Pet.plan_id)
+        .filter(in_current_term)
+        .scalar()
+        or 0
+    )
+
+    used_centavos = (
+        db.query(func.coalesce(func.sum(models.Reimbursement.approved_amount_centavos), 0))
+        .select_from(models.Reimbursement)
+        .join(models.Pet, models.Pet.id == models.Reimbursement.pet_id)
+        .filter(
+            models.Reimbursement.status.in_(reimbursement_utils.USED_STATUSES),
+            models.Pet.plan_id.isnot(None),
+            in_current_term,
+            on_or_after_activation,
+        )
+        .scalar()
+        or 0
+    )
+
+    return {
+        "used_php": round(used_centavos / 100),
+        "granted_php": round(granted_centavos / 100),
+        "used_pct": (
+            round((used_centavos / granted_centavos) * 100, 1) if granted_centavos else 0.0
+        ),
+    }
 
 
 @router.get("/analytics/founding-location")
@@ -45,9 +117,10 @@ def analytics_overview(
     db: Session = Depends(get_db),
 ):
     """Business KPIs for the management dashboard: membership, revenue, plan
-    mix, claims/payouts, and benefit utilization. All figures are derived
-    read-only from live data. Revenue is whole pesos (payments); claim payouts
-    are stored in centavos and returned as whole pesos."""
+    mix, claims/payouts, and benefit utilization (see benefit_utilization). All
+    figures are derived read-only from live data. Revenue is whole pesos
+    (payments); claim payouts and wallet pools are stored in centavos and
+    returned as whole pesos."""
 
     total_members = db.query(func.count(models.Member.id)).scalar() or 0
     founding_members = (
@@ -108,10 +181,6 @@ def analytics_overview(
         or 0
     )
 
-    total_sessions = db.query(func.coalesce(func.sum(models.PetService.total_sessions), 0)).scalar() or 0
-    used_sessions = db.query(func.coalesce(func.sum(models.PetService.used_sessions), 0)).scalar() or 0
-    used_pct = round((used_sessions / total_sessions) * 100, 1) if total_sessions else 0.0
-
     partner_clinics = db.query(func.count(models.ClinicPartner.id)).scalar() or 0
 
     return {
@@ -131,11 +200,7 @@ def analytics_overview(
             "pending_review": pending_review,
             "payout_total_php": round(payout_centavos / 100),
         },
-        "utilization": {
-            "total_sessions": total_sessions,
-            "used_sessions": used_sessions,
-            "used_pct": used_pct,
-        },
+        "utilization": benefit_utilization(db),
         "partner_clinics": partner_clinics,
     }
 

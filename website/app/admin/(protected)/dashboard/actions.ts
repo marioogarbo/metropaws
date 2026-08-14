@@ -78,7 +78,7 @@ export interface BusinessKpis {
     pending_review: number;
     payout_total_php: number;
   };
-  utilization: { total_sessions: number; used_sessions: number; used_pct: number };
+  utilization: { used_php: number; granted_php: number; used_pct: number };
   partner_clinics: number;
 }
 
@@ -87,7 +87,7 @@ const EMPTY_KPIS: BusinessKpis = {
   revenue: { total_php: 0, paid_payments: 0 },
   plan_mix: [],
   claims: { total: 0, by_status: {}, pending_review: 0, payout_total_php: 0 },
-  utilization: { total_sessions: 0, used_sessions: 0, used_pct: 0 },
+  utilization: { used_php: 0, granted_php: 0, used_pct: 0 },
   partner_clinics: 0,
 };
 
