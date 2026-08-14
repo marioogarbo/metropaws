@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session, joinedload
 from database import get_db
 import models, schemas, auth as auth_utils
 import storage
-from routers.settings import get_payments_enabled
 from routers.payments import reconcile_member_pending_payments
 import asyncio
 import logging
