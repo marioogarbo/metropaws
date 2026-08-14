@@ -55,10 +55,20 @@ says. If a fact is derivable by reading a file, link to that file instead.
   direct-to-provider payouts become reachable, and why members must never
   supply the payout details.
 - [`features/member-documents.md`](features/member-documents.md) —
-  **active freeze, blocked on the client.** The Membership Agreement and Member
-  Manual are offline for rewriting; why their URLs must keep resolving anyway,
-  what sign-up records in the meantime, and the checklist for putting the new
-  documents back.
+  the Membership Agreement and Member Manual: the 2026-08-03 freeze and its
+  2026-08-13 restore with Agreement Rev. 5A and Manual Rev. 3C, why their URLs
+  must keep resolving whatever their state, what sign-up recorded during the
+  freeze, and why the published site is deliberately one edit ahead of the
+  controlled PDF.
+- [`features/document-system-alignment.md`](features/document-system-alignment.md) —
+  **open register, nothing scheduled.** Where the published agreement and manual
+  promise behaviour the system doesn't implement, each with the cheaper fix —
+  build it, or amend the document. Includes two live money bugs.
+- [`features/direct-provider-payments.md`](features/direct-provider-payments.md) —
+  paying a provider directly instead of reimbursing the member: the global
+  switch, the per-member tri-state override and why it exists, why the app can't
+  read it from `/settings/mobile-config`, and the sequence that must be followed
+  or the benefit can't be deducted at all.
 - [`features/pet-care-directory.md`](features/pet-care-directory.md) —
   the public Las Piñas pet-care directory and its admin CRUD: why it gets its own
   table instead of reusing `reimbursement_providers`, why "Providers" was the
@@ -80,3 +90,10 @@ says. If a fact is derivable by reading a file, link to that file instead.
   client edit access and why, and found the shipped app still asks for the frozen
   Membership Agreement. Then renamed the benefit pools from "wallet" to
   "benefit" — website only, so the app's wording now lags the site.
+- [`sessions/2026-08-14-per-member-direct-pay-and-release.md`](sessions/2026-08-14-per-member-direct-pay-and-release.md) —
+  republished the member documents with Rev. 5A / Rev. 3C, built the per-member
+  direct-pay override and in-app claim instructions, then released across all
+  three projects (prod migration, backend deploy, website sync, Play 1.4.1
+  published). Found: pre-activation claims aren't deducted, no category matches
+  "Emergency" so that pool is unreachable, and a skipped vaccination card can
+  never be added.

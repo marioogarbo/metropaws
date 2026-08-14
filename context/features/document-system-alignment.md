@@ -71,12 +71,14 @@ for an upcoming scheduled service". The flow that exists:
 | Service Completion | ❌ no provider-side confirmation | — |
 | Provider Settlement | ✅ offline, recorded by admin | `PUT /admin/reimbursements/{id}/mark-paid` |
 
-So the gap is narrower than "not built": it is **switched off, unnamed, and
-missing the artifact**. `direct_provider_payment_enabled` defaults to false
-([`backend/routers/settings.py:27`](../../backend/routers/settings.py)) and was
-verified false in production on 2026-08-13 via the public
-`GET /settings/mobile-config`. Admin toggle: `/admin/settings` →
-"Direct-to-Provider Payments".
+So the gap is narrower than "not built": it was **switched off, unnamed, and
+missing the artifact**. The switch is no longer off — the global setting was
+turned on in production on 2026-08-13, and a per-member override shipped
+2026-08-14 so a single member can be restricted without disabling the feature
+for everyone. How it works:
+[`direct-provider-payments.md`](./direct-provider-payments.md).
+
+Unnamed and missing the artifact still stand.
 
 Real remaining gaps on this item: no authorization reference/QR, no validity
 expiry, no provider acceptance step, no service-completion confirmation, and
@@ -91,11 +93,12 @@ told to pay and claim, is being run under a process the contract calls the
 exception. And §12's "no reimbursement is guaranteed merely because the Member
 paid a provider" now sits over a product whose only path is to pay and claim.
 
-**Cheaper fix:** given the correction above, turning the flag on gets most of
-§6 operating today. The decision to make with Romy is whether direct-to-provider
-becomes the *default* path (which is what §6 says) or stays an option alongside
-reimbursement — and whether the missing authorization artifact (reference/QR,
-expiry, provider acceptance) is worth building or worth striking from §6.
+**Cheaper fix:** turning the flag on already got most of §6 operating. Mario's
+position on 2026-08-13 is that direct-to-provider is an **option**, not the
+default. §6 says otherwise, so either the agreement is amended to describe both
+paths, or the product moves. That decision is still open with Romy, along with
+whether the missing authorization artifact (reference/QR, expiry, provider
+acceptance) is worth building or worth striking from §6.
 
 ### The operational trap — no retro-recording
 
