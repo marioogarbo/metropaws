@@ -246,15 +246,13 @@ def list_clinic_bookings(
         try:
             booking_date = date_type.fromisoformat(date)
             query = query.filter(models.Booking.booking_date == booking_date)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.") from exc
 
     if status:
         query = query.filter(models.Booking.status == status)
 
-    bookings = query.order_by(
+    return query.order_by(
         models.Booking.booking_date,
         models.Booking.time_slot,
     ).all()
-
-    return bookings

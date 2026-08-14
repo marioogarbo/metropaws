@@ -85,9 +85,9 @@ def get_payment_invoice(
     try:
         pdf_bytes, _inv_no, filename = invoice_utils.build_receipt_pdf(db, payment)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Could not generate the receipt PDF.")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Could not generate the receipt PDF.") from e
 
     disposition = "attachment" if download else "inline"
     return Response(
@@ -126,14 +126,14 @@ def resend_payment_invoice(
         invoice_no = invoice_utils.generate_and_send(db, payment)
     except ValueError as e:
         # Expected, actionable problems (no member email, etc.).
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Resend receipt failed for payment %s", payment_id)
         raise HTTPException(
             status_code=502,
             detail=f"Could not send the receipt email ({type(e).__name__}: {e}). "
                    "Check the mail (SMTP) configuration and try again.",
-        )
+        ) from e
 
     return {
         "sent": True,

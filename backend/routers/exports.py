@@ -144,8 +144,8 @@ def export_reimbursements(
     if status:
         try:
             query = query.filter(models.Reimbursement.status == models.ReimbursementStatus(status))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid status value")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid status value") from exc
     claims = query.order_by(models.Reimbursement.created_at.desc()).all()
     columns = [
         ExportColumn("Member"),

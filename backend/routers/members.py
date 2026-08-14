@@ -132,13 +132,12 @@ def get_my_services(
     member = db.query(models.Member).filter(models.Member.user_id == current_user.id).first()
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
-    services = (
+    return (
         db.query(models.MemberService)
         .options(joinedload(models.MemberService.service_type))
         .filter(models.MemberService.member_id == member.id)
         .all()
     )
-    return services
 
 
 @router.post("/me/plan", status_code=410)
@@ -275,7 +274,7 @@ def get_my_bookings(
     member = db.query(models.Member).filter(models.Member.user_id == current_user.id).first()
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
-    bookings = (
+    return (
         db.query(models.Booking)
         .options(
             joinedload(models.Booking.service_type),
@@ -285,4 +284,3 @@ def get_my_bookings(
         .order_by(models.Booking.booking_date.desc(), models.Booking.created_at.desc())
         .all()
     )
-    return bookings

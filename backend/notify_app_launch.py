@@ -125,7 +125,9 @@ def _sheet_rows(path: Path) -> list[dict[str, object]]:
     try:
         rows = workbook.worksheets[0].iter_rows(values_only=True)
         header = ["" if cell is None else str(cell).strip() for cell in next(rows, ())]
-        return [dict(zip(header, row)) for row in rows]
+        # strict=False: a spreadsheet row can be shorter than the header when
+        # trailing cells are empty, and longer if a stray value sits past it.
+        return [dict(zip(header, row, strict=False)) for row in rows]
     finally:
         workbook.close()
 

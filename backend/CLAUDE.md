@@ -90,7 +90,7 @@ Token lifetime: 7 days (`ACCESS_TOKEN_EXPIRE_MINUTES=10080`). There is no refres
 
 ## File Uploads
 
-New uploads go through `save_upload()` in `storage.py`. Legacy pet photo / vax card uploads still use `_validate_and_save_file()` in `routers/pets.py` (same validation; migrating it to `storage.py` is a pending follow-up).
+**All** uploads go through `save_upload()` in `storage.py` — pet photos, vaccination cards and reimbursement receipts. There is no second upload path; add new ones here rather than validating bytes in a router.
 
 | Upload type | Subdir | Allowed MIME types | Max size |
 |---|---|---|---|

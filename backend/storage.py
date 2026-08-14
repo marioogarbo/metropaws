@@ -9,10 +9,9 @@ container filesystem is wiped on every redeploy / idle spin-down, so files
 written there are lost. Configure Supabase Storage in production. See
 docs/HOSTING_AND_DATA_SAFETY_RECOMMENDATION.md.
 
-This module is the canonical upload path for new features. The legacy
-``_validate_and_save_file`` in routers/pets.py predates it and still trusts the
-client Content-Type; migrating that to ``save_upload`` here is a small follow-up
-that also fixes pet photo / vax-card uploads.
+This is the only upload path in the backend — pet photos, vaccination cards and
+reimbursement receipts all go through ``save_upload``. Keep it that way: the
+MIME allowlist and the UUID filenames are enforced here and nowhere else.
 """
 import os
 import uuid
@@ -127,7 +126,7 @@ def _upload_to_supabase(key: str, data: bytes, content_type: str) -> str:
     except httpx.HTTPError as e:
         # Full reason to server logs; generic message to the user.
         print(f"[storage] Supabase upload network error: {e}")
-        raise HTTPException(status_code=502, detail="Could not store the file. Please try again.")
+        raise HTTPException(status_code=502, detail="Could not store the file. Please try again.") from e
     if resp.status_code not in (200, 201):
         print(f"[storage] Supabase upload {resp.status_code} for {url} -> {(resp.text or '').strip()[:300]}")
         raise HTTPException(status_code=502, detail="Could not store the file. Please try again.")

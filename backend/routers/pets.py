@@ -251,12 +251,12 @@ def delete_pet(
     try:
         db.delete(pet)
         db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
         raise HTTPException(
             status_code=409,
             detail="This pet still has linked records and can't be removed automatically. Please contact support.",
-        )
+        ) from exc
 
 
 @router.post("/{pet_id}/activate-plan", response_model=schemas.PetOut)

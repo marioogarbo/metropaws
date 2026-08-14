@@ -228,7 +228,7 @@ def send_reset_email(to_email: str, reset_link: str, from_name: str = "MetroPaws
     try:
         _send_email(to_email, subject, html_body, from_name=from_name)
     except Exception as e:
-        raise Exception(f"Failed to send email: {str(e)}")
+        raise Exception(f"Failed to send email: {str(e)}") from e
 
 
 def _peso(centavos):

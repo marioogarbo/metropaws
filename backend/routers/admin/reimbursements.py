@@ -50,8 +50,8 @@ def list_reimbursements(
     if status:
         try:
             q = q.filter(models.Reimbursement.status == models.ReimbursementStatus(status))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid status value")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid status value") from exc
     if member_id:
         q = q.filter(models.Reimbursement.member_id == member_id)
     return (

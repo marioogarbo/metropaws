@@ -458,7 +458,7 @@ def render_invoice_pdf(payment: models.Payment, member: models.Member, plan, pet
 def _load_context(db: Session, payment: models.Payment):
     """Re-fetch the payment with member/user/plan/pet eagerly loaded so the PDF
     and email have everything even when called right after a commit."""
-    p = (
+    return (
         db.query(models.Payment)
         .options(
             joinedload(models.Payment.member).joinedload(models.Member.user),
@@ -468,7 +468,6 @@ def _load_context(db: Session, payment: models.Payment):
         .filter(models.Payment.id == payment.id)
         .first()
     )
-    return p
 
 
 def build_receipt_pdf(db: Session, payment: models.Payment) -> tuple[bytes, str, str]:

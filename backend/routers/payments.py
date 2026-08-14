@@ -113,7 +113,7 @@ async def create_checkout(
         )
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=502, detail=f"Payment provider error: {e}")
+        raise HTTPException(status_code=502, detail=f"Payment provider error: {e}") from e
 
     # Reuse provider_source_id to hold the Checkout Session id (cs_...) so no
     # DB migration is needed; the webhook matches the paid session by this id.
@@ -193,9 +193,10 @@ async def get_payment(
     )
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    if current_user.role == models.UserRole.member:
-        if not current_user.member or payment.member_id != current_user.member.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
+    if current_user.role == models.UserRole.member and (
+        not current_user.member or payment.member_id != current_user.member.id
+    ):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     await _reconcile_pending_payment(db, payment, source="poll")
     return payment

@@ -30,8 +30,8 @@ def list_bookings(
     if status:
         try:
             q = q.filter(models.Booking.status == models.BookingStatus(status))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid status value")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid status value") from exc
     return (
         q.order_by(models.Booking.booking_date.asc(), models.Booking.created_at.asc())
         .offset(skip)
