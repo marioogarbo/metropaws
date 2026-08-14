@@ -102,8 +102,9 @@ variable locking admins out of production is the worse failure.
 which is what made the 2026-08 credential exposure serious rather than
 theoretical: every tag pushed before 2026-08-14 carried `.env.dev` and
 `.env.prod` inside the image. Those 96 tags were deleted on 2026-08-14 and only
-`latest` plus one clean versioned build remain in each repo. **The credentials
-themselves still need rotating** — see
+`latest` plus one clean versioned build remain in each repo. **`SECRET_KEY` has
+since been rotated and deployed; the rest of the credentials still need
+rotating** — see
 [`credential-exposure-2026-08.md`](credential-exposure-2026-08.md).
 
 Keep `latest` alive through any future cleanup: it is Render's pull target, and

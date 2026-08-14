@@ -108,13 +108,14 @@ UUID filenames; extension derived from the validated MIME, never the client file
 
 ## Reimbursements
 
-Members claim money back for services paid out-of-pocket (see `docs/REIMBURSEMENT_FEATURE_PLAN.md`). Tables: `reimbursements` + append-only `reimbursement_events`. Per-plan/category ceiling lives in `plan_services.reimbursement_cap_centavos`.
+Members claim money back for services paid out-of-pocket (see `docs/REIMBURSEMENT_FEATURE_PLAN.md`). Tables: `reimbursements` + append-only `reimbursement_events`. The ceiling is **two per-plan wallet pools** on `plans` — `reimbursement_wallet_centavos` (Preventive Wellness) and `emergency_wallet_centavos` — chosen by service-category NAME in `reimbursement_utils.is_emergency_category`. Per-category `plan_services.reimbursement_cap_centavos` is **legacy and no longer consulted**.
 
 **Invariants — don't break these:**
 - **All money is integer centavos** (`claimed_amount_centavos`, `approved_amount_centavos`, `reimbursement_cap_centavos`). Never float, never whole-peso. Format to ₱ at the UI edge only. (Contrast: `Payment.amount_php` is legacy whole-peso — do not copy that for receipts.)
 - Status lifecycle: `pending → under_review → approved → paid`, plus `rejected`, plus `needs_info` (member resubmits to the same claim → `under_review`). `paid` is terminal; never modify a paid claim.
 - Every status transition appends a `ReimbursementEvent` (audit trail) — like `ServiceLog`, never edit/delete.
-- Approval enforces the remaining cap inside a `with_for_update()` lock (`reimbursement_utils.category_usage(..., lock=True)`) — keep the lock to prevent concurrent overspend.
+- Approval enforces the remaining pool inside a `with_for_update()` lock (`reimbursement_utils.wallet_usage(..., lock=True)`) — keep the lock to prevent concurrent overspend.
+- **Benefit utilization is money, not sessions.** `admin/analytics.benefit_utilization` divides approved+paid claim amounts by the wallet pools granted to pets still inside their term. Do not "restore" the old `used_sessions / total_sessions` ratio: sessions are written only by the clinic QR scan and `deploy-service`, neither of which the reimbursement flow touches, so that ratio reads 0% forever.
 - Status emails are best-effort via `reimbursement_utils.notify_status` (never raises). Admin review is web-admin only (`require_admin`).
 
 ---

@@ -49,11 +49,12 @@ committed. This was Docker Hub only.
   and today's versioned build in each repo, both confirmed to contain no env
   files. `latest` was left in place throughout, so Render never lost its pull
   target.
-- **`SECRET_KEY` rotated** in `.env.dev` and `.env.prod` — fresh 512-bit values,
-  different per environment. **Not yet deployed**: the running services still
-  hold the old key, and the next deploy for any reason will push the new one and
-  log every member and admin out (tokens last 7 days). Originals are in the
-  session scratchpad.
+- **`SECRET_KEY` rotated AND deployed** — fresh 512-bit values, different per
+  environment, live on both services since the 2026-08-14 evening deploy
+  (`metropaws-backend-dev:20260814-195239`, `metropaws-backend:20260814-200520`).
+  Every member and admin token issued under the old key is now invalid; admins
+  re-signed in successfully afterwards, which is what confirms the new key is the
+  one in use. This one is closed.
 
 ## Not done — this is what actually closes it
 
@@ -67,7 +68,7 @@ Ordered by how easily each can be used, not by how alarming it sounds:
    nothing — it is only read when seeding. The account's own password has to
    change. There is no "change password while signed in" endpoint; the only path
    is the forgot-password email flow, or updating the hash directly.
-2. `SECRET_KEY` — rotated in the files, pending a deploy.
+2. ~~`SECRET_KEY`~~ — **done 2026-08-14** (rotated and deployed, see above).
 3. `DATABASE_URL` (Supabase → Settings → Database → reset password). The only one
    with a real outage window: the running service keeps the old password and
    starts failing the moment it is reset, until the redeploy lands. Do it last,
@@ -81,6 +82,11 @@ Ordered by how easily each can be used, not by how alarming it sounds:
 6. PayMongo secret + webhook secret. The webhook secret is tied to the endpoint
    registration, so rotating it means recreating the webhook.
 7. `ZEPTOMAIL_TOKEN`, `SMTP_PASSWORD`.
+8. **The Docker Hub access token with delete scope**, created to run the tag
+   cleanup and never given an expiry. It was not in any image — it leaked by
+   being pasted in plaintext into a session — but it can delete `latest`, which
+   is Render's pull target for both services. Revoking it costs nothing, since
+   the cleanup it was made for is finished.
 
 Then check Supabase logs, PayMongo transactions and Render deploy history for
 anything unrecognised.

@@ -78,7 +78,8 @@ says. If a fact is derivable by reading a file, link to that file instead.
   **open, and the highest-priority item in the repo.** Production credentials
   were publicly pullable inside Docker images for four months: what was exposed,
   how it happened, which tags were deleted, and the ordered rotation list that
-  actually closes it. Nothing has been rotated yet.
+  actually closes it. `SECRET_KEY` is rotated and deployed; everything else on
+  that list is still outstanding, the admin account password first.
 - [`features/deployment-topology.md`](features/deployment-topology.md) —
   which repo and branch deploys to which host, which frontend calls which
   backend (staging points at *dev*), why production deploys from `master` and not
@@ -118,3 +119,10 @@ says. If a fact is derivable by reading a file, link to that file instead.
   `Access-Control-Allow-Origin` to any site that asked, found production
   credentials publicly pullable from Docker Hub, and gave the three auth guards
   their first tests.
+- [`sessions/2026-08-14-benefit-utilization-kpi.md`](sessions/2026-08-14-benefit-utilization-kpi.md) —
+  a client asked why Benefit Utilization read 0%; it was dividing by service
+  sessions, which nothing increments since claims replaced clinic scans. Rebuilt
+  it on the same peso pools the app's Benefit Wallet uses, then took the whole
+  backend reorganisation to dev and prod. Found: `used_sessions` is now dead data,
+  which silently makes the upgrade rule's "benefits untouched" check looser than
+  its docstring; and the migration script deletes rows as well as adding columns.
