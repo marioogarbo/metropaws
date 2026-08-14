@@ -27,7 +27,7 @@ backend/
 ├── database.py       # SQLAlchemy engine & session
 ├── models.py         # ORM table definitions
 ├── schemas/          # Pydantic request/response models, one module per subject
-├── email_utils.py    # Password reset email sender
+├── email_utils/      # Outbound email: transport, shared layout, one module per template
 ├── seed.py           # Seeds service types + default admin
 ├── routers/
 │   ├── auth.py       # /register, /login, /forgot-password, /reset-password, /me
