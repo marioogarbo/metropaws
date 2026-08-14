@@ -5,7 +5,7 @@ what gets snapshotted onto the Payment row. The published policy is 15% off the
 annual plan for a member's 2nd and 3rd pet, only for a plan strictly cheaper
 than the member's best active plan, and only on a pet's first activation.
 """
-from domain import pricing_utils
+from app.domain import pricing_utils
 
 PREMIUM_PRICE = 4999
 STANDARD_PRICE = 2999

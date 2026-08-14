@@ -9,8 +9,8 @@ nothing rendered a PDF. Now something does.
 from datetime import datetime, timezone
 from pathlib import Path
 
-import models
-from invoice_utils import formatting, render
+from app import models
+from app.invoice_utils import formatting, render
 
 PAID_AT = datetime(2026, 8, 14, 3, 25, tzinfo=timezone.utc)
 CREATED_AT = datetime(2026, 8, 14, 3, 21, tzinfo=timezone.utc)

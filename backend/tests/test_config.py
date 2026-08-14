@@ -5,7 +5,7 @@ resolve to dev, never to the live database.
 """
 import pytest
 
-import config
+from app import config
 
 
 def test_default_environment_is_dev(monkeypatch):

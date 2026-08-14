@@ -65,7 +65,7 @@ for an upcoming scheduled service". The flow that exists:
 | Rev. 5A §6 stage | Built? | Where |
 | --- | --- | --- |
 | Service Request | ✅ member files with a **future** appointment date | `POST /reimbursements`, `payout_target=provider` |
-| Eligibility Review | ✅ pool, plan year, category, duplicate-receipt checks | [`domain/reimbursement_utils.py`](../../backend/domain/reimbursement_utils.py) |
+| Eligibility Review | ✅ pool, plan year, category, duplicate-receipt checks | [`app/domain/reimbursement_utils.py`](../../backend/app/domain/reimbursement_utils.py) |
 | Provider Verification | ⚠️ admin vets the provider once, on creation — not per request | `/admin/providers` → `ReimbursementProvider` |
 | Authorization | ⚠️ approval sets an approved amount, but issues **no reference number or QR** and no explicit validity window | `PUT /admin/reimbursements/{id}/review` |
 | Service Completion | ❌ no provider-side confirmation | — |
@@ -104,7 +104,7 @@ acceptance) is worth building or worth striking from §6.
 
 `_validate_service_date(allow_future=True)` **rejects a past appointment date**
 for a provider-target request
-([`backend/routers/reimbursements.py:68`](../../backend/routers/reimbursements.py)),
+([`backend/app/routers/reimbursements.py:68`](../../backend/app/routers/reimbursements.py)),
 and the window is today → +60 days (`PROVIDER_MAX_FUTURE_DAYS`). There is also
 no admin-side create endpoint — `POST /reimbursements` requires
 `require_member`, so only the member can file, from the app.
@@ -116,7 +116,7 @@ member for money MetroPaws already spent. Sequence is therefore mandatory:
 member files → admin approves → MetroPaws pays → admin marks paid.
 
 Deduction happens at **`approved`**, not at `paid` — `USED_STATUSES =
-(approved, paid)` in [`domain/reimbursement_utils.py`](../../backend/domain/reimbursement_utils.py).
+(approved, paid)` in [`app/domain/reimbursement_utils.py`](../../backend/app/domain/reimbursement_utils.py).
 Marking paid afterwards does not deduct twice.
 
 ### Open decision — the future-date rule on direct-pay requests
@@ -198,9 +198,9 @@ Active, Vesting in Progress, Fully Service-Eligible, Authorization Restricted,
 Suspended, Expired, Under Review — and makes the member responsible for checking
 that status before getting a service.
 
-`Member` ([`backend/models.py:33`](../../backend/models.py)) has **no status
+`Member` ([`backend/app/models.py:33`](../../backend/app/models.py)) has **no status
 column**. Membership state is derived from `Payment` rows and
-[`domain/plan_term_utils.py`](../../backend/domain/plan_term_utils.py). Nothing surfaces
+[`app/domain/plan_term_utils.py`](../../backend/app/domain/plan_term_utils.py). Nothing surfaces
 anything resembling that vocabulary.
 
 Making a member responsible for reading a status the product never shows is a
@@ -232,9 +232,9 @@ in the app on the same day. Two distinct pieces of work:
 ## 6. PawPoints — 4 of 9 earning activities are missing
 
 **Manual §9.** The manual publishes a 9-row earning table. `POINTS_BY_TIER` in
-[`backend/domain/paw_points_utils.py:5`](../../backend/domain/paw_points_utils.py) implements
+[`backend/app/domain/paw_points_utils.py:5`](../../backend/app/domain/paw_points_utils.py) implements
 5, and `PawPointsActivityType`
-([`backend/models.py:429`](../../backend/models.py)) matches.
+([`backend/app/models.py:429`](../../backend/app/models.py)) matches.
 
 | Manual activity | Standard / Deluxe / Premium | In code |
 | --- | --- | --- |
@@ -266,7 +266,7 @@ The manual publishes a Pet Passport feature table promising a Vaccination Record
 that "tracks vaccination history and upcoming due dates", plus grooming and
 consultation records and reminder support.
 
-What exists on `Pet` ([`backend/models.py:72`](../../backend/models.py)) is a
+What exists on `Pet` ([`backend/app/models.py:72`](../../backend/app/models.py)) is a
 single `vax_card_url` — **one image of the vaccination card**. No vaccine name,
 no date administered, no next-due date, therefore no reminders. Eight identity
 photo slots are modelled in detail; the medical record is one file field.
@@ -286,7 +286,7 @@ The gap is UI-only — every other layer works:
 
 | Layer | State |
 | --- | --- |
-| Backend `PUT /pets/{id}` | ✅ accepts `vax_card` ([`pets.py:164,220`](../../backend/routers/pets.py)) |
+| Backend `PUT /pets/{id}` | ✅ accepts `vax_card` ([`pets.py:164,220`](../../backend/app/routers/pets.py)) |
 | `ApiService.uploadVaxCard` | ✅ exists ([`api_service.dart:678`](../../mobile/lib/core/services/api_service.dart)) — **dead code, zero callers** |
 | Registration (`add_pet_screen`) | ✅ `_pickVax` at line 229, skippable |
 | Pet profile (`pet_profile_screen`) | ❌ `_VaxSection` (line 579) is a `StatelessWidget` that only *views* |
@@ -297,7 +297,7 @@ Clinics **cannot** upload — the clinic scanner only reads `vax_card_url` to sh
 a "💉 Vax ✓" badge. The copy sends members down a path that does not exist.
 
 **Staff cannot upload either.** `PUT /admin/members/{member_id}/pets/{pet_id}`
-([`routers/admin/pets.py`](../../backend/routers/admin/pets.py)) takes a JSON `PetUpdate` body,
+([`app/routers/admin/pets.py`](../../backend/app/routers/admin/pets.py)) takes a JSON `PetUpdate` body,
 no file. So a member who skipped the step has no route at all: not the app, not
 the clinic, not support.
 
@@ -360,9 +360,9 @@ Effective Date is retroactively payable unless MetroPaws approves a written
 exception."* §5.8 repeats it for monthly subscribers.
 
 The submit path has **no check on `service_date` against
-`pet.plan_activated_at`** ([`reimbursements.py:97-355`](../../backend/routers/reimbursements.py)).
+`pet.plan_activated_at`** ([`reimbursements.py:97-355`](../../backend/app/routers/reimbursements.py)).
 Activation is consulted in exactly one place —
-[`reimbursement_utils.wallet_usage:87`](../../backend/domain/reimbursement_utils.py),
+[`reimbursement_utils.wallet_usage:87`](../../backend/app/domain/reimbursement_utils.py),
 which *excludes* pre-activation claims from the used/pending totals so they don't
 count against the allowance.
 

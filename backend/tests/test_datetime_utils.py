@@ -1,7 +1,7 @@
 """The timezone guard the money paths share — datetime_utils.aware."""
 from datetime import datetime, timedelta, timezone
 
-from datetime_utils import aware
+from app.datetime_utils import aware
 
 NAIVE = datetime(2026, 8, 14, 3, 21)
 UTC = timezone.utc

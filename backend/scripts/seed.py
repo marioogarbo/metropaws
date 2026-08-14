@@ -14,10 +14,10 @@ Nothing happens on import. Run it explicitly, and mind which database
 Sample clinic logins are created only when SEED_CLINIC_PASSWORD is set, so
 production never gets accounts whose password lives in this repo.
 """
-import config
-import models
-from auth import hash_password
-from database import SessionLocal, engine
+from app import config
+from app import models
+from app.auth import hash_password
+from app.database import SessionLocal, engine
 
 SERVICE_TYPES = [
     {"name": "Grooming", "description": "Full grooming session", "icon": "cut"},

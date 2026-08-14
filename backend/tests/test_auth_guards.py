@@ -13,10 +13,10 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-import auth as auth_utils
-import main
-import models
-from database import get_db
+from app import auth as auth_utils
+from app import main
+from app import models
+from app.database import get_db
 
 PARAM = re.compile(r"\{[^}]+\}")
 BODYLESS_METHODS = ("GET", "DELETE")

@@ -52,7 +52,7 @@ if (-not (Test-Path $python)) {
     $python = "python"
 }
 
-$uvicornArgs = "-m uvicorn main:app --host $BindHost --port $Port"
+$uvicornArgs = "-m uvicorn app.main:app --host $BindHost --port $Port"
 if ($useReload) { $uvicornArgs += " --reload" }
 
 Write-Host ""

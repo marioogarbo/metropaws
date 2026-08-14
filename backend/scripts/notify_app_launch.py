@@ -39,9 +39,9 @@ from typing import Callable
 
 import openpyxl
 
-import config
+from app import config
 
-from email_utils import (  # noqa: E402 — env must be loaded before the mail config is read
+from app.email_utils import (  # noqa: E402 — env must be loaded before the mail config is read
     AUDIENCE_FOUNDING_MEMBER,
     AUDIENCE_FOUNDING_RESERVATION,
     AUDIENCE_MEMBER,

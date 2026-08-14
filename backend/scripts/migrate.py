@@ -13,9 +13,9 @@ Nothing happens on import — run it explicitly, and mind which database
 ``deploy.ps1`` does NOT run this. A deploy that needs a new column has to be
 migrated first, or every query touching that table fails.
 """
-import config
-import models
-from database import engine
+from app import config
+from app import models
+from app.database import engine
 from sqlalchemy import text
 
 

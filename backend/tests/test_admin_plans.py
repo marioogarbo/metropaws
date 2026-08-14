@@ -8,8 +8,8 @@ unrecorded change to a wallet is the part you cannot reconstruct later.
 import pytest
 from fastapi import HTTPException
 
-import models
-from routers.admin.plans import _apply_service_caps
+from app import models
+from app.routers.admin.plans import _apply_service_caps
 
 STANDARD_PRICE = 2999
 CAP = 150_000

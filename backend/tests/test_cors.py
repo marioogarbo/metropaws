@@ -3,7 +3,7 @@
 Getting this wrong is not a cosmetic failure: too strict locks admins out of
 the website, too loose lets any site call the API with a token it obtained.
 """
-import main
+from app import main
 
 WEBSITE = "https://metropaws.ph"
 LOCAL_WEBSITE = "http://localhost:3000"

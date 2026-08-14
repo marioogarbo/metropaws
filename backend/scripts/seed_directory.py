@@ -17,8 +17,8 @@ website renders anything without a dialable number as muted text instead of a
 tel: link, so the honest state of the data survives to the page.
 """
 
-from database import SessionLocal, engine
-import models
+from app.database import SessionLocal, engine
+from app import models
 
 models.Base.metadata.create_all(bind=engine)
 

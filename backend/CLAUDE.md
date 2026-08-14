@@ -20,30 +20,30 @@ HTTP Request → FastAPI Router → Depends(auth) → Business Logic → SQLAlch
 
 | File | What it owns |
 |---|---|
-| `main.py` | App factory, middleware, static file mount, router registration, DB table creation on startup |
-| `config.py` | **Environment selection + settings access.** `APP_ENV` (`dev` default / `prod`) picks `.env.dev` or `.env.prod`; `.env.local` overrides both; real environment variables beat every file, which is how Docker and Render are configured. Import it before any other project module and read settings through `require` / `env` / `env_int` / `env_bool` — several modules read config at import time, so the import order is what guarantees correctness. |
-| `database.py` | SQLAlchemy engine + `SessionLocal` + `get_db` dependency |
-| `models.py` | All ORM table definitions — single source of truth for the DB schema |
-| `schemas/` | **All Pydantic request/response models — single source of truth for API contracts.** One module per subject (`auth`, `services`, `pets`, `members`, `plans`, `bookings`, `clinics`, `providers`, `payments`, `reimbursements`, `paw_points`, `content`, `directory`, `reservations`, `settings`, `notifications`, plus shared `validators`). `__init__.py` re-exports every name, so `import schemas` / `schemas.PetOut` works unchanged. Imports are layered one way — `validators → services → pets, plans → members → bookings → clinics`, and `providers → reimbursements`; if two modules need each other, the shared shape belongs in the lower one. |
-| `auth.py` | JWT encode/decode, password hashing, and the three FastAPI dependency guards: `get_current_user`, `require_admin`, `require_member` |
-| `email_utils/` | **Outbound email**, one module per concern: `transport` (delivery), `layout` (shared chrome), then one template each — `password_reset`, `claims`, `receipts` (**`send_payment_receipt_email`, PDF attached**), `app_launch` (**`build_app_launch_email` / `send_app_launch_email`**). `__init__.py` re-exports the public senders, so `import email_utils` is unchanged. Keeps the name `email_utils` deliberately — a package called `email` would shadow the stdlib module the transport imports `MIMEText` from. Sends via the **ZeptoMail HTTP API** when `ZEPTOMAIL_TOKEN` is set (**required in prod** — Render's free tier blocks outbound SMTP ports 25/465/587); falls back to plain SMTP for local dev. `layout._branded_shell()` is the shared logo header + card + footer chrome — build new templates on it. `claims` and `receipts` predate it and still inline their own copies, so a styling change currently has to be made three times. |
-| `invoice_utils/` | **Payment receipt PDF generation + send** (fpdf2, branded), split by concern: `business` (env-configurable seller identity), `formatting` (peso/phone/date/receipt number), `render` (page geometry, palette, drawing), `delivery` (build + send). `__init__.py` re-exports the public names. `notify_payment_receipt` = best-effort/never-raises (auto path); `generate_and_send` = raises (admin resend). Asset paths are anchored on `config.BACKEND_DIR`, **not** `__file__` — a relative-to-here path broke every render when this became a package. |
-| `storage.py` | **Canonical file-upload helper (`save_upload`)** — writes to Supabase Storage when configured, else local disk. Use this for new uploads. |
-| `domain/` | **Business rules, independent of HTTP** — `plan_utils` (granting benefits), `plan_term_utils`, `pricing_utils`, `reimbursement_utils`, `paw_points_utils`, `directory_taxonomy`. Nothing here imports a router or touches a request; routers translate HTTP into calls on these. Called `domain` and **not** `services` on purpose: in this product a "service" is a vet or grooming visit (`ServiceType`), and `routers/admin/services.py` already means that — two senses of the word in one tree would be worse than a slightly formal package name. |
-| `domain/reimbursement_utils.py` | Shared reimbursement math (per-plan cap, category usage/remaining) + best-effort status email |
-| `domain/pricing_utils.py` | Plan pricing rules — the multi-pet **Pack Discount** (`pack_discount_quote`). The ONLY place plan prices are adjusted; checkout and `GET /payments/quotes` both call it. |
-| `domain/plan_term_utils.py` | Plan term math + **upgrade/renewal eligibility** (`plan_status`, `purchase_eligibility`, `benefits_untouched`). The ONLY place those rules live; checkout, activate-plan, quotes, wallet, and the claim expiry gate all call it. |
+| `app/main.py` | App factory, middleware, static file mount, router registration, DB table creation on startup |
+| `app/config.py` | **Environment selection + settings access.** `APP_ENV` (`dev` default / `prod`) picks `.env.dev` or `.env.prod`; `.env.local` overrides both; real environment variables beat every file, which is how Docker and Render are configured. Import it before any other project module and read settings through `require` / `env` / `env_int` / `env_bool` — several modules read config at import time, so the import order is what guarantees correctness. |
+| `app/database.py` | SQLAlchemy engine + `SessionLocal` + `get_db` dependency |
+| `app/models.py` | All ORM table definitions — single source of truth for the DB schema |
+| `app/schemas/` | **All Pydantic request/response models — single source of truth for API contracts.** One module per subject (`auth`, `services`, `pets`, `members`, `plans`, `bookings`, `clinics`, `providers`, `payments`, `reimbursements`, `paw_points`, `content`, `directory`, `reservations`, `settings`, `notifications`, plus shared `validators`). `__init__.py` re-exports every name, so `import schemas` / `schemas.PetOut` works unchanged. Imports are layered one way — `validators → services → pets, plans → members → bookings → clinics`, and `providers → reimbursements`; if two modules need each other, the shared shape belongs in the lower one. |
+| `app/auth.py` | JWT encode/decode, password hashing, and the three FastAPI dependency guards: `get_current_user`, `require_admin`, `require_member` |
+| `app/email_utils/` | **Outbound email**, one module per concern: `transport` (delivery), `layout` (shared chrome), then one template each — `password_reset`, `claims`, `receipts` (**`send_payment_receipt_email`, PDF attached**), `app_launch` (**`build_app_launch_email` / `send_app_launch_email`**). `__init__.py` re-exports the public senders, so `import email_utils` is unchanged. Keeps the name `email_utils` deliberately — a package called `email` would shadow the stdlib module the transport imports `MIMEText` from. Sends via the **ZeptoMail HTTP API** when `ZEPTOMAIL_TOKEN` is set (**required in prod** — Render's free tier blocks outbound SMTP ports 25/465/587); falls back to plain SMTP for local dev. `layout._branded_shell()` is the shared logo header + card + footer chrome — build new templates on it. `claims` and `receipts` predate it and still inline their own copies, so a styling change currently has to be made three times. |
+| `app/invoice_utils/` | **Payment receipt PDF generation + send** (fpdf2, branded), split by concern: `business` (env-configurable seller identity), `formatting` (peso/phone/date/receipt number), `render` (page geometry, palette, drawing), `delivery` (build + send). `__init__.py` re-exports the public names. `notify_payment_receipt` = best-effort/never-raises (auto path); `generate_and_send` = raises (admin resend). Asset paths are anchored on `config.BACKEND_DIR`, **not** `__file__` — a relative-to-here path broke every render when this became a package. |
+| `app/storage.py` | **Canonical file-upload helper (`save_upload`)** — writes to Supabase Storage when configured, else local disk. Use this for new uploads. |
+| `app/domain/` | **Business rules, independent of HTTP** — `plan_utils` (granting benefits), `plan_term_utils`, `pricing_utils`, `reimbursement_utils`, `paw_points_utils`, `directory_taxonomy`. Nothing here imports a router or touches a request; routers translate HTTP into calls on these. Called `domain` and **not** `services` on purpose: in this product a "service" is a vet or grooming visit (`ServiceType`), and `app/routers/admin/services.py` already means that — two senses of the word in one tree would be worse than a slightly formal package name. |
+| `app/domain/reimbursement_utils.py` | Shared reimbursement math (per-plan cap, category usage/remaining) + best-effort status email |
+| `app/domain/pricing_utils.py` | Plan pricing rules — the multi-pet **Pack Discount** (`pack_discount_quote`). The ONLY place plan prices are adjusted; checkout and `GET /payments/quotes` both call it. |
+| `app/domain/plan_term_utils.py` | Plan term math + **upgrade/renewal eligibility** (`plan_status`, `purchase_eligibility`, `benefits_untouched`). The ONLY place those rules live; checkout, activate-plan, quotes, wallet, and the claim expiry gate all call it. |
 | `scripts/seed.py` | **Reference data for a fresh database**, one named function per subject in `SEEDERS` order: service types, plans, plan services, app settings, admin user, PawPoints rewards, sample clinics (only with `SEED_CLINIC_PASSWORD`), FAQs. Every step is idempotent — it inserts only what is missing — so re-running tops a database up after a new default is added, and never overwrites an admin's edit. Nothing runs on import; `python -m scripts.seed`, minding `APP_ENV`. Not part of the app lifecycle |
 | `scripts/migrate.py` | **Idempotent schema migrations, one named function per step, run in `MIGRATIONS` order.** Nothing executes on import — run `python -m scripts.migrate` explicitly, and mind which DB `APP_ENV` resolves to. Add a step as a new function *and* register it in `MIGRATIONS`; `tests/test_migrate.py` fails if you forget, or if the module regains an import-time side effect. `deploy.ps1` does **not** run it |
 | `scripts/notify_app_launch.py` | One-off CLI broadcast of the Android launch announcement to members + Founding 50 reservations. Reads the admin XLSX exports (no DB access) and picks the audience variant per person. **Deduped on `_mailbox_key` (canonical inbox, folding Gmail dots/`+tags`), not on the raw address** — a member who also reserved early is emailed once, with the members-export row winning so the copy is right. Ledger of delivered inboxes means a re-run resumes instead of double-sending; the send loop re-checks too. Same person on two *different* addresses (matched by phone) is reported for a human decision, never auto-dropped. Dry-run by default; `--send` confirms first. |
-| `routers/auth.py` | Registration, login, `/me`, forgot/reset password |
-| `routers/members.py` | Member profile CRUD + in-app notifications (list / unread-count / mark-read) |
-| `routers/pets.py` | Pet CRUD + file uploads (photos, vax cards) |
-| `routers/admin/` | **Admin API, one module per subject** — `services` (QR scan, deploy/assign, service types, logs), `members`, `plans`, `partners` (clinic partners), `providers` (direct-pay payees), `pets`, `bookings`, `analytics`, `payments` (+ invoices), `paw_points`, `reimbursements` (review/approve/mark-paid). `__init__.py` supplies the shared `/admin` prefix and includes each module — routes and OpenAPI tags are unchanged from the single 1,347-line `admin.py` this replaced. Add a new admin area as a new module here rather than growing an existing one past its subject. |
-| `routers/reimbursements.py` | Member reimbursement claims: submit, list, resubmit, Benefit Wallet |
-| `routers/payments.py` | PayMongo checkout, return pages, webhook, plan-grant on payment |
-| `routers/settings.py` | App settings (payments on/off, founding-50 toggle/limit) |
-| `paymongo.py` | PayMongo REST client — Checkout Sessions + webhook signature verification |
+| `app/routers/auth.py` | Registration, login, `/me`, forgot/reset password |
+| `app/routers/members.py` | Member profile CRUD + in-app notifications (list / unread-count / mark-read) |
+| `app/routers/pets.py` | Pet CRUD + file uploads (photos, vax cards) |
+| `app/routers/admin/` | **Admin API, one module per subject** — `services` (QR scan, deploy/assign, service types, logs), `members`, `plans`, `partners` (clinic partners), `providers` (direct-pay payees), `pets`, `bookings`, `analytics`, `payments` (+ invoices), `paw_points`, `reimbursements` (review/approve/mark-paid). `__init__.py` supplies the shared `/admin` prefix and includes each module — routes and OpenAPI tags are unchanged from the single 1,347-line `admin.py` this replaced. Add a new admin area as a new module here rather than growing an existing one past its subject. |
+| `app/routers/reimbursements.py` | Member reimbursement claims: submit, list, resubmit, Benefit Wallet |
+| `app/routers/payments.py` | PayMongo checkout, return pages, webhook, plan-grant on payment |
+| `app/routers/settings.py` | App settings (payments on/off, founding-50 toggle/limit) |
+| `app/paymongo.py` | PayMongo REST client — Checkout Sessions + webhook signature verification |
 
 ---
 
@@ -71,7 +71,7 @@ User (admin) ──── logs ──── ServiceLog
 
 ## Auth & RBAC
 
-Three dependency guards in `auth.py` — always use the right one:
+Three dependency guards in `app/auth.py` — always use the right one:
 
 | Dependency | Grants access to |
 |---|---|
@@ -92,17 +92,17 @@ Token lifetime: 7 days (`ACCESS_TOKEN_EXPIRE_MINUTES=10080`). There is no refres
 
 ## File Uploads
 
-**All** uploads go through `save_upload()` in `storage.py` — pet photos, vaccination cards and reimbursement receipts. There is no second upload path; add new ones here rather than validating bytes in a router.
+**All** uploads go through `save_upload()` in `app/storage.py` — pet photos, vaccination cards and reimbursement receipts. There is no second upload path; add new ones here rather than validating bytes in a router.
 
 | Upload type | Subdir | Allowed MIME types | Max size |
 |---|---|---|---|
 | Pet photo | `photos/` | jpeg, png, webp | env `MAX_FILE_BYTES` |
 | Vaccination card | `vax_cards/` | jpeg, png, pdf | env `MAX_FILE_BYTES` |
-| Reimbursement receipt | `receipts/` | jpeg, png, pdf | env `MAX_FILE_BYTES` (8 MB default in `storage.py`) |
+| Reimbursement receipt | `receipts/` | jpeg, png, pdf | env `MAX_FILE_BYTES` (8 MB default in `app/storage.py`) |
 
 UUID filenames; extension derived from the validated MIME, never the client filename. The returned value is a full public URL saved on the row (e.g. `reimbursements.receipt_url`).
 
-**Storage durability (important):** when `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` are set, `storage.py` uploads to **Supabase Storage** (durable) and returns the public object URL. Otherwise it falls back to the local `uploads/` dir — which is **NOT durable on Render's free tier** (wiped on every redeploy / idle spin-down). Configure Supabase Storage in production. See `docs/HOSTING_AND_DATA_SAFETY_RECOMMENDATION.md`.
+**Storage durability (important):** when `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` are set, `app/storage.py` uploads to **Supabase Storage** (durable) and returns the public object URL. Otherwise it falls back to the local `uploads/` dir — which is **NOT durable on Render's free tier** (wiped on every redeploy / idle spin-down). Configure Supabase Storage in production. See `docs/HOSTING_AND_DATA_SAFETY_RECOMMENDATION.md`.
 
 ---
 
@@ -122,14 +122,14 @@ Members claim money back for services paid out-of-pocket (see `docs/REIMBURSEMEN
 ## Adding New Features — Patterns to Follow
 
 ### New endpoint
-1. Add Pydantic schemas to the matching module in `schemas/` (request + response), and re-export them from `schemas/__init__.py`.
-2. Add the route to the appropriate router in `routers/`. Use the correct auth dependency.
-3. Register the router in `main.py` only if it's a new router file.
-4. Never put business logic in `main.py`.
+1. Add Pydantic schemas to the matching module in `app/schemas/` (request + response), and re-export them from `app/schemas/__init__.py`.
+2. Add the route to the appropriate router in `app/routers/`. Use the correct auth dependency.
+3. Register the router in `app/main.py` only if it's a new router file.
+4. Never put business logic in `app/main.py`.
 
 ### New database table
-1. Add the ORM model to `models.py`. Follow the `gen_uuid` primary key pattern.
-2. `models.Base.metadata.create_all(bind=engine)` in `main.py` auto-creates the table on next startup — no migration file needed for new tables.
+1. Add the ORM model to `app/models.py`. Follow the `gen_uuid` primary key pattern.
+2. `models.Base.metadata.create_all(bind=engine)` in `app/main.py` auto-creates the table on next startup — no migration file needed for new tables.
 3. If modifying an existing table, add a step to `scripts/migrate.py` — a named function using `ADD COLUMN IF NOT EXISTS` (or a guarded `DO $$`), registered in `MIGRATIONS`. Do not rely on `create_all` to alter existing columns. Run it against dev **and** prod before the deploy that needs the column. (`alembic` is in `requirements.txt` but has never been initialized.)
 
 ### New service type (business domain)
@@ -154,16 +154,16 @@ Subscription payments use PayMongo's **hosted Checkout Session API** (`POST /v1/
 - `success_url`/`cancel_url` MUST be `http(s)` (PayMongo rejects custom schemes). The custom-scheme deep link happens only inside the return pages.
 - The PayMongo dashboard webhook must be subscribed to **`checkout_session.payment.paid`**. To add payment methods, extend `payment_method_types` in `paymongo.create_checkout_session` (currently `["card", "gcash", "qrph"]`) — but the method must also be activated/approved in the PayMongo dashboard or it stays hidden.
 - When payments are disabled (`/settings/payments-enabled` → false), `/payments/checkout` returns 400; plans are granted in person by admins instead.
-- **Upgrade / renewal rules (2026-07-27/28, client decision — `domain/plan_term_utils.py`):** A pet's plan runs **365 days** from `plan_activated_at`. Mid-term, a member may buy only a **strictly higher-priced** plan for that pet, and only while this term's benefits are **completely untouched** (both wallet pools at zero used AND zero pending — rejected claims don't count — and zero `used_sessions`); same/lower plans 409 until the **renewal window** (`RENEWAL_WINDOW_DAYS`, default 30, before expiry) or after expiry, when ANY plan may be bought with no untouched requirement. Enforced in `/payments/checkout` AND `pets.activate_plan` (payments-disabled path) via `purchase_eligibility` → 409 with `eligibility_message` (shown verbatim in-app). **Every grant REPLACES benefits** — `grant_plan_to_pet` deletes the pet's `PetService` rows and rebuilds them from the plan (+ founding bonus), fresh `expires_at`, `plan_activated_at = now` (which also resets wallets, since `wallet_usage` windows on it). No stacking/rollover, ever. **Expiry is enforced**: expired pets get 400 on new claim submission (resubmits of in-term claims stay allowed; provider-target future `service_date` may not pass the term end). `GET /payments/quotes` carries per-plan `eligible/eligibility/is_current`; `WalletPetOut` carries `plan_status/plan_expires_at` (additive JSON — old apps unaffected). Legacy pets with `plan_id` but NULL `plan_activated_at`: active, never expire, upgradeable while untouched. PawPoints: an upgrade counts as `membership_renewal` (no new activity type).
+- **Upgrade / renewal rules (2026-07-27/28, client decision — `app/domain/plan_term_utils.py`):** A pet's plan runs **365 days** from `plan_activated_at`. Mid-term, a member may buy only a **strictly higher-priced** plan for that pet, and only while this term's benefits are **completely untouched** (both wallet pools at zero used AND zero pending — rejected claims don't count — and zero `used_sessions`); same/lower plans 409 until the **renewal window** (`RENEWAL_WINDOW_DAYS`, default 30, before expiry) or after expiry, when ANY plan may be bought with no untouched requirement. Enforced in `/payments/checkout` AND `pets.activate_plan` (payments-disabled path) via `purchase_eligibility` → 409 with `eligibility_message` (shown verbatim in-app). **Every grant REPLACES benefits** — `grant_plan_to_pet` deletes the pet's `PetService` rows and rebuilds them from the plan (+ founding bonus), fresh `expires_at`, `plan_activated_at = now` (which also resets wallets, since `wallet_usage` windows on it). No stacking/rollover, ever. **Expiry is enforced**: expired pets get 400 on new claim submission (resubmits of in-term claims stay allowed; provider-target future `service_date` may not pass the term end). `GET /payments/quotes` carries per-plan `eligible/eligibility/is_current`; `WalletPetOut` carries `plan_status/plan_expires_at` (additive JSON — old apps unaffected). Legacy pets with `plan_id` but NULL `plan_activated_at`: active, never expire, upgradeable while untouched. PawPoints: an upgrade counts as `membership_renewal` (no new activity type).
 - **Pack Discount (2026-07-27, published in the website FAQ):** 15% off the annual plan for a member's 2nd and 3rd pet, only when the new plan is **strictly cheaper** than the member's best still-active pet plan (equal tier = no discount; 4th+ pet = full price; anchor plans count while `plan_activated_at` is within 365 days, legacy null counts as active). Implemented in `pricing_utils.pack_discount_quote`, applied **server-side only** at `/payments/checkout` (snapshotted to `Payment.discount_php`; `amount_php` stays the FINAL charged amount) and re-evaluated on every checkout, so a secondary pet's renewal keeps the discount only while the primary is still active. Rounding favors the member: `final = price * (100-pct) // 100` (15%: ₱2,999→₱2,549). **FIRST ACTIVATION ONLY** (client decision 2026-07-29 — it's a joining incentive for adding a pet, not a standing multi-pet rate): callers pass the `plan_term_utils` eligibility code as `purchase_code`, and only `new` (`pricing_utils._DISCOUNT_ELIGIBLE_CODES`) carries a discount — **upgrades AND renewals pay full price**. `purchase_code=None` means "no context" and keeps the discount. A renewal-time incentive, if ever wanted, must be its own rule/percent rather than widening that set. The app shows prices from `GET /payments/quotes?pet_id=` (declared BEFORE `/{payment_id}` — route order matters) and never computes them. The receipt PDF prints Subtotal − Pack Discount = Total Paid when discounted. `payments.discount_php` is added by `scripts/migrate.py` — **must be run on dev + prod DBs**. **On/off + percent are ADMIN-CONTROLLED, live, no redeploy** (2026-07-28) — `pricing_utils.pack_discount_settings(db)` reads `AppSetting` keys `pack_discount_enabled`/`pack_discount_percent` (same key/value pattern as `booking_enabled`), exposed via `GET /settings/pack-discount` (public) + `PUT /admin/settings/pack-discount` (`require_admin`, `percent` validated 0–100) on the website's Settings page ("Pricing" section). `PACK_DISCOUNT_PERCENT`/`PACK_DISCOUNT_MAX_PLAN_PETS` env vars are now only the **fresh-install fallback** before an admin has ever saved a value — `PACK_DISCOUNT_MAX_PLAN_PETS` itself stays env-only (no admin UI; not requested).
 
 PayMongo env vars: `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `PAYMONGO_SUCCESS_REDIRECT`, `PAYMONGO_FAILURE_REDIRECT` (the last two are the `http(s)` return-page URLs).
 
-### Payment receipts / invoices (`invoice_utils/`)
+### Payment receipts / invoices (`app/invoice_utils/`)
 
-Every paid plan payment emails the member a **branded PDF receipt**. It's generated by `invoice_utils/render.py` (fpdf2) using `assets/metropaws-logo.png` + the bundled Montserrat weights in `assets/fonts/`.
+Every paid plan payment emails the member a **branded PDF receipt**. It's generated by `app/invoice_utils/render.py` (fpdf2) using `assets/metropaws-logo.png` + the bundled Montserrat weights in `assets/fonts/`.
 
-- **Auto path:** `_grant_plan` (`routers/payments.py`) calls `invoice_utils.notify_payment_receipt(db, payment)` **after** `db.commit()`. It's best-effort and **never raises** — a mail failure must not undo a grant. It runs exactly once per payment because every grant caller (webhook / poll / return page / profile safety-net) only reaches `_grant_plan` while the payment is still `pending`.
+- **Auto path:** `_grant_plan` (`app/routers/payments.py`) calls `invoice_utils.notify_payment_receipt(db, payment)` **after** `db.commit()`. It's best-effort and **never raises** — a mail failure must not undo a grant. It runs exactly once per payment because every grant caller (webhook / poll / return page / profile safety-net) only reaches `_grant_plan` while the payment is still `pending`.
 - **Admin view/download:** `GET /admin/payments/{payment_id}/invoice` (`require_admin`) returns the PDF via `invoice_utils.build_receipt_pdf` — `inline` by default, `?download=true` forces a save. Website Payments page has a per-row **"View"** button that opens `/api/admin/payments/[id]/invoice` (same-origin Next route that forwards the httpOnly `admin_token` as a Bearer) in a new tab.
 - **Admin resend (email):** `POST /admin/payments/{payment_id}/resend-invoice` (`require_admin`) calls `invoice_utils.generate_and_send` which **raises** on failure, so a bad SMTP config / missing member email surfaces to the operator (400/502). Website has a secondary per-row mail-icon button (server action) for this.
 - **Receipt number** is deterministic — `MP-<year>-<first 8 of payment id>` — so a resend reproduces the same number (NOT a sequential BIR OR series).
@@ -176,13 +176,13 @@ Every paid plan payment emails the member a **branded PDF receipt**. It's genera
 
 ## Environment Variables
 
-All config goes through `config.py`. Never hardcode values, and never call
+All config goes through `app/config.py`. Never hardcode values, and never call
 `load_dotenv()` or read `os.getenv` at module level in new code — use
 `config.require(...)` for settings the app cannot start without and
 `config.env` / `config.env_int` / `config.env_bool` for the rest.
 
 `APP_ENV` selects the environment: unset or `dev` → `.env.dev` (DEV Supabase),
-`prod` → `.env.prod` (LIVE). A bare `uvicorn main:app` therefore targets dev;
+`prod` → `.env.prod` (LIVE). A bare `uvicorn app.main:app` therefore targets dev;
 production takes a deliberate `APP_ENV=prod`. Every process prints its resolved
 target (`[config] APP_ENV=… db=… config=…`) on startup.
 
@@ -205,7 +205,7 @@ reset never runs and every later command in that terminal targets production.
 | `ALLOWED_ORIGINS` | No | — | Comma-separated browser origins allowed by CORS. Governs the **website's browser-side calls only** (admin login, password reset, founding/pricing forms) — the mobile app sends no `Origin`, so CORS never applies to it, and Next.js server actions are server-to-server. Unset (together with the regex below) allows every origin and logs `[cors] no ALLOWED_ORIGINS set` |
 | `ALLOWED_ORIGIN_REGEX` | No | — | Pattern for origins whose hostname changes per deploy (Vercel previews). **Scope it to the Vercel account slug** (`…-mario-garbos-projects.vercel.app`) — a bare `*.vercel.app` would admit anyone's deployment. Set in both envs: previews reach prod too, because `website/lib/api.ts` falls back to the production API when `NEXT_PUBLIC_API_URL` is unset |
 | `MAX_FILE_BYTES` | No | `5242880` (pets) / `8388608` (storage.py) | Upload limit. Set to `8388608` (8 MB) for receipts. |
-| `SUPABASE_URL` | Yes (for durable uploads) | — | Supabase project URL; enables Supabase Storage in `storage.py` |
+| `SUPABASE_URL` | Yes (for durable uploads) | — | Supabase project URL; enables Supabase Storage in `app/storage.py` |
 | `SUPABASE_SERVICE_KEY` | Yes (for durable uploads) | — | Supabase service-role key (server-side only — never ship to client) |
 | `SUPABASE_BUCKET` | No | `uploads` | Storage bucket name (must be created + public) |
 | `REIMBURSEMENT_MAX_CLAIM_PHP` | No | `20000` | Per-claim ceiling in pesos (compared in centavos) |

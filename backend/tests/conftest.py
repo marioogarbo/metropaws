@@ -23,7 +23,7 @@ from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
-import models  # noqa: E402
+from app import models  # noqa: E402
 
 _unique = count(1)
 

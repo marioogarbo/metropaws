@@ -93,7 +93,7 @@ kind of gap that never announces itself, because the build keeps working.
 
 The general rule now recorded in `backend/CLAUDE.md`: secrets never enter the
 image. Configuration arrives as real environment variables at runtime —
-`--env-file` locally, Render's env vars in deployment — and `config.py` is built
+`--env-file` locally, Render's env vars in deployment — and `app/config.py` is built
 around that, with files being a local-development convenience only.
 
 ## Related

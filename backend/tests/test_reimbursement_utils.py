@@ -6,8 +6,8 @@ refuses a valid claim.
 """
 from datetime import date
 
-import models
-from domain import reimbursement_utils as rutils
+from app import models
+from app.domain import reimbursement_utils as rutils
 
 GROOMING_CLAIM_CENTAVOS = 150_000
 EMERGENCY_CLAIM_CENTAVOS = 500_000

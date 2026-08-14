@@ -6,10 +6,10 @@
 
 | Piece | Path |
 | --- | --- |
-| Service vocabulary (backend) | `backend/domain/directory_taxonomy.py` |
-| Model | `backend/models.py` → `DirectoryProvider` |
+| Service vocabulary (backend) | `backend/app/domain/directory_taxonomy.py` |
+| Model | `backend/app/models.py` → `DirectoryProvider` |
 | Schemas | `backend/schemas.py` → `DirectoryProvider{Create,Update,Out}` |
-| Routes | `backend/routers/directory.py` |
+| Routes | `backend/app/routers/directory.py` |
 | Seed | `backend/scripts/seed_directory.py` |
 | Service vocabulary (website) | `website/lib/directory-taxonomy.ts` |
 | Fetch + helpers | `website/lib/directory.ts` |
@@ -109,7 +109,7 @@ The displayed category line is the slugs' labels joined with " / ", which
 reproduces the client's strings exactly.
 
 **The vocabulary lives in two places and must stay in sync:** the backend
-validates against it (`backend/domain/directory_taxonomy.py`), the website renders
+validates against it (`backend/app/domain/directory_taxonomy.py`), the website renders
 labels and chips from it (`website/lib/directory-taxonomy.ts`). Both files carry
 a comment pointing at the other. Adding a service type is a two-line change in
 both — deliberately a code change, because a new slug that no chip maps to would
@@ -126,7 +126,7 @@ Every card therefore gets a working map button without the admin having to hunt
 
 ## API
 
-Public (no auth), mirroring `routers/faqs.py`:
+Public (no auth), mirroring `app/routers/faqs.py`:
 
 - `GET /directory` → published rows only, partners first then name A→Z.
   Response never contains anything not meant to be public — it's a separate
@@ -141,8 +141,8 @@ Admin (`require_admin`):
   hanging off it (unlike a reimbursement provider, which must be deactivated
   instead of deleted because claims reference it)
 
-New router file `backend/routers/directory.py` with `public_router` +
-`admin_router`, registered in `main.py` alongside the FAQ pair.
+New router file `backend/app/routers/directory.py` with `public_router` +
+`admin_router`, registered in `app/main.py` alongside the FAQ pair.
 
 **Ordering is server-side and fixed** (partners first, then alphabetical). No
 `sort_order` column and no drag-to-reorder in v1: FAQs need a narrative order,
@@ -814,7 +814,7 @@ hamburger, but that changes the header everywhere and is a design call.
 ## Deploy checklist
 
 1. **`directory_providers` already exists on PROD** — created accidentally on
-   2026-08-08 when `main.py` was imported locally while `.env` pointed at prod
+   2026-08-08 when `app/main.py` was imported locally while `.env` pointed at prod
    (`create_all` runs at import). Empty table, additive, nothing else touched.
    No action needed, but do not be surprised to find it there.
 2. Deploy the backend image (`.\deploy.ps1`) — new router, no new env vars, no

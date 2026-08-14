@@ -1,10 +1,10 @@
 # Direct-to-provider payments
 
 **Status:** live in production since 2026-08-14. Global switch **on**.
-**Owns:** [`backend/domain/reimbursement_utils.py`](../../backend/domain/reimbursement_utils.py),
-[`backend/routers/reimbursements.py`](../../backend/routers/reimbursements.py),
-[`backend/routers/settings.py`](../../backend/routers/settings.py),
-[`backend/models.py`](../../backend/models.py) (`Member.direct_pay_*`,
+**Owns:** [`backend/app/domain/reimbursement_utils.py`](../../backend/app/domain/reimbursement_utils.py),
+[`backend/app/routers/reimbursements.py`](../../backend/app/routers/reimbursements.py),
+[`backend/app/routers/settings.py`](../../backend/app/routers/settings.py),
+[`backend/app/models.py`](../../backend/app/models.py) (`Member.direct_pay_*`,
 `Reimbursement.payout_target`, `ReimbursementProvider`),
 [`website/components/admin/member-direct-pay-control.tsx`](../../website/components/admin/member-direct-pay-control.tsx),
 [`mobile/lib/features/member/screens/reimbursement_screen.dart`](../../mobile/lib/features/member/screens/reimbursement_screen.dart)

@@ -13,7 +13,7 @@ against a real production checkout on 2026-08-06: a Deluxe plan at ₱5,999,
 and roughly a 30-minute countdown on the session.
 
 The code said so already and was not being read carefully:
-[`backend/paymongo.py`](../../backend/paymongo.py) comments that "QRPh is
+[`backend/paymongo.py`](../../backend/app/paymongo.py) comments that "QRPh is
 active from day one". The PayMongo blocker costs us the **separate** card /
 GCash / Maya / GrabPay buttons and the bank payout, not the ability to collect.
 
@@ -22,7 +22,7 @@ and one was nearly specified before this was checked. `payments_enabled` is on
 in production. Grant-after-payment has four layers: the
 `checkout_session.payment.paid` webhook, a client poll, the return page, and
 the profile-load reconcile in
-[`backend/routers/payments.py`](../../backend/routers/payments.py).
+[`backend/routers/payments.py`](../../backend/app/routers/payments.py).
 
 ## The app's plan flow is not what the code reading suggested
 
@@ -40,7 +40,7 @@ Romy wanted to edit site copy himself. Declined for now, and the reasoning is
 worth keeping because the request will return:
 
 - The admin panel has **one** role. `UserRole` is `member | admin | clinic`
-  ([`backend/models.py`](../../backend/models.py)) and the admin login only
+  ([`backend/models.py`](../../backend/app/models.py)) and the admin login only
   checks `role !== "admin"`. An account that can edit a heading can also see
   member PII, approve reimbursements, move provider payouts, and flip the
   settings that decide what customers are charged. Granular editing needs a

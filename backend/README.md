@@ -21,24 +21,32 @@ FastAPI backend for the MetroPaws Wellness Club — handles membership, pet reco
 
 ```
 backend/
-├── main.py                 # App entry point, middleware, router registration
-├── config.py               # Environment selection (APP_ENV) & settings access
-├── database.py             # SQLAlchemy engine, session, get_db dependency
-├── auth.py                 # JWT encode/decode + the three access guards
-├── models.py               # ORM table definitions
-├── paymongo.py             # PayMongo REST client
-├── storage.py              # The one upload path (Supabase Storage, local fallback)
-├── datetime_utils.py       # Timezone guard shared by the money paths
-├── domain/                 # Business rules, independent of HTTP
-├── routers/                # HTTP layer; admin/ is a package, one module per subject
-├── schemas/                # Pydantic request/response models, one per subject
-├── email_utils/            # Outbound email: transport, layout, one per template
-├── invoice_utils/          # Receipt PDF: business, formatting, render, delivery
-├── scripts/                # One-off CLI, not part of the app lifecycle
+├── app/                        # everything the running service needs
+│   ├── main.py                 # entry point (app.main:app), middleware, routers
+│   ├── config.py               # environment selection (APP_ENV) & settings
+│   ├── database.py             # SQLAlchemy engine, session, get_db dependency
+│   ├── auth.py                 # JWT encode/decode + the three access guards
+│   ├── models.py               # ORM table definitions
+│   ├── paymongo.py             # PayMongo REST client
+│   ├── storage.py              # the one upload path (Supabase, local fallback)
+│   ├── datetime_utils.py       # timezone guard shared by the money paths
+│   ├── domain/                 # business rules, independent of HTTP
+│   ├── routers/                # HTTP layer; admin/ is one module per subject
+│   ├── schemas/                # request/response models, one per subject
+│   ├── email_utils/            # outbound email: transport, layout, templates
+│   └── invoice_utils/          # receipt PDF: business, formatting, render, delivery
+├── scripts/                    # one-off CLI, never imported by the app
 ├── tests/
-├── assets/                 # Logo + bundled Montserrat weights for the PDF
-└── uploads/                # Local upload fallback (NOT durable on Render)
+├── assets/                     # logo + bundled Montserrat weights for the PDF
+├── uploads/                    # local upload fallback (NOT durable on Render)
+├── Dockerfile  deploy.ps1  run.ps1  pyproject.toml  .env.dev  .env.prod
+└── CLAUDE.md  README.md
 ```
+
+Two things live outside `app/` on purpose: `scripts/` is run by hand and never
+imported by the service, and `tests/` is not shipped. Paths to `assets/` and the
+`.env` files are resolved from `config.BACKEND_DIR`, which is the directory
+above `app/` — never from `__file__`, which moves when a module does.
 
 Anything under `scripts/` is run deliberately and never imported by the app:
 
@@ -84,7 +92,7 @@ first and beats `.env.dev`, so you can point at your own database or fix
 BASE_URL=http://localhost:8000
 ```
 
-`.env.example` documents every supported variable. See `config.py` for the
+`.env.example` documents every supported variable. See `app/config.py` for the
 loading rules.
 
 ### 3. Seed the database
@@ -107,7 +115,7 @@ can never leave your terminal pointed at production. Or run uvicorn directly
 from this directory:
 
 ```bash
-python -m uvicorn main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 For a **one-off command against production**, scope the variable to the child

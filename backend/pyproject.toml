@@ -68,6 +68,8 @@ extend-immutable-calls = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The app is a package now, so this is where `import app.…`, `scripts.…` and
+# `tests.…` all resolve from.
 # The backend is a flat set of modules imported as `import models` etc., so the
 # package root has to be on sys.path for the tests to import the same way the
 # app does.

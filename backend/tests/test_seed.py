@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-import models
+from app import models
 from scripts import seed
 
 SEED_SOURCE = Path(seed.__file__)

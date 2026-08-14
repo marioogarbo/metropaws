@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-import main
+from app import main
 
 SNAPSHOT_PATH = Path(__file__).parent / "routes_snapshot.json"
 

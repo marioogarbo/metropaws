@@ -8,7 +8,7 @@ dropping an endpoint the mobile app depends on.
 """
 import json
 
-import main
+from app import main
 from tests.test_app_routes import SNAPSHOT_PATH, route_table
 
 routes = route_table(main.app)

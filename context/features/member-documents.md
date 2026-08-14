@@ -135,11 +135,11 @@ deploy:
 | Surface | Value | To change it |
 | --- | --- | --- |
 | `website/components/register-form.tsx` → `AGREEMENT_VERSION` | `2026-08-rev5a` | done |
-| `backend/routers/auth.py` → `CURRENT_AGREEMENT_VERSION` | `2026-07.2` | needs `deploy.ps1` |
+| `backend/app/routers/auth.py` → `CURRENT_AGREEMENT_VERSION` | `2026-07.2` | needs `deploy.ps1` |
 | `mobile/.../register_screen.dart` → `_agreementVersion` | `2026-07.2` | needs a new AAB + Play review |
 
 Nothing validates the string — the backend stores
-`payload.agreement_version` verbatim ([`backend/routers/auth.py`](../../backend/routers/auth.py))
+`payload.agreement_version` verbatim ([`backend/app/routers/auth.py`](../../backend/app/routers/auth.py))
 and only falls back to its own constant when the client sends none. So the
 website change is safe on its own, but the three will not agree until the
 backend and app ship.
