@@ -74,6 +74,11 @@ says. If a fact is derivable by reading a file, link to that file instead.
   table instead of reusing `reimbursement_providers`, why "Providers" was the
   wrong name for the admin page, and why this page ships without a hardcoded
   fallback list.
+- [`features/credential-exposure-2026-08.md`](features/credential-exposure-2026-08.md) —
+  **open, and the highest-priority item in the repo.** Production credentials
+  were publicly pullable inside Docker images for four months: what was exposed,
+  how it happened, which tags were deleted, and the ordered rotation list that
+  actually closes it. Nothing has been rotated yet.
 - [`features/deployment-topology.md`](features/deployment-topology.md) —
   which repo and branch deploys to which host, which frontend calls which
   backend (staging points at *dev*), why production deploys from `master` and not
@@ -108,5 +113,8 @@ says. If a fact is derivable by reading a file, link to that file instead.
   files into packages without changing a single caller. Found: live credentials
   were being baked into every Docker image, `ALLOWED_ORIGINS` was deployed but
   never read, `migrate.py` ran every migration on import, and a `__file__`-based
-  asset path broke every receipt while the whole suite stayed green. Deployed to
-  dev; production still runs the old build.
+  asset path broke every receipt while the whole suite stayed green. Then
+  released to production, discovered that prod had been echoing
+  `Access-Control-Allow-Origin` to any site that asked, found production
+  credentials publicly pullable from Docker Hub, and gave the three auth guards
+  their first tests.

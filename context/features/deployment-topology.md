@@ -98,11 +98,16 @@ variable locking admins out of production is the worse failure.
 `marioogarbo/metropaws-backend` (prod) and `-dev`. Tagged `latest` plus a
 `yyyyMMdd-HHmmss` stamp; Render pulls `latest`.
 
-**Every tag pushed before `20260814-131454` contains `.env.dev` and `.env.prod`**
-— live database URL, Supabase service key, PayMongo live keys, Render API key.
-`.dockerignore` excluded only `.env`, and the Dockerfile does `COPY . .`. Newer
-images are clean, but the fix does not reach images already pushed: those
-credentials are exposed until the tags are deleted or the keys rotated.
+**Both repositories are public.** Anyone can pull any tag without an account,
+which is what made the 2026-08 credential exposure serious rather than
+theoretical: every tag pushed before 2026-08-14 carried `.env.dev` and
+`.env.prod` inside the image. Those 96 tags were deleted on 2026-08-14 and only
+`latest` plus one clean versioned build remain in each repo. **The credentials
+themselves still need rotating** — see
+[`credential-exposure-2026-08.md`](credential-exposure-2026-08.md).
+
+Keep `latest` alive through any future cleanup: it is Render's pull target, and
+deleting it breaks both services.
 
 `founding_reservations_backup.csv` / `.json` still enter the image (gitignored
 but not dockerignored) — a deliberate choice as of 2026-08-14.

@@ -297,7 +297,7 @@ Clinics **cannot** upload — the clinic scanner only reads `vax_card_url` to sh
 a "💉 Vax ✓" badge. The copy sends members down a path that does not exist.
 
 **Staff cannot upload either.** `PUT /admin/members/{member_id}/pets/{pet_id}`
-([`admin.py:647`](../../backend/routers/admin.py)) takes a JSON `PetUpdate` body,
+([`routers/admin/pets.py`](../../backend/routers/admin/pets.py)) takes a JSON `PetUpdate` body,
 no file. So a member who skipped the step has no route at all: not the app, not
 the clinic, not support.
 

@@ -7,7 +7,7 @@ email — taking the Membership Agreement and Member Manual offline for rewritin
 ## 1. Launch announcement email
 
 Built [`backend/notify_app_launch.py`](../../backend/notify_app_launch.py) plus
-the template in [`backend/email_utils.py`](../../backend/email_utils.py)
+the template in [`backend/email_utils/app_launch.py`](../../backend/email_utils/app_launch.py)
 (`build_app_launch_email` / `send_app_launch_email`).
 
 **Recipients come from the admin XLSX exports, not the database.** A run needs

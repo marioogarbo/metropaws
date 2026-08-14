@@ -309,27 +309,131 @@ but only the last has direct test coverage. Restructuring the first two without
 tests first would be how you cause an incident, not prevent one. Tests before
 refactor, in that order.
 
+---
+
+## Third pass — production release, and what the audit turned up
+
+### 9. `main` went to production
+
+`deploy.ps1 -Env prod` from `main` at `5a185c5` — deliberately not the
+`refactor/backend-organize` branch, which had never been deployed anywhere.
+No migration was needed: nothing on `main` touches `models.py`.
+
+Image `20260814-144603`, deploy `dep-d9v9rap42hec738glngg`. Verified live:
+
+| Origin | Before | After |
+| --- | --- | --- |
+| `www.metropaws.ph`, bare domain, staging, own previews | allowed | allowed |
+| `localhost:3000` | allowed | **blocked** |
+| unrelated `*.vercel.app`, `evil.example.com` | allowed | **blocked** |
+
+The "before" column is the finding: production was echoing
+`Access-Control-Allow-Origin` back to *any* site that asked, **with credentials
+enabled** — so any website could make authenticated cross-origin calls using a
+member's token. That is what `ALLOWED_ORIGINS`-not-being-read actually cost.
+
+Live `/openapi.json` reports 95 paths, 117 operations, 47 admin paths, 92 models
+— identical to local, so all four package splits import correctly in the
+production image.
+
+Consequence to remember: **`localhost:3000` can no longer call the production
+API.** Local website development must point `NEXT_PUBLIC_API_URL` at the dev
+backend, which is what staging already does.
+
+### 10. The Docker Hub exposure was confirmed, measured and partly closed
+
+Full account in [`features/credential-exposure-2026-08.md`](../features/credential-exposure-2026-08.md).
+In short: every image tag pushed between 2026-04-26 and today contained
+`.env.prod`; 96 tags were deleted, four clean ones remain, and **none of the
+credentials have been rotated yet**. `SECRET_KEY` is rotated in the env files
+but not deployed.
+
+### 11. `_apply_service_caps` and the auth guards got tests
+
+- `_apply_service_caps` (14 tests) — the audited money-config path. No bug
+  found; it behaves as documented, including the boundary where an omitted
+  `sessions` must not zero the value and an explicit `0` must not be read as
+  "not supplied".
+- **The three auth guards had no coverage at all** (136 tests). `require_admin`,
+  `require_member` and `get_current_user` are the guards `CLAUDE.md` calls
+  load-bearing, and deleting one from a handler would have left every test
+  green. Now every `/admin` route is checked for 401 anonymous and 403 as a
+  member, driven off the real route table so new routes are covered on arrival.
+
+333 tests total.
+
+## Findings (third pass)
+
+### 9. The unauthenticated surface, now pinned
+
+Walking every route anonymously found **27 that answer without a token**. All
+deliberate — `/auth/*`, public content, the settings the app reads before
+sign-in, PayMongo's return pages and webhook. The set is now asserted, so an
+endpoint that forgets its guard shows up as an addition.
+
+Two things in it are decisions rather than bugs, recorded so they are not
+rediscovered as alarms:
+
+- **`/docs`, `/redoc` and `/openapi.json` are public**, advertising the whole
+  admin API. It is also how deploys get verified here.
+- **`GET /auth/check-email` confirms whether an address is registered.** That is
+  user enumeration, in a codebase that deliberately hardened
+  `/auth/forgot-password` to always return 200 *to prevent exactly that*. It is
+  rate-limited to 5/min per IP, which slows it rather than stopping it. The
+  registration form needs it for the "email already taken" check, so it is a
+  genuine UX-versus-privacy trade.
+
+### 10. `seed.py` had migrate.py's problem, and hid a migration
+
+15 statements ran on import, including `create_all` and creating the admin
+account — against whatever `APP_ENV` resolved to. It also raised on import when
+`SEED_ADMIN_PASSWORD` was unset.
+
+While restructuring it, `migrations/add_paw_points.sql` turned out to be
+orphaned: referenced by nothing, pasted into the Supabase SQL editor by hand, so
+**a fresh environment silently had no PawPoints rewards catalogue**. It could
+not safely be re-run either — its ids came from `gen_random_uuid()`, so
+`ON CONFLICT DO NOTHING` never matched and a second run would have inserted all
+seven rewards again. Absorbed into `seed_paw_points_rewards`, matched on name;
+file and directory deleted.
+
+### 11. Test helpers that reimplement production sequencing will lie to you
+
+The first `seed.py` test helper copied `main()`'s loop but left out the commit
+between steps. The session is `autoflush=False`, so `seed_plan_services` could
+not see the plans `seed_plans` had added, and the test failed against correct
+code. Both now call the same `run_all()`.
+
+This is the second time in one session that a divergence between a real path and
+a near-copy caused a false signal — the first produced the duplicate-benefit bug
+in `grant_plan_to_member`. Where sequencing matters, have one function own it
+and make the test call that.
+
 ## Left open
 
-1. **Production backend is not deployed.** It still runs `allow_origins=["*"]`
-   and the pre-split code. The CORS change reaches real members only then.
-2. **Old Docker Hub tags still contain live credentials.** Delete the tags or
-   rotate the keys — the `.dockerignore` fix only protects new images.
-3. **`refactor/backend-organize` is unmerged and unpushed** — the three commits
-   in the second pass above. `main` itself is pushed and level with `origin`.
-4. **Tests for `_apply_service_caps` and `grant_plan_to_pet`**, before either is
-   restructured (finding 8).
-5. A context object for `invoice_utils.render`'s six drawing functions (F1,
-   finding 7) — the one argument-count fix that earns its keep.
-6. **`staging-metropaws-website`'s `master` and `staging` branches** are still on
+1. **No credential has been rotated.** The single most important item; see
+   [`features/credential-exposure-2026-08.md`](../features/credential-exposure-2026-08.md)
+   for the ordered list. The admin account password is the most exploitable.
+2. **`SECRET_KEY` is rotated in the env files but not deployed.** The next
+   deploy — for any reason — pushes it and logs everyone out. Not a problem,
+   but not a surprise you want mid-something-else.
+3. **A Docker Hub access token with delete scope, never-expiring, was pasted in
+   plaintext during this session.** Revoke it.
+4. **`refactor/backend-organize` is unmerged and unpushed** — 8 commits, never
+   deployed. Dev before prod.
+5. **Production may already hold duplicate `member_services` rows** from the
+   `grant_plan_to_member` bug fixed in `4261c20`. The fix stops new ones; it
+   does not clean up old ones. A read-only count would settle it.
+6. A context object for `invoice_utils.render`'s six drawing functions (F1,
+   second-pass finding 7).
+7. **`staging-metropaws-website`'s `master` and `staging` branches** are still on
    the 2026-07-11 commit; only `main` was moved.
-7. **GitHub is showing a billing failure** on the account ("We are having a
-   problem billing your account"). Unrelated to this work.
-8. `founding_reservations_backup.csv` / `.json` still enter the Docker image.
-9. `email_utils.notify_status` is the one uncovered branch — it needs a mail
-   double to test meaningfully.
-10. Deleting the broadcast ledger re-armed the double-send risk in
+8. **GitHub is showing a billing failure** on the account. Unrelated to this work.
+9. `founding_reservations_backup.csv` / `.json` still enter the Docker image.
+10. `email_utils.notify_status` is the one uncovered branch — it needs a mail
+    double to test meaningfully.
+11. Deleting the broadcast ledger re-armed the double-send risk in
     `notify_app_launch.py` (see §2).
-11. `email_utils` `claims` and `receipts` still inline their own HTML shell
+12. `email_utils` `claims` and `receipts` still inline their own HTML shell
     instead of `layout._branded_shell` (finding 2) — a product decision, since
     fixing it changes what members see.
