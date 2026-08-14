@@ -37,7 +37,7 @@ HTTP Request → FastAPI Router → Depends(auth) → Business Logic → SQLAlch
 | `routers/auth.py` | Registration, login, `/me`, forgot/reset password |
 | `routers/members.py` | Member profile CRUD + in-app notifications (list / unread-count / mark-read) |
 | `routers/pets.py` | Pet CRUD + file uploads (photos, vax cards) |
-| `routers/admin.py` | QR scan, service deployment, service assignment, member listing, logs, reimbursement review |
+| `routers/admin/` | **Admin API, one module per subject** — `services` (QR scan, deploy/assign, service types, logs), `members`, `plans`, `partners` (clinic partners), `providers` (direct-pay payees), `pets`, `bookings`, `analytics`, `payments` (+ invoices), `paw_points`, `reimbursements` (review/approve/mark-paid). `__init__.py` supplies the shared `/admin` prefix and includes each module — routes and OpenAPI tags are unchanged from the single 1,347-line `admin.py` this replaced. Add a new admin area as a new module here rather than growing an existing one past its subject. |
 | `routers/reimbursements.py` | Member reimbursement claims: submit, list, resubmit, Benefit Wallet |
 | `routers/payments.py` | PayMongo checkout, return pages, webhook, plan-grant on payment |
 | `routers/settings.py` | App settings (payments on/off, founding-50 toggle/limit) |

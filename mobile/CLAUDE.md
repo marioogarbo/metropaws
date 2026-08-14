@@ -54,7 +54,7 @@ Key backend files to cross-reference when changing API contracts:
 - `backend/routers/auth.py` — `/register`, `/login`, `/me`, forgot/reset password
 - `backend/routers/members.py` — member profile CRUD
 - `backend/routers/pets.py` — pet CRUD + photo/vax card uploads
-- `backend/routers/admin.py` — QR scan, service deployment, service assignment, logs
+- `backend/routers/admin/services.py` — QR scan, service deployment, service assignment, logs
 
 > **NEVER copy credentials from `backend/.env` into mobile code.** Base URL goes in `core/constants/api_constants.dart` only.
 

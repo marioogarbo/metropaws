@@ -1,7 +1,7 @@
 """Member-facing reimbursement endpoints: submit a claim, list claims, resubmit
 after a "needs info" request, and view the Benefit Wallet.
 
-Admin review/approve/mark-paid live in routers/admin.py. See
+Admin review/approve/mark-paid live in routers/admin/reimbursements.py. See
 docs/REIMBURSEMENT_FEATURE_PLAN.md.
 """
 import hashlib
