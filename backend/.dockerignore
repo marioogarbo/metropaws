@@ -13,4 +13,4 @@ uploads/
 .git
 .gitignore
 .render-service-id.*
-deploy.ps1
+*.ps1

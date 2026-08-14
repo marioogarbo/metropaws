@@ -184,6 +184,12 @@ All config goes through `config.py`. Never hardcode values, and never call
 production takes a deliberate `APP_ENV=prod`. Every process prints its resolved
 target (`[config] APP_ENV=… db=… config=…`) on startup.
 
+**Scope `APP_ENV` to the child process, never to the shell.** Use `.\run.ps1`
+(`-Env prod` for the live DB, with a typed confirmation) or
+`cmd /c "set APP_ENV=prod&& <command>"`. The `$env:APP_ENV='prod'; …;
+$env:APP_ENV=$null` idiom is unsafe: Ctrl+C aborts the rest of the line, so the
+reset never runs and every later command in that terminal targets production.
+
 | Variable | Required | Default | Notes |
 |---|---|---|---|
 | `APP_ENV` | No | `dev` | Which environment this process is. `dev` → `.env.dev`, `prod` → `.env.prod`. Set explicitly on the deployed services so their startup banner is truthful |

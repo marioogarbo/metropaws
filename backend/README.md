@@ -83,16 +83,31 @@ python seed.py
 
 ### 4. Run the server
 
-```bash
-uvicorn main:app --reload --port 8000
+```powershell
+.\run.ps1                     # DEV with auto-reload
+.\run.ps1 -Port 8080          # DEV on another port
+.\run.ps1 -BindHost 0.0.0.0   # DEV reachable from your phone on the LAN
+.\run.ps1 -Env prod           # PROD — asks you to type PROD first
 ```
 
-To point a one-off command at production, set `APP_ENV` for that command only —
-never as a persistent shell or machine variable:
+`run.ps1` sets `APP_ENV` inside the child process only, so an interrupted run
+can never leave your terminal pointed at production. Or run uvicorn directly
+from this directory:
+
+```bash
+python -m uvicorn main:app --reload --port 8000
+```
+
+For a **one-off command against production**, scope the variable to the child
+process rather than setting it in your shell:
 
 ```powershell
-$env:APP_ENV='prod'; python migrate.py; $env:APP_ENV=$null
+cmd /c "set APP_ENV=prod&& python migrate.py"
 ```
+
+> Do not use `$env:APP_ENV='prod'; …; $env:APP_ENV=$null`. Ctrl+C aborts the
+> rest of the line, the reset never runs, and every later command in that
+> terminal silently targets the live database.
 
 API docs available at `http://localhost:8000/docs`
 
