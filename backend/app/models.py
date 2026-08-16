@@ -396,6 +396,12 @@ class Payment(Base):
     # the row so receipts/audits can reconstruct the price without re-running
     # the eligibility rule against state that has since changed.
     discount_php = Column(Integer, nullable=False, default=0, server_default="0")
+    # Set when this payment is a monthly installment (Agreement §5.2). NULL means
+    # an ordinary one-off annual purchase. The distinction cannot be inferred from
+    # the amount — matching on price is the same fragile trick that left the
+    # Emergency Wallet unreachable — and it decides whether the payment re-grants
+    # the plan or merely advances the vesting counter.
+    subscription_id = Column(String, ForeignKey("subscriptions.id"), nullable=True, index=True)
     currency = Column(String, nullable=False, default="PHP")
     provider = Column(String, nullable=False, default="paymongo")
     provider_source_id = Column(String, nullable=True, index=True)

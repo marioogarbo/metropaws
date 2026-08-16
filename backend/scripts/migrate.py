@@ -487,6 +487,36 @@ def add_monthly_vesting_thresholds() -> None:
         conn.commit()
 
 
+def link_payments_to_subscriptions() -> None:
+    """payments.subscription_id (2026-08-17) — marks a payment as a monthly
+    installment rather than a one-off purchase.
+
+    Needed because the two must behave differently at grant time: the first
+    payment activates the plan, every later installment only advances the vesting
+    counter. Re-granting monthly would rebuild the pet's benefits and reset
+    plan_activated_at, handing the member a fresh wallet every month.
+
+    Deliberately a foreign key rather than a boolean or an amount comparison:
+    price-matching is the same fragile trick that left the Emergency Wallet
+    unreachable, and the link is wanted anyway to reconcile an installment to its
+    arrangement. NULL on every existing row, which is correct — every payment
+    taken so far was annual.
+
+    Runs after add_monthly_vesting_thresholds because it references
+    `subscriptions`, which create_new_tables makes.
+    """
+    with engine.connect() as conn:
+        conn.execute(text("""
+            ALTER TABLE payments
+                ADD COLUMN IF NOT EXISTS subscription_id VARCHAR REFERENCES subscriptions(id)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS ix_payments_subscription_id
+                ON payments (subscription_id)
+        """))
+        conn.commit()
+
+
 # Order matters: later steps assume the columns earlier ones added.
 MIGRATIONS = (
     create_new_tables,
@@ -507,6 +537,7 @@ MIGRATIONS = (
     add_pack_discount_column,
     add_per_member_direct_pay_override,
     add_monthly_vesting_thresholds,
+    link_payments_to_subscriptions,
 )
 
 

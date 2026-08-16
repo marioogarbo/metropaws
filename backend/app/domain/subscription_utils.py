@@ -23,13 +23,20 @@ Thresholds are columns on Plan, not constants here — §5.5 allows them to chan
 left the Emergency Wallet unreachable for months (see
 reimbursement_utils.EMERGENCY_CATEGORY_NAMES).
 """
+import calendar
 import enum
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+from app import config
 from app import models
 from app.domain import reimbursement_utils
+
+# How late an installment may be before the run of consecutive payments is
+# broken (§5.6). Env-tunable because it is a collections policy, not a rule of
+# the agreement — §5.6 leaves the response to MetroPaws' discretion.
+GRACE_DAYS = config.env_int("SUBSCRIPTION_GRACE_DAYS", 7)
 
 
 class BenefitClass(str, enum.Enum):
@@ -103,6 +110,38 @@ def payments_remaining(subscription: models.Subscription, benefit: BenefitClass)
     return max(0, needed - (subscription.consecutive_payments or 0))
 
 
+def next_due_after(paid_on: date) -> date:
+    """The date the following installment falls due — one calendar month on.
+
+    Clamped to the length of the target month, so a subscription started on the
+    31st stays on the 31st where the month allows it and lands on the last day
+    where it does not, rather than drifting earlier every short month.
+    """
+    year = paid_on.year + (paid_on.month // 12)
+    month = paid_on.month % 12 + 1
+    return date(year, month, min(paid_on.day, calendar.monthrange(year, month)[1]))
+
+
+def is_in_default(subscription: models.Subscription) -> bool:
+    """True when the next installment is overdue by more than the grace window.
+
+    **Derived, not swept.** This backend has no scheduler or background worker,
+    so nothing could mark a subscription late on a timer. Reading it from
+    `next_due_on` the way plan_term_utils reads expiry from `plan_activated_at`
+    means default is always current without a cron job existing to be forgotten.
+
+    Reads the clock in UTC, matching plan_status. A subscription that has never
+    had a cleared payment has no due date and so cannot be in default — it is
+    simply not started.
+    """
+    if subscription.status == models.SubscriptionStatus.cancelled:
+        return False
+    if subscription.next_due_on is None:
+        return False
+    today = datetime.now(timezone.utc).date()
+    return today > subscription.next_due_on + timedelta(days=GRACE_DAYS)
+
+
 def _stamp_eligible(
     subscription: models.Subscription, benefit: BenefitClass, on: date
 ) -> None:
@@ -112,18 +151,39 @@ def _stamp_eligible(
         subscription.planned_eligible_since = on
 
 
+def _restart_run(subscription: models.Subscription) -> None:
+    """Break the run of consecutive payments and surrender both eligibilities.
+
+    The stamps go with the counter deliberately. §5.8 says earlier payments do
+    not make prior services payable, so a re-earned eligibility must carry a NEW
+    date — keeping the old stamp would leave a member covered for the months they
+    were in default.
+    """
+    subscription.consecutive_payments = 0
+    subscription.emergency_eligible_since = None
+    subscription.planned_eligible_since = None
+
+
 def record_cleared_payment(subscription: models.Subscription, paid_on: date) -> None:
     """Count one cleared monthly payment (§5.4) and stamp any threshold it crosses.
 
-    The stamp happens here, at the moment the counter crosses, because §5.8 needs
-    the DATE a benefit became available and that can never be recomputed
-    afterwards — a §5.6 reset destroys the run of payments that produced it.
+    Applies the §5.6 policy chosen on 2026-08-17: an installment that arrives
+    after the grace window has passed **restarts the run at one** rather than
+    continuing it. Nothing sweeps for this — the lateness is judged here, at the
+    next payment, which is the only moment the answer can change.
 
-    Does not set `next_due_on` or `last_payment_at`: those belong to the billing
-    cycle, which is not built yet.
+    The stamp happens at the moment the counter crosses, because §5.8 needs the
+    DATE a benefit became available and a restart destroys the run that produced
+    it.
+
+    Sets `next_due_on`. Leaves `last_payment_at` to the caller, which holds the
+    real timestamp; this function only has the date.
     """
+    if is_in_default(subscription):
+        _restart_run(subscription)
     subscription.consecutive_payments = (subscription.consecutive_payments or 0) + 1
     subscription.status = models.SubscriptionStatus.active
+    subscription.next_due_on = next_due_after(paid_on)
     for benefit in BenefitClass:
         if eligible_since(subscription, benefit) is not None:
             continue
@@ -143,10 +203,13 @@ def claim_block_reason(
     non-payment (§5.6), not yet vested (§5.5), and vested now but the service
     predates eligibility (§5.8).
     """
-    if subscription.status == models.SubscriptionStatus.suspended:
+    if subscription.status == models.SubscriptionStatus.suspended or is_in_default(
+        subscription
+    ):
         return (
             "This membership is suspended after a missed payment. Settle the "
-            "outstanding installment to use benefits again."
+            "outstanding installment to use benefits again — note that paying "
+            "late restarts the qualifying period."
         )
 
     remaining = payments_remaining(subscription, benefit)

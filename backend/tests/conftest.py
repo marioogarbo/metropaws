@@ -10,6 +10,15 @@ import os
 os.environ["APP_ENV"] = "dev"
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SECRET_KEY"] = "test-only-secret"
+# No test may send real mail. Without this the suite inherits .env.dev's live
+# credentials, and exercising any grant path reaches out to Gmail with a real
+# member address attached — which is how this was found. With no sender
+# configured, transport._send_email raises before any network call and the
+# best-effort callers swallow it, so behaviour under test is unchanged.
+os.environ["ZEPTOMAIL_TOKEN"] = ""
+os.environ["EMAIL_FROM"] = ""
+os.environ["SMTP_USER"] = ""
+os.environ["SMTP_HOST"] = ""
 # Pinned so the app under test has a known CORS state rather than inheriting
 # whatever .env.dev happens to list today.
 os.environ["ALLOWED_ORIGINS"] = ""
@@ -158,3 +167,20 @@ def days_ago():
         return datetime.now(timezone.utc) - timedelta(days=days)
 
     return _days_ago
+
+
+@pytest.fixture
+def utc_days_ago():
+    """A UTC calendar date N days in the past.
+
+    Use this rather than ``date.today() - timedelta(...)`` whenever the value is
+    compared against something stored in UTC. Mixing the two is wrong for however
+    many hours the local date runs ahead of UTC — ten a day here — and it has
+    already produced both a test that failed on a date rollover and one that
+    passed while asserting the wrong day.
+    """
+
+    def _utc_days_ago(days: int) -> date:
+        return (datetime.now(timezone.utc) - timedelta(days=days)).date()
+
+    return _utc_days_ago

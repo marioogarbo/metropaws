@@ -12,6 +12,7 @@ from app import models
 from app import paymongo
 from app.domain import plan_term_utils
 from app.domain import pricing_utils
+from app.domain import subscription_utils
 from app import schemas
 from app.database import get_db
 from app.domain.plan_utils import grant_plan_to_member, grant_plan_to_pet
@@ -371,6 +372,32 @@ async def webhook(request: Request, db: Session = Depends(get_db)):
     return {"received": True}
 
 
+def _advance_subscription(
+    db: Session, payment: models.Payment
+) -> models.Subscription | None:
+    """Count this payment against its monthly arrangement, if it belongs to one.
+
+    Returns the subscription so the caller can tell an activating first
+    installment (grant the plan) from every later one (do not). A payment with no
+    `subscription_id` is an ordinary annual purchase and returns None.
+    """
+    if not payment.subscription_id:
+        return None
+    subscription = (
+        db.query(models.Subscription)
+        .filter(models.Subscription.id == payment.subscription_id)
+        .first()
+    )
+    if subscription is None:
+        return None
+
+    paid_at = payment.paid_at or datetime.now(timezone.utc)
+    subscription_utils.record_cleared_payment(subscription, paid_at.date())
+    subscription.last_payment_at = paid_at
+    db.flush()
+    return subscription
+
+
 def _grant_plan(db: Session, payment: models.Payment) -> None:
     from app.domain.paw_points_utils import award_points, has_awarded_for_reference
 
@@ -381,32 +408,45 @@ def _grant_plan(db: Session, payment: models.Payment) -> None:
     if not member or not plan:
         return
 
-    is_renewal = False
-    if payment.pet_id:
-        from sqlalchemy.orm import joinedload
-        pet = (
-            db.query(models.Pet)
-            .options(joinedload(models.Pet.pet_services).joinedload(models.PetService.service_type))
-            .filter(models.Pet.id == payment.pet_id)
-            .first()
-        )
-        if pet:
-            is_renewal = pet.plan_activated_at is not None
-            grant_plan_to_pet(db, pet, plan, member)
-    else:
-        is_renewal = member.plan_type is not None
-        grant_plan_to_member(db, member, plan)
+    # A monthly installment AFTER the first must not re-grant. grant_plan_to_pet
+    # deletes and rebuilds the pet's PetService rows and resets plan_activated_at,
+    # which resets the wallet year with it — so re-granting every month would hand
+    # a subscriber a fresh allowance twelve times a year. Installment one activates
+    # the plan; the rest only advance the vesting counter, which
+    # _advance_subscription has already done. They still get a receipt, because
+    # money changed hands.
+    subscription = _advance_subscription(db, payment)
+    is_later_installment = subscription is not None and subscription.consecutive_payments > 1
 
-    activity = "membership_renewal" if is_renewal else "membership_activation"
-    if not has_awarded_for_reference(db, member.id, activity, payment.id):
-        award_points(
-            db,
-            member_id=member.id,
-            activity_type=activity,
-            plan_type=plan.name,
-            reference_id=payment.id,
-            notes=f"Plan: {plan.name}",
-        )
+    is_renewal = False
+    if not is_later_installment:
+        if payment.pet_id:
+            from sqlalchemy.orm import joinedload
+            pet = (
+                db.query(models.Pet)
+                .options(joinedload(models.Pet.pet_services).joinedload(models.PetService.service_type))
+                .filter(models.Pet.id == payment.pet_id)
+                .first()
+            )
+            if pet:
+                is_renewal = pet.plan_activated_at is not None
+                grant_plan_to_pet(db, pet, plan, member)
+        else:
+            is_renewal = member.plan_type is not None
+            grant_plan_to_member(db, member, plan)
+
+        # PawPoints mark joining or renewing a membership. An installment is
+        # neither — it is one payment toward a membership that already exists.
+        activity = "membership_renewal" if is_renewal else "membership_activation"
+        if not has_awarded_for_reference(db, member.id, activity, payment.id):
+            award_points(
+                db,
+                member_id=member.id,
+                activity_type=activity,
+                plan_type=plan.name,
+                reference_id=payment.id,
+                notes=f"Plan: {plan.name}",
+            )
 
     payment.status = models.PaymentStatus.paid
     payment.paid_at = datetime.now(timezone.utc)

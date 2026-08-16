@@ -248,3 +248,128 @@ def test_a_suspended_subscription_blocks_even_when_vested(db, monthly_plan, make
     )
 
     assert "suspended" in reason
+
+
+# ---------------------------------------------------------------------------
+# Billing cycle: due dates, default, and the §5.6 restart policy (2026-08-17)
+# ---------------------------------------------------------------------------
+
+
+def test_the_next_installment_falls_due_a_month_later(db):
+    assert subs.next_due_after(date(2026, 6, 15)) == date(2026, 7, 15)
+
+
+def test_a_december_payment_rolls_into_january(db):
+    assert subs.next_due_after(date(2026, 12, 10)) == date(2027, 1, 10)
+
+
+def test_a_month_end_due_date_clamps_to_a_short_month(db):
+    """31 Jan must not overflow into March — it lands on the last of February,
+    and the day is taken from the payment date each time so it does not drift
+    permanently earlier."""
+    assert subs.next_due_after(date(2027, 1, 31)) == date(2027, 2, 28)
+
+
+def test_a_subscription_with_no_due_date_is_not_in_default(db, monthly_plan, make_subscription):
+    """Never paid is 'not started', not 'behind'."""
+    subscription = make_subscription(monthly_plan, next_due_on=None)
+
+    assert subs.is_in_default(subscription) is False
+
+
+def test_an_installment_inside_the_grace_window_is_not_default(db, monthly_plan, make_subscription, utc_days_ago):
+    subscription = make_subscription(
+        monthly_plan, next_due_on=utc_days_ago(subs.GRACE_DAYS - 1)
+    )
+
+    assert subs.is_in_default(subscription) is False
+
+
+def test_an_installment_on_the_last_grace_day_is_not_default(db, monthly_plan, make_subscription, utc_days_ago):
+    """Inclusive boundary — the member still has that day to pay."""
+    subscription = make_subscription(
+        monthly_plan, next_due_on=utc_days_ago(subs.GRACE_DAYS)
+    )
+
+    assert subs.is_in_default(subscription) is False
+
+
+def test_an_installment_past_the_grace_window_is_default(db, monthly_plan, make_subscription, utc_days_ago):
+    subscription = make_subscription(
+        monthly_plan, next_due_on=utc_days_ago(subs.GRACE_DAYS + 1)
+    )
+
+    assert subs.is_in_default(subscription) is True
+
+
+def test_a_cancelled_subscription_is_never_in_default(db, monthly_plan, make_subscription, utc_days_ago):
+    subscription = make_subscription(
+        monthly_plan,
+        status=models.SubscriptionStatus.cancelled,
+        next_due_on=utc_days_ago(999),
+    )
+
+    assert subs.is_in_default(subscription) is False
+
+
+def test_a_default_blocks_a_claim_even_when_fully_vested(db, monthly_plan, make_subscription, utc_days_ago):
+    subscription = make_subscription(
+        monthly_plan,
+        consecutive_payments=99,
+        emergency_eligible_since=date(2026, 1, 1),
+        next_due_on=utc_days_ago(subs.GRACE_DAYS + 1),
+    )
+
+    reason = subs.claim_block_reason(
+        subscription, subs.BenefitClass.emergency, SERVICE_DAY
+    )
+
+    assert "suspended" in reason
+
+
+def test_a_payment_sets_the_next_due_date(db, monthly_plan, make_subscription):
+    subscription = make_subscription(monthly_plan)
+
+    subs.record_cleared_payment(subscription, date(2026, 6, 15))
+
+    assert subscription.next_due_on == date(2026, 7, 15)
+
+
+def test_an_on_time_payment_continues_the_run(db, monthly_plan, make_subscription, utc_days_ago):
+    subscription = make_subscription(
+        monthly_plan, consecutive_payments=4, next_due_on=utc_days_ago(1)
+    )
+
+    subs.record_cleared_payment(subscription, SERVICE_DAY)
+
+    assert subscription.consecutive_payments == 5
+
+
+def test_a_late_payment_restarts_the_run_at_one(db, monthly_plan, make_subscription, utc_days_ago):
+    """§5.6, policy chosen 2026-08-17: past the grace window the qualifying
+    period resets rather than resuming."""
+    subscription = make_subscription(
+        monthly_plan,
+        consecutive_payments=4,
+        next_due_on=utc_days_ago(subs.GRACE_DAYS + 1),
+    )
+
+    subs.record_cleared_payment(subscription, SERVICE_DAY)
+
+    assert subscription.consecutive_payments == 1
+
+
+def test_a_restart_surrenders_the_earned_eligibility(db, monthly_plan, make_subscription, utc_days_ago):
+    """§5.8 — the re-earned eligibility must carry a NEW date, or the member
+    stays covered for the months they were in default."""
+    subscription = make_subscription(
+        monthly_plan,
+        consecutive_payments=6,
+        emergency_eligible_since=date(2026, 1, 1),
+        planned_eligible_since=date(2026, 4, 1),
+        next_due_on=utc_days_ago(subs.GRACE_DAYS + 1),
+    )
+
+    subs.record_cleared_payment(subscription, SERVICE_DAY)
+
+    assert subscription.planned_eligible_since is None

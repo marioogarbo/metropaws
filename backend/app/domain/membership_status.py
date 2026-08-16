@@ -59,8 +59,10 @@ def status_for(
     the ones that merely qualify how, so the label always names the strongest
     thing standing in their way:
 
-    1. Suspended — §5.6 non-payment. Outranks vesting entirely: a fully vested
-       subscriber in default still cannot claim.
+    1. Suspended — §5.6 non-payment, whether an admin set it or the installment
+       is simply overdue past the grace window (that half is derived, so it needs
+       no scheduler). Outranks vesting entirely: a fully vested subscriber in
+       default still cannot claim.
     2. Expired — the plan year ended (§5.9 term), which blocks new claims.
     3. Pending Onboarding — no plan, or a monthly arrangement whose first
        installment has not cleared. §5.3 grants digital access only *after* that
@@ -78,7 +80,10 @@ def status_for(
     6. Fully Service-Eligible — an annual member with a live plan. §5.9 exempts
        them from vesting outright.
     """
-    if subscription is not None and subscription.status == models.SubscriptionStatus.suspended:
+    if subscription is not None and (
+        subscription.status == models.SubscriptionStatus.suspended
+        or subscription_utils.is_in_default(subscription)
+    ):
         return MembershipStatus.suspended
 
     plan_state = plan_term_utils.plan_status(pet)
