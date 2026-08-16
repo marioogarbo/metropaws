@@ -1,5 +1,13 @@
 # Deployment topology — what runs where, and what calls what
 
+> **Production database rules (2026-08-16).** Never seed, drop, truncate or
+> `create_all` against the live database. Migrations there only on Mario's
+> explicit ask; even reads need an ask each time. Enforced by a `PreToolUse`
+> guard in [`.claude/settings.json`](../../.claude/settings.json) and written up
+> in [`backend/CLAUDE.md`](../../backend/CLAUDE.md). Note that
+> `deploy.ps1 -Env prod` **full-replaces** Render's env vars from `.env.prod`, so
+> a placeholder left in that file goes live and takes the API down.
+
 Which repo deploys to which host, which frontend talks to which backend, and the
 CORS allowlist that follows from it. None of this is visible from the code, and
 getting it wrong locks admins out of the website or lets any site call the API.

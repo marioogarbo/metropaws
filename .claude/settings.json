@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "permissions": {
+    "deny": [
+      "Bash(dropdb *)",
+      "Bash(APP_ENV=prod python -m scripts.seed)",
+      "Bash(APP_ENV=prod python -m scripts.migrate)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Checking for production database writes",
+            "command": "c=$(cat); head=$(printf '%s' \"$c\" | sed 's/<<.*//'); always='dropdb|drop[[:space:]]+(table|database|schema)|truncate[[:space:]]+(table[[:space:]]+)?[a-z_]'; prod='APP_ENV=prod|-Env[[:space:]]+prod|\\.env\\.prod|ap-southeast-1'; dest='scripts\\.seed|scripts\\.migrate|seed\\.py|migrate\\.py|delete[[:space:]]+from|create_all|run\\.ps1|uvicorn'; if echo \"$c\" | grep -Eqi \"$always\"; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: drops and truncates are never part of normal MetroPaws work — schema changes go through scripts/migrate.py. Denied for every environment, because a connection string held in a variable hides which database this would hit. If this is genuinely needed, Mario must unblock it deliberately in .claude/settings.json.\"}}'; elif echo \"$head\" | grep -Eqi \"$prod\" && echo \"$head\" | grep -Eqi \"$dest\"; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: this targets the LIVE MetroPaws database (real members, real payments). Seeds, migrations and create_all are DEV-ONLY — run it against dev instead. Read-only SELECTs against prod are still allowed, but ask first. If Mario has explicitly asked for a production migration, he must unblock it deliberately in .claude/settings.json.\"}}'; elif echo \"$head\" | grep -Eqi 'deploy\\.ps1' && echo \"$head\" | grep -Eqi \"$prod\"; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"PRODUCTION DEPLOY. deploy.ps1 FULL-REPLACES Render env vars from .env.prod — confirm that file has no placeholder values, and that the migration has already been run, before approving.\"}}'; fi; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

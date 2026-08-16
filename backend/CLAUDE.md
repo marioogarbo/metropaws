@@ -251,6 +251,36 @@ The image targets `linux/amd64`. The app runs as a non-root `app` user inside th
 
 ---
 
+## Production Database — Hard Rules
+
+**Production is live.** Real members, real memberships, real payment history. A
+mistake there is a customer's money and their pet's benefits, not a bad test run.
+
+| Action | dev | prod |
+|---|---|---|
+| Read (SELECT) | free | **ask first, every time** |
+| `scripts/seed.py` | free | **never** |
+| `scripts/migrate.py` | free | only when Mario explicitly asks |
+| `create_all` (a bare `import main`, `run.ps1`, `uvicorn`) | free | **never** |
+| `DROP` / `TRUNCATE` / `DELETE FROM` | ask | **never** |
+
+- **Default to dev.** `APP_ENV` unset or `dev` → `.env.dev`; `prod` → `.env.prod`.
+  Read the `[config] APP_ENV=… db=… config=…` banner on every run and say which
+  environment it names. Dev is `aws-1-ap-southeast-2…:6543`, prod is
+  `aws-1-ap-southeast-1…:5432`.
+- **An earlier approval does not carry over.** Approval to read prod for one
+  question is not approval for the next one.
+- `scripts/migrate.py` is **not** purely additive — `deduplicate_pet_services`
+  and `deduplicate_plan_services` delete rows.
+- **`deploy.ps1 -Env prod` full-replaces Render's env vars from `.env.prod`.**
+  Confirm that file holds no placeholder values before deploying: a blanked
+  `DATABASE_URL` would be pushed live and take the API down.
+
+A `PreToolUse` guard in [`.claude/settings.json`](../.claude/settings.json)
+enforces the "never" rows and prompts on a prod deploy. It is a safety net, not
+permission to stop thinking — it matches command text, so a novel phrasing can
+slip past it.
+
 ## What Not to Do
 
 - **Do not add Alembic auto-migrate on startup.** `create_all` is intentional — it only creates missing tables, it never drops or alters. Use explicit migrations for schema changes.
