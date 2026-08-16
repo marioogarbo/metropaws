@@ -372,7 +372,7 @@ async def webhook(request: Request, db: Session = Depends(get_db)):
 
 
 def _grant_plan(db: Session, payment: models.Payment) -> None:
-    from paw_points_utils import award_points, has_awarded_for_reference
+    from app.domain.paw_points_utils import award_points, has_awarded_for_reference
 
     member = (
         db.query(models.Member).filter(models.Member.id == payment.member_id).first()
@@ -416,5 +416,5 @@ def _grant_plan(db: Session, payment: models.Payment) -> None:
     # a mail hiccup must never undo a completed grant. Runs once per payment
     # because every caller (webhook / poll / return / safety-net) only reaches
     # _grant_plan while the payment is still pending.
-    import invoice_utils
+    from app import invoice_utils
     invoice_utils.notify_payment_receipt(db, payment)

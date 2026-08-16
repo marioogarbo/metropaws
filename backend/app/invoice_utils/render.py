@@ -246,7 +246,7 @@ def _method_label(payment: models.Payment) -> str:
     code = None
     if (payment.provider or "").lower() == "paymongo" and payment.provider_source_id:
         try:
-            import paymongo
+            from app import paymongo
             code = paymongo.get_paid_payment_method(payment.provider_source_id)
         except Exception:
             code = None

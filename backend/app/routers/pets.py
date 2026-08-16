@@ -98,7 +98,7 @@ def create_pet(
     db.commit()
     db.refresh(pet)
 
-    from paw_points_utils import award_points, has_awarded_for_reference
+    from app.domain.paw_points_utils import award_points, has_awarded_for_reference
     if not has_awarded_for_reference(db, member.id, "pet_profile_completed", pet.id):
         award_points(
             db,
