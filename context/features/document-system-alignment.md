@@ -1,8 +1,9 @@
 # Documents vs system — the alignment backlog
 
-**Status:** open, no work scheduled. Raised 2026-08-13 when Membership Agreement
-Rev. 5A and Member Manual Rev. 3C went live (see
-[`member-documents.md`](./member-documents.md)).
+**Status:** open. Raised 2026-08-13 when Membership Agreement Rev. 5A and Member
+Manual Rev. 3C went live (see [`member-documents.md`](./member-documents.md)).
+Items 11 and 12 — the two that moved money — were fixed 2026-08-15 and are
+**awaiting deploy**; everything else is unstarted.
 **Owns:** nothing yet — this is a register, not an implementation.
 
 ## The rule Mario set
@@ -379,10 +380,33 @@ date during review stops it. The exclusion was almost certainly written to be
 *protective* ("old claims shouldn't eat this year's allowance"); the missing
 submission gate turns it into the opposite.
 
-**Fix is small:** reject `service_date < plan_activated_at` at submission, with
-an admin override path for §5.1's "written exception". Worth doing before
-volume picks up — it is a money leak, not a wording mismatch. Check existing rows
-for pre-activation dates when it ships.
+**Fixed 2026-08-15.** `_reject_before_plan_start` in
+[`app/routers/reimbursements.py`](../../backend/app/routers/reimbursements.py)
+rejects `service_date < plan_activated_at` with a 400 naming the pet and the
+start date. Backend only — no migration, no app release.
+
+Three things worth knowing about how it landed:
+
+- **The gate runs on resubmit too.** Resubmit accepts a new `service_date`, so a
+  submit-only check was bypassable in two steps: file an in-term claim, then
+  correct the date after the admin asks for more information.
+- **The boundary is inclusive** — a claim dated *on* the activation day is
+  allowed, matching `wallet_usage`'s `service_date >= plan_activated_at`. Pinned
+  by a test, since an off-by-one here silently rejects every same-day claim.
+- **Legacy grants (`plan_activated_at` NULL) are not gated.** `plan_term_utils`
+  treats them as active without expiry, so there is no term start to measure
+  against; gating them would reject every claim from the manually-granted pets.
+
+**No cleanup needed.** The read-only audit found **zero** pre-activation claims in
+dev or production, so nothing was ever exploited and no existing row has to be
+corrected.
+
+**Still open:** §5.1's "written exception" has nowhere to live. Only a member can
+create a claim — `POST /reimbursements` requires `require_member` and there is no
+admin-side create endpoint — so staff cannot record an approved exception even
+when the business wants to. This is the same missing endpoint as the item 1
+retro-recording trap; both are closed by option B there, and neither should be
+built separately.
 
 ## 12. No category is recognised as Emergency, so that pool is unreachable
 
@@ -422,10 +446,15 @@ The grooming equivalent is fine — `_GROOMING_CATEGORY_NAMES` is
 `{"grooming", "full grooming"}` and matches both real categories. Emergency is
 the set that drifted.
 
-**⚠️ Check production before anything else.** Not verified here — prod DB is
-off-limits without an explicit ask. Look at the admin Plans/categories list: if
-prod also lacks a category named exactly `Emergency`, every emergency claim ever
-paid came out of the preventive pool.
+**✅ Production checked 2026-08-15 — affected, but nothing has been mispaid.**
+Read-only query against both databases. Prod holds the same six categories as
+dev and **no category named `Emergency`**, so the pool was unreachable there too.
+
+The saving detail: **no emergency claim has ever been filed in either
+environment.** Prod's entire claim history is one paid `Vaccines` claim
+(₱650); dev has four, none emergency. So the bug was live but had not yet cost
+anything, and fixing it re-buckets no existing row — the next emergency claim
+would have been the first to draw from the wrong pool.
 
 **Fix options:**
 
@@ -434,15 +463,30 @@ paid came out of the preventive pool.
 | Quick | Add `"emergency stabilization"` to the set | One line, restores both behaviours today. Still name-matched, so the next rename breaks it again |
 | Proper | `ServiceType.is_emergency` boolean, admin-editable | Kills the whole class of bug. The existing comment says the flag was deliberately avoided to mirror the grooming pattern — that reasoning has now cost us the pool |
 
-Do the quick fix if prod is affected and money is moving; schedule the flag
-either way. No app release needed — this is backend and data only.
+**Quick fix applied 2026-08-15.** `EMERGENCY_CATEGORY_NAMES` is now
+`{"emergency", "emergency stabilization"}`, matching the two-name shape
+`_GROOMING_CATEGORY_NAMES` already uses. Both behaviours are restored: emergency
+claims draw from the Emergency Wallet, and emergency is refused direct-to-provider
+pay. Backend only — no migration, no app release.
 
-**A test now pins the broken behaviour** (2026-08-14):
-`test_emergency_stabilization_does_not_match_the_emergency_pool` in
-`backend/tests/test_reimbursement_utils.py` asserts that
-`"Emergency Stabilization"` does *not* match the pool, with a docstring saying it
-documents the gap rather than endorses it. Whichever fix is chosen, that test
-will fail and has to be updated deliberately — which is the point.
+The test that pinned the broken behaviour was inverted rather than deleted, which
+is what it was there for:
+`test_emergency_stabilization_matches_the_emergency_pool`. Two more were added —
+one for direct-pay eligibility, one asserting `wallet_usage` buckets a
+stabilization claim into the emergency totals, so the money path is covered and
+not just the predicate.
+
+**Still open: the flag.** The match is still by name, so renaming the category in
+the admin UI silently re-breaks it. `ServiceType.is_emergency` remains the durable
+fix and is now the only outstanding half of item 12.
+
+**Consequence to tell the client before this deploys.** Emergency claims will now
+be capped at the Emergency Wallet — ₱300 Standard / ₱900 Deluxe / ₱1,500 Premium —
+instead of drawing on the preventive pool of ₱2,000 / ₱4,000 / ₱7,000. That is the
+two-pool model working as designed and as the documents describe, but from a
+member's point of view it is a tightening, and the first emergency claimant will
+experience it as a much smaller allowance than the app would have granted last
+week.
 
 ## Suggested order when this gets picked up
 
@@ -452,11 +496,10 @@ will fail and has to be updated deliberately — which is the point.
 2. **Item 5, member-facing strings only.** Cheap, visible, no dependency.
 3. **Item 2.** Confirm whether vesting is real. If not, amend §5.5 — which is
    the same conversation as item 10, so raise them together.
-4. **Item 12** — check prod for the Emergency category FIRST. If it is missing
-   there too, emergency claims are draining the preventive pool right now.
-5. **Item 11** — pre-activation claims. Small backend fix; leaks money the
-   same way item 12 does, just more slowly.
-6. **Item 6**, referral + birthday bonus. Self-contained.
+4. ~~**Item 12**~~ / ~~**Item 11**~~ — both fixed 2026-08-15, undeployed. What
+   remains of 12 is the `ServiceType.is_emergency` flag; of 11, the admin-side
+   written-exception path, which belongs to item 1's option B.
+5. **Item 6**, referral + birthday bonus. Self-contained.
 7. **Item 7** (pet records) is independent of item 1 and Romy has already asked
    for it — scope it alongside item 5.
 8. Items 3, 4, 8, 9 follow item 1 and are not worth scoping before it.

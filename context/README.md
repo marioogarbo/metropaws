@@ -126,3 +126,11 @@ says. If a fact is derivable by reading a file, link to that file instead.
   backend reorganisation to dev and prod. Found: `used_sessions` is now dead data,
   which silently makes the upgrade rule's "benefits untouched" check looser than
   its docstring; and the migration script deletes rows as well as adding columns.
+- [`sessions/2026-08-15-emergency-pool-and-preactivation-claims.md`](sessions/2026-08-15-emergency-pool-and-preactivation-claims.md) —
+  fixed the two alignment-register items that could misroute money: no service
+  category matched the Emergency Wallet, so emergency claims drew on the far
+  larger preventive pool and qualified for direct-to-provider pay; and a claim
+  dated before the plan started was accepted, uncapped, and never deducted. A
+  read-only audit of both databases confirmed production was affected by the
+  first but that no emergency claim has ever been filed, so nothing was mispaid —
+  and settled the duplicate `member_services` question at zero rows.
