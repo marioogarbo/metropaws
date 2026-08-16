@@ -174,9 +174,62 @@ submission. A monthly member can submit a claim on day one.
 not intend to hold monthly members out for ten months, §5.5 is the thing to fix,
 not the code.
 
-**Cheaper fix:** almost certainly amend, unless the business genuinely wants
-vesting. If it does, this is the highest-value gap to build — §5.4 says the
-whole point is to stop people enrolling purely to claim immediately.
+### Decision made 2026-08-16: build it
+
+Mario: monthly is wanted, because some members can't afford the annual fee or
+don't want to commit yet. So this stops being "amend or build" and becomes a
+build, and it is now the largest open feature on the project.
+
+**Verified state of monthly today — it does not exist as a product.** Read-only
+prod audit 2026-08-16:
+
+- Every payment ever taken is at an **annual** price (6 paid × ₱2,999 Standard;
+  4 pending Standard, 1 pending Deluxe). No payment matches a monthly price, and
+  **no member has ever paid twice**.
+- `price_monthly` (₱300 / ₱600 / ₱900) exists on `Plan`, in the admin schema, in
+  `seed.py`, and on the two admin/marketing surfaces — and **in no payment path
+  at all**. Checkout charges `plan.price`. The mobile app never reads the field.
+- `Payment` has **no cadence, period or subscription field**, so there is nothing
+  to count consecutive payments against.
+- The public [`PricingSection.tsx`](../../website/app/components/PricingSection.tsx)
+  advertises a monthly toggle whose sub-line reads "₱2,999 billed annually" under
+  a "₱300/mo" headline. Both cannot be true, and ₱2,999 ÷ 12 is ₱250, not ₱300.
+
+**Collection does not depend on the PayMongo wallet.** Auto-debit would need a
+vaulted card, which is blocked. But QR Ph is a push payment the member initiates,
+which is how Filipinos already pay utilities and tuition — a monthly payment link
+plus a cleared-payment counter works on the checkout flow already live in
+production, with no PayMongo changes. §5.6 being written around missed and late
+payments suggests manual collection was always the assumption.
+
+**Price scaling needs a decision** — Standard and De Luxe are both exactly +20%
+over annual (₱3,600 vs ₱2,999; ₱7,200 vs ₱5,999), but Premium is only +8%
+(₱10,800 vs ₱9,999). A uniform premium would put Premium at ~₱1,000/mo. Looks
+like an oversight on the plan where under-pricing costs most.
+
+**Build order.** (1) a subscription entity — member, plan, pet, cadence,
+consecutive-payment counter, status, next-due; (2) the two vesting gates at claim
+submission, which slot in beside `_reject_before_plan_start`; (3) the monthly
+cycle — payment link per period, reconcile, increment or reset per §5.6, plus
+reminders; (4) §5.7 member status, which becomes mandatory rather than optional
+because a member must be able to see whether they are vested. This closes items 2
+and 4 outright and part of item 1.
+
+**Blocked on two answers from Romy**, both of which change the data model:
+
+1. **The §5.5 thresholds in writing** — see item 10. The document contradicts
+   itself and the thresholds *are* the feature.
+2. **§5.6's reset rule**, which is deliberately discretionary: reset the counter
+   to zero, or restore to last good standing? A hard reset needs a counter; a
+   restore needs payment history plus an admin override. Recommendation:
+   reset-to-zero after a configurable grace period, with an admin action to
+   restore — enforceable automatically, and keeps mercy a deliberate staff
+   decision rather than the default.
+
+Note §5.10, which governs the whole build: account activation, benefit
+eligibility, Service Authorization and Provider Settlement are **four separate
+events**. Digital access after payment one is not benefit eligibility, and
+benefit eligibility is not an approved authorization.
 
 ## 3. Advance notice is not collected or enforced
 
@@ -348,6 +401,35 @@ Carried from [`member-documents.md`](./member-documents.md): the published page
 reads six / eight / ten; MP-CON-001 as supplied reads "two (6)", "three (8)",
 "four (10)". Romy owes a reissued PDF, or confirmation that the words were right
 and the site is wrong. Deliberately not chased yet — Mario's call on 2026-08-13.
+
+### The document resolves its own contradiction — the numerals are right
+
+Confirmed against the controlled PDF 2026-08-16. This stops being a judgment call
+once the **Emergency Support Control** column is read alongside it. That column is
+unambiguous — words and numerals agree — at **3 / 3 / 4** consecutive payments.
+
+Test each reading of the planned-service column against it:
+
+| Reading | Standard | De Luxe | Premium | Result |
+| --- | --- | --- | --- | --- |
+| **Words** (2 / 3 / 4) | planned 2, emergency 3 | planned 3, emergency 3 | planned 4, emergency 4 | Planned services unlock **before** emergency on Standard, and simultaneously on the other two |
+| **Numerals** (6 / 8 / 10) | emergency 3, planned 6 | emergency 3, planned 8 | emergency 4, planned 10 | Emergency always unlocks first, planned services later |
+
+Under the words, the Emergency Support Control column does nothing: it either
+binds later than the far larger planned-service benefit, or lands on the same
+month. A separate, earlier gate for emergencies is the only reading in which that
+column is a control at all.
+
+The numerals also match §5.4's stated purpose — the requirement exists to
+"reduce enrollment solely for immediate high-value utilization", and the
+high-value drawdown is the Preventive Wellness pool (₱2,000 / ₱4,000 / ₱7,000)
+behind planned services, not the Emergency pool (₱300 / ₱900 / ₱1,500).
+
+So publishing six / eight / ten was correct, and Romy can be told *why* rather
+than asked to choose: the words are a stale leftover from an earlier 2/3/4 draft
+that the numerals were raised past. **This must be settled in writing before any
+monthly-subscription code ships** — the thresholds are the feature, and 2/3/4
+versus 6/8/10 is a materially different product.
 
 ---
 
