@@ -98,9 +98,31 @@ built together or not at all.
 `tests/test_reimbursement_dates.py` (new file) and
 `tests/test_reimbursement_utils.py`.
 
-**Not committed, not deployed.** Both changes are backend-only: no migration, no
-new endpoint, no route-surface change, so no AAB and no `migrate.py` run. A
-`deploy.ps1` to dev then prod is all either needs.
+Committed to `fix/emergency-pool-and-preactivation-claims` as three commits (the
+two fixes separately, then this record). Unmerged and unpushed.
+
+### Released to dev
+
+| Step | Result |
+| --- | --- |
+| Image | `metropaws-backend-dev:20260816-220514`, digest `sha256:bc04307b…` |
+| Render deploy | `dep-da0qf4nlk1mc738i4980` → **live** |
+| Health | `{"status": "ok"}` |
+| Route surface | 95 paths / 117 operations, **zero drift** vs `tests/routes_snapshot.json` |
+
+Neither change needs a migration, a new endpoint or an AAB, so dev → prod is a
+plain `deploy.ps1 -Env prod`.
+
+Verified the running image actually carries the fixes rather than trusting the
+deploy: `docker run` on the pushed tag found both the widened category set and
+`_reject_before_plan_start` at all three sites. The same run confirmed **no
+`.env*` files in the image**, so the `.dockerignore` fix from
+[`../features/credential-exposure-2026-08.md`](../features/credential-exposure-2026-08.md)
+is still holding.
+
+**Not in production.** Hold until the client has been told about the emergency
+cap above — the fix is correct either way, but the first emergency claimant meets
+a smaller allowance and that should not be a surprise.
 
 ## Left open
 
