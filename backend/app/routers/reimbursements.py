@@ -94,6 +94,36 @@ def _validate_service_date(service_date: date, allow_future: bool = False) -> No
         )
 
 
+def _reject_before_plan_start(pet: models.Pet, service_date: date) -> None:
+    """Agreement §5.1: a service obtained before the membership effective date is
+    not payable.
+
+    Without this gate such a claim is not merely allowed, it is free. wallet_usage
+    excludes pre-activation claims from the used and pending totals, so the
+    balance check below can never fail on one whatever the amount, and approving
+    it never consumes the benefit. The exclusion was written to protect the
+    allowance from old claims; with no gate at submission it does the opposite.
+
+    §5.1 allows a written exception, which has nowhere to live yet — only a member
+    can create a claim, so there is no staff path to record one.
+    """
+    term = plan_term_utils.plan_term(pet)
+    if term is None:
+        # Legacy grant with no activation date: no term start to measure against,
+        # and plan_term_utils already treats these as active without expiry.
+        return
+    start = term[0].date()
+    if service_date < start:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"That date is before {pet.name}'s plan started on "
+                f"{start.strftime('%d %b %Y')}. Services from before the plan "
+                "began aren't covered."
+            ),
+        )
+
+
 @router.post("/reimbursements", response_model=schemas.ReimbursementOut, status_code=201)
 def submit_reimbursement(
     service_type_id: str = Form(...),
@@ -226,6 +256,7 @@ def submit_reimbursement(
 
     _validate_amount(claimed_amount_centavos)
     _validate_service_date(service_date, allow_future=is_provider_target)
+    _reject_before_plan_start(pet, service_date)
 
     # A provider-target claim books a FUTURE appointment — it can't be scheduled
     # past the plan year's end (the benefit funding it would have expired).
@@ -404,6 +435,9 @@ def resubmit_reimbursement(
             detail="Only claims that need more information can be resubmitted.",
         )
 
+    # Needed by both the date and the amount checks below.
+    pet = db.query(models.Pet).filter(models.Pet.id == claim.pet_id).first()
+
     if receipt and receipt.filename:
         claim.receipt_sha256 = _receipt_hash(receipt)
         claim.receipt_url = storage.save_upload(receipt, "receipts", ALLOWED_RECEIPT_TYPES)
@@ -411,12 +445,15 @@ def resubmit_reimbursement(
         claim.provider_name = provider_name
     if service_date is not None:
         _validate_service_date(service_date)
+        # Resubmit can move the date, so the plan-start gate has to run here too
+        # or it is trivially bypassed by filing in-term and correcting afterwards.
+        if pet is not None:
+            _reject_before_plan_start(pet, service_date)
         claim.service_date = service_date
     if claimed_amount_centavos is not None:
         _validate_amount(claimed_amount_centavos)
         # Re-check the wallet: the member may raise the amount on resubmit. Check
         # against the pool this claim's category draws from.
-        pet = db.query(models.Pet).filter(models.Pet.id == claim.pet_id).first()
         if pet is not None:
             emergency = rutils.is_emergency_category(
                 claim.service_type.name if claim.service_type else None
