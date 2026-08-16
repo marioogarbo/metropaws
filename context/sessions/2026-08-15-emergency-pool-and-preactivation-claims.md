@@ -297,3 +297,44 @@ a real payment.
 - `fix/emergency-pool-and-preactivation-claims` — emergency pool, pre-activation
   gate, monthly subscriptions, the prod guard. On dev only. Production needs
   `scripts/migrate.py` run first, and that needs Mario's explicit go.
+
+## Addendum, 2026-08-17 — §5.7 member status, verified on dev
+
+`domain/membership_status.py` derives the Agreement §5.7 labels rather than
+storing them, the same call `plan_status` makes. It exists because §5.7 makes the
+member responsible for checking their status before requesting a service and
+nothing displayed one — tolerable while every member was annual and immediately
+eligible, not tolerable once monthly vesting can withhold benefits silently.
+
+Two judgment calls to revisit if anyone disagrees:
+
+- **"Under Review" is not implemented.** No review flag exists anywhere in the
+  model, and a label the system can never enter is noise in front of a member.
+  §5.7 says "may display … including", so a subset is faithful to it.
+- **Authorization Restricted outranks Fully Service-Eligible.** A restricted
+  member can still claim reimbursement, so this is arguable. Chosen because it is
+  the more specific truth and it matches the mapping the direct-pay migration
+  already cited.
+
+### A test bug the calendar exposed
+
+Two boundary tests mixed a LOCAL `date.today()` with a UTC `days_ago()`. In UTC+10
+those disagree for ten hours a day. One started failing the moment the local date
+rolled ahead of UTC; the other — `test_claim_dated_on_the_activation_day_counts`
+in `test_analytics.py` — kept **passing** while quietly asserting the day *after*
+activation, so the inclusive boundary it exists to protect was never verified.
+Both now take their dates from one clock. Worth remembering as a class: any test
+comparing a stored UTC timestamp against a locally-derived date is wrong for part
+of every day.
+
+### Dev release
+
+| Step | Result |
+| --- | --- |
+| Image | `metropaws-backend-dev:20260817-085658` |
+| Render deploy | `dep-da140j5bedkc73c091g0` → live, health ok |
+| `WalletPetOut` | `membership_status` + `membership_status_label` present in the live schema |
+| `PlanOut` | both vesting fields present |
+| Route surface | 95 paths / 117 operations, zero drift — everything additive |
+
+464 tests pass. Production still runs only the import hotfix.
