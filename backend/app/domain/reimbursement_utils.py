@@ -3,10 +3,13 @@
 Kept separate from the routers so the member-facing wallet and the admin review
 flow compute remaining benefit the exact same way. All amounts are centavos.
 
-Two pools per plan (client decision 2026-07-16): a claim filed under the
-"Emergency" category draws from the Emergency Wallet; every other category draws
-from the Preventive Wellness Wallet. The pool is chosen by service-category NAME
-(no is_emergency DB flag), mirroring the grooming-cooldown name-match pattern.
+Two pools per plan (client decision 2026-07-16): a claim filed under an emergency
+category draws from the Emergency Wallet; every other category draws from the
+Preventive Wellness Wallet. The pool is chosen by service-category NAME (no
+is_emergency DB flag), mirroring the grooming-cooldown name-match pattern.
+
+That name match is the weak point: it silently misroutes money when a category is
+named something the set doesn't list, and it did — see EMERGENCY_CATEGORY_NAMES.
 """
 from sqlalchemy.orm import Session
 
@@ -25,7 +28,18 @@ PENDING_STATUSES = (
 
 # Category names (lower-cased) that draw from the Emergency Wallet instead of the
 # Preventive Wellness Wallet. Same name-match approach as the grooming cooldown.
-EMERGENCY_CATEGORY_NAMES = {"emergency"}
+#
+# Both spellings are listed because seed.py creates two different things: the
+# wallet-bucket category "Emergency" and the session category "Emergency
+# Stabilization". Only the latter exists in dev or production, so matching
+# "emergency" alone left the Emergency Wallet unreachable — every emergency claim
+# drew from the much larger Preventive Wellness pool, and emergency qualified for
+# direct-to-provider pay because that rule is defined as "not emergency".
+# Verified against both databases 2026-08-15.
+#
+# Renaming the category in the admin UI breaks this again. The durable fix is an
+# admin-editable ServiceType.is_emergency flag.
+EMERGENCY_CATEGORY_NAMES = {"emergency", "emergency stabilization"}
 
 
 def is_emergency_category(name: str | None) -> bool:

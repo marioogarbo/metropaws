@@ -25,13 +25,17 @@ def test_missing_category_is_not_emergency(db):
     assert rutils.is_emergency_category(None) is False
 
 
-def test_emergency_stabilization_does_not_match_the_emergency_pool(db):
-    """Documents a live gap, it does not endorse it: the seeded category is
-    named "Emergency Stabilization", but the pool matches the exact name
-    "Emergency" only — so nothing currently draws from the Emergency Wallet.
-    See context/ for the open decision on whether to rename or widen the match.
+def test_emergency_stabilization_matches_the_emergency_pool(db):
+    """The name every real database actually uses. Dev and production both hold
+    "Emergency Stabilization" and no category called plain "Emergency", so while
+    the match was exact this returned False and the Emergency Wallet could never
+    be drawn against.
     """
-    assert rutils.is_emergency_category("Emergency Stabilization") is False
+    assert rutils.is_emergency_category("Emergency Stabilization") is True
+
+
+def test_an_unrelated_category_is_not_emergency(db):
+    assert rutils.is_emergency_category("General Consultation") is False
 
 
 def test_non_emergency_category_allows_direct_pay(db):
@@ -41,6 +45,14 @@ def test_non_emergency_category_allows_direct_pay(db):
 def test_emergency_category_forbids_direct_pay(db):
     """Emergencies stay on pay-then-reimburse — manual review is too slow."""
     assert rutils.is_direct_pay_eligible_category("Emergency") is False
+
+
+def test_emergency_stabilization_forbids_direct_pay(db):
+    """The other half of the same bug: direct-pay eligibility is defined as "not
+    emergency", so an unmatched emergency category was offered direct-to-provider
+    pay against an explicit client decision.
+    """
+    assert rutils.is_direct_pay_eligible_category("Emergency Stabilization") is False
 
 
 def test_member_without_an_override_follows_the_global_switch(db, make_member):
@@ -160,6 +172,24 @@ def test_emergency_claim_draws_from_the_emergency_pool(db, make_member, make_pet
     make_claim(
         pet,
         make_service_type("Emergency"),
+        models.ReimbursementStatus.approved,
+        claimed_centavos=EMERGENCY_CLAIM_CENTAVOS,
+        approved_centavos=EMERGENCY_CLAIM_CENTAVOS,
+    )
+
+    assert rutils.wallet_usage(db, pet) == (0, 0, EMERGENCY_CLAIM_CENTAVOS, 0)
+
+
+def test_a_stabilization_claim_draws_from_the_emergency_pool(
+    db, make_member, make_pet, make_service_type, make_claim
+):
+    """The money-path half of the category-name fix. "Emergency Stabilization" is
+    the name real databases use; until it matched, this amount landed in the
+    preventive totals and drew down the wrong pool."""
+    pet = make_pet(make_member())
+    make_claim(
+        pet,
+        make_service_type("Emergency Stabilization"),
         models.ReimbursementStatus.approved,
         claimed_centavos=EMERGENCY_CLAIM_CENTAVOS,
         approved_centavos=EMERGENCY_CLAIM_CENTAVOS,
