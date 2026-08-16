@@ -141,3 +141,97 @@ except where noted:
    future appointment date is rejected as "can't be in the future". Noticed while
    adding the gate; left alone deliberately, since it changes behaviour on a path
    with no end-to-end test. Small, and real.
+
+---
+
+# Follow-on, 2026-08-16 — monthly subscriptions, a live grant bug, and a prod guard
+
+## The grant path had been broken in production for two days
+
+While tracing where a monthly payment counter would hook in, `_grant_plan`'s
+first statement turned out to be `from paw_points_utils import ...` — unqualified,
+left behind by the `app/` package move in `1bff552`. Three more like it:
+`import invoice_utils` in the same function, the same paw-points import in
+`routers/pets.py`, and `import paymongo` in `invoice_utils/render.py`.
+
+All four are function-local, so nothing failed at startup, no test reached them,
+and the route surface was byte-identical. They raised only when the line ran —
+and `_grant_plan` is what activates a plan after payment, called by the webhook,
+the status poll, the return page and the profile reconcile.
+
+`payment.status = paid` is set *after* the failing import, so the failure mode is
+the bad one: **a member is charged, the payment stays `pending`, and no plan is
+granted.** Live since the reorg deployed on 2026-08-14 evening.
+
+The four are fixed. `tests/test_imports.py` walks the AST of every module under
+`app/` and fails on any project import missing the `app.` prefix — confirmed
+failing on the three offending files before the fix, passing after.
+
+**Still to check in production:** any payment created or paid after 2026-08-14
+whose pet has no `plan_activated_at`. The earlier audit found 4 pending Standard
+payments, which is consistent with this bug but equally consistent with abandoned
+checkouts — the dates were not captured. This is the first thing to settle.
+
+## Monthly subscriptions — decided, and the foundation built
+
+Mario: monthly is needed, for members who can't afford the annual fee or aren't
+ready to commit. Register item 2 therefore becomes a build. Detail and the
+verified starting state are in
+[`../features/document-system-alignment.md`](../features/document-system-alignment.md).
+
+Built: a per-pet `Subscription`, vesting thresholds as columns on `Plan`
+(6/3, 8/3, 10/4), `domain/subscription_utils.py`, and gates on both claim submit
+and resubmit. Three decisions worth keeping:
+
+- **An annual member has no Subscription row.** That absence *is* §5.9, so no
+  code path has to special-case annual.
+- **Thresholds are data, not constants.** §5.5 allows them to change by approved
+  Plan Schedule, and a name-keyed lookup is exactly what left the Emergency
+  Wallet unreachable for months.
+- **Eligibility dates are stored, not just a counter.** §5.8 refuses a service
+  obtained before the eligibility date even after the payments complete, and a
+  counter cannot answer that. The stamp is written when the threshold is crossed,
+  because a §5.6 reset destroys the run that produced it.
+
+`record_cleared_payment` has no caller on purpose. Wiring it into `_grant_plan`
+would be actively wrong: `grant_plan_to_pet` deletes and rebuilds the pet's
+benefits and resets `plan_activated_at`, so a monthly re-grant would hand every
+subscriber a fresh wallet every month. Payment two onward must increment the
+counter *without* re-granting — that is the billing cycle, still unbuilt.
+
+## Production database guard
+
+Mario's rule, stated 2026-08-16: never seed, delete, modify or reset tables on
+the live database; dev is free. Now enforced rather than remembered — a
+`PreToolUse` hook in [`../../.claude/settings.json`](../../.claude/settings.json),
+with the rules written up in
+[`../../backend/CLAUDE.md`](../../backend/CLAUDE.md).
+
+Testing it was worth more than writing it. The guard fired on its own test
+harness, and then on the commit that introduced it, because both discuss these
+terms in prose. Everything after a heredoc marker is now excluded from the
+environment match, so text that merely mentions production passes while a heredoc
+carrying real SQL is still caught.
+[`../../.claude/test-prod-guard.sh`](../../.claude/test-prod-guard.sh) pins 18
+cases: 7 denied, 1 prompted, 10 allowed.
+
+**The guard is a safety net, not a substitute for reading the `[config]` banner.**
+It matches command text, so a novel phrasing slips past it.
+
+## Released to dev
+
+| Step | Result |
+| --- | --- |
+| `migrate.py` on dev | 18 steps, all applied; thresholds backfilled 6/3, 8/3, 10/4 |
+| `subscriptions` table | created by `create_all`, 15 columns, 0 rows |
+| Image | `metropaws-backend-dev:20260816-233705` |
+| Render deploy | `dep-da0rq4gjo6nc73f97tqg` → live, health ok |
+| Route surface | 95 paths / 117 operations, zero drift |
+| `GET /plans` | serves the vesting fields — proves the migration preceded the code |
+
+448 tests pass. Docker Hub threw the familiar `auth.docker.io: EOF` on the first
+push; a straight retry succeeded, as before.
+
+**Production has none of this** — not the import fix, not the vesting schema. The
+import fix is the urgent half, since it is breaking real payments, and it needs
+no migration.
