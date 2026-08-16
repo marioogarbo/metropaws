@@ -261,6 +261,21 @@ class Plan(Base):
     # consulted for gating.
     reimbursement_wallet_centavos = Column(Integer, nullable=False, default=0, server_default="0")
     emergency_wallet_centavos = Column(Integer, nullable=False, default=0, server_default="0")
+    # Monthly vesting thresholds (Agreement Rev. 5A §5.5): how many consecutive
+    # cleared monthly payments a subscriber needs before each class of benefit
+    # opens. Emergency opens first, planned services later — see
+    # domain/subscription_utils.py.
+    #
+    # Held per plan rather than looked up by plan NAME on purpose. A name match is
+    # what made the Emergency Wallet unreachable for months
+    # (reimbursement_utils.EMERGENCY_CATEGORY_NAMES), and §5.5 explicitly allows
+    # these to change "through an officially approved Plan Schedule", so they are
+    # data, not code. 0 = no waiting period.
+    #
+    # Annual members are never gated (§5.9); these apply only where a Subscription
+    # row exists for the pet.
+    vesting_planned_payments = Column(Integer, nullable=False, default=0, server_default="0")
+    vesting_emergency_payments = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -393,6 +408,78 @@ class Payment(Base):
     member = relationship("Member")
     plan = relationship("Plan")
     pet = relationship("Pet")
+
+
+class SubscriptionStatus(str, enum.Enum):
+    """Lifecycle of a monthly installment arrangement.
+
+    Deliberately NOT the member-facing labels of Agreement §5.7 ("Vesting in
+    Progress", "Fully Service-Eligible", ...). Those are derived from this plus
+    the payment counter, the same way plan_term_utils derives plan_status rather
+    than storing it — a stored label drifts from the facts that produce it.
+    """
+    pending_first_payment = "pending_first_payment"
+    active = "active"
+    suspended = "suspended"
+    cancelled = "cancelled"
+
+
+class Subscription(Base):
+    """A monthly installment arrangement for ONE pet's plan (Agreement §5.2–§5.8).
+
+    Per pet rather than per member, because plans are granted per pet and Payment
+    already carries pet_id: a member may hold one pet annually and another
+    monthly.
+
+    **An annual member has no row here at all.** That absence is how §5.9 is
+    expressed in code — no subscription, no vesting gate — so nothing has to
+    special-case the annual path.
+
+    One row per pet, reused if a member resubscribes after cancelling. History
+    lives in `payments`, which is the audited record; keeping a single row avoids
+    the duplicate-row class of bug that PetService and PlanService both had to
+    grow UNIQUE constraints to stop.
+    """
+    __tablename__ = "subscriptions"
+    __table_args__ = (
+        UniqueConstraint("pet_id", name="uq_subscription_pet"),
+    )
+
+    id         = Column(String, primary_key=True, default=gen_uuid)
+    member_id  = Column(String, ForeignKey("members.id"), nullable=False, index=True)
+    pet_id     = Column(String, ForeignKey("pets.id"), nullable=False)
+    plan_id    = Column(String, ForeignKey("plans.id"), nullable=False)
+    status     = Column(
+        Enum(SubscriptionStatus),
+        default=SubscriptionStatus.pending_first_payment,
+        nullable=False,
+        index=True,
+    )
+
+    # Consecutive, uninterrupted, successfully cleared payments (§5.4). Reset or
+    # restored on default per §5.6 — that policy is a business decision and is
+    # not implemented here.
+    consecutive_payments = Column(Integer, nullable=False, default=0, server_default="0")
+    last_payment_at      = Column(DateTime(timezone=True), nullable=True)
+    next_due_on          = Column(Date, nullable=True)
+
+    # The dates each class of benefit became available, stamped when the counter
+    # crosses the plan's threshold. §5.8 makes these load-bearing rather than
+    # cosmetic: a service obtained BEFORE the applicable eligibility date is never
+    # payable, "even if the Member later completes the required monthly
+    # installments". A counter alone cannot answer that; it has no memory of when.
+    emergency_eligible_since = Column(Date, nullable=True)
+    planned_eligible_since   = Column(Date, nullable=True)
+
+    started_at   = Column(DateTime(timezone=True), server_default=func.now())
+    suspended_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    created_at   = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at   = Column(DateTime(timezone=True), onupdate=func.now())
+
+    member = relationship("Member")
+    pet    = relationship("Pet")
+    plan   = relationship("Plan")
 
 
 class AppSetting(Base):

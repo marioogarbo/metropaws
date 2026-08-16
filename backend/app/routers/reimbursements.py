@@ -16,6 +16,7 @@ from app import models, schemas, auth as auth_utils
 from app.domain import plan_term_utils
 from app import storage
 from app.domain import reimbursement_utils as rutils
+from app.domain import subscription_utils
 from app.routers import settings as settings_router
 
 router = APIRouter(prefix="/members/me", tags=["reimbursements"])
@@ -122,6 +123,22 @@ def _reject_before_plan_start(pet: models.Pet, service_date: date) -> None:
                 "began aren't covered."
             ),
         )
+
+
+def _reject_unvested_monthly(
+    subscription: models.Subscription,
+    category_name: str | None,
+    service_date: date,
+) -> None:
+    """Vesting gate for monthly subscribers (Agreement §5.2–§5.8).
+
+    Only ever called when the pet actually has a subscription — an annual member
+    has no row, which is how §5.9 exempts them.
+    """
+    benefit = subscription_utils.benefit_class_for_category(category_name)
+    reason = subscription_utils.claim_block_reason(subscription, benefit, service_date)
+    if reason:
+        raise HTTPException(status_code=400, detail=reason)
 
 
 @router.post("/reimbursements", response_model=schemas.ReimbursementOut, status_code=201)
@@ -257,6 +274,10 @@ def submit_reimbursement(
     _validate_amount(claimed_amount_centavos)
     _validate_service_date(service_date, allow_future=is_provider_target)
     _reject_before_plan_start(pet, service_date)
+
+    subscription = subscription_utils.for_pet(db, pet)
+    if subscription is not None:
+        _reject_unvested_monthly(subscription, service_type.name, service_date)
 
     # A provider-target claim books a FUTURE appointment — it can't be scheduled
     # past the plan year's end (the benefit funding it would have expired).
@@ -445,10 +466,17 @@ def resubmit_reimbursement(
         claim.provider_name = provider_name
     if service_date is not None:
         _validate_service_date(service_date)
-        # Resubmit can move the date, so the plan-start gate has to run here too
-        # or it is trivially bypassed by filing in-term and correcting afterwards.
+        # Resubmit can move the date, so the date gates have to run here too or
+        # they are trivially bypassed by filing in-term and correcting afterwards.
         if pet is not None:
             _reject_before_plan_start(pet, service_date)
+            subscription = subscription_utils.for_pet(db, pet)
+            if subscription is not None:
+                _reject_unvested_monthly(
+                    subscription,
+                    claim.service_type.name if claim.service_type else None,
+                    service_date,
+                )
         claim.service_date = service_date
     if claimed_amount_centavos is not None:
         _validate_amount(claimed_amount_centavos)

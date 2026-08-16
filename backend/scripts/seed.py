@@ -62,6 +62,9 @@ PLANS = [
         # Two pools: Preventive Wellness ₱2,000 + Emergency ₱300.
         "reimbursement_wallet_centavos": 200_000,
         "emergency_wallet_centavos": 30_000,
+        # Agreement §5.5 launch controls for monthly subscribers.
+        "vesting_planned_payments": 6,
+        "vesting_emergency_payments": 3,
     },
     {
         "name": "Deluxe",
@@ -83,6 +86,8 @@ PLANS = [
         # Two pools: Preventive Wellness ₱4,000 + Emergency ₱900.
         "reimbursement_wallet_centavos": 400_000,
         "emergency_wallet_centavos": 90_000,
+        "vesting_planned_payments": 8,
+        "vesting_emergency_payments": 3,
     },
     {
         "name": "Premium",
@@ -105,6 +110,8 @@ PLANS = [
         # Two pools: Preventive Wellness ₱7,000 + Emergency ₱1,500.
         "reimbursement_wallet_centavos": 700_000,
         "emergency_wallet_centavos": 150_000,
+        "vesting_planned_payments": 10,
+        "vesting_emergency_payments": 4,
     },
 ]
 

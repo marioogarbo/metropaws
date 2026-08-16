@@ -43,6 +43,11 @@ class PlanCreate(BaseModel):
     reimbursement_wallet_centavos: int = Field(default=0, ge=0, le=100_000_000)
     # Annual Emergency Wallet (centavos) — "Emergency"-category claims draw here.
     emergency_wallet_centavos: int = Field(default=0, ge=0, le=100_000_000)
+    # Consecutive cleared monthly payments before each benefit class opens for a
+    # monthly subscriber (Agreement §5.5). 0 = no waiting period. Annual members
+    # are never gated by these.
+    vesting_planned_payments: int = Field(default=0, ge=0, le=60)
+    vesting_emergency_payments: int = Field(default=0, ge=0, le=60)
 
 
 class PlanUpdate(BaseModel):
@@ -58,6 +63,9 @@ class PlanUpdate(BaseModel):
     reimbursement_wallet_centavos: Optional[int] = Field(default=None, ge=0, le=100_000_000)
     # Annual Emergency Wallet (centavos) — "Emergency"-category claims draw here.
     emergency_wallet_centavos: Optional[int] = Field(default=None, ge=0, le=100_000_000)
+    # Monthly vesting thresholds (Agreement §5.5) — see PlanCreate.
+    vesting_planned_payments: Optional[int] = Field(default=None, ge=0, le=60)
+    vesting_emergency_payments: Optional[int] = Field(default=None, ge=0, le=60)
     # Legacy per-category cap edits (kept for API compat; caps no longer gate claims).
     service_caps: Optional[List[PlanServiceCapUpdate]] = None
 
@@ -74,6 +82,8 @@ class PlanOut(BaseModel):
     sort_order: int
     reimbursement_wallet_centavos: int = 0
     emergency_wallet_centavos: int = 0
+    vesting_planned_payments: int = 0
+    vesting_emergency_payments: int = 0
     plan_services: List[PlanServiceOut] = []
 
     model_config = {"from_attributes": True}

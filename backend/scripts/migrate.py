@@ -438,6 +438,55 @@ def add_per_member_direct_pay_override() -> None:
         conn.commit()
 
 
+def add_monthly_vesting_thresholds() -> None:
+    """Per-plan monthly vesting thresholds (Agreement Rev. 5A §5.5, 2026-08-16).
+
+    How many consecutive cleared monthly payments a subscriber needs before each
+    class of benefit opens. Columns rather than constants because §5.5 allows the
+    figures to change "through an officially approved Plan Schedule".
+
+    The backfill applies the §5.5 launch controls to the three seeded plans:
+    Standard 6 planned / 3 emergency, De Luxe 8 / 3, Premium 10 / 4. Emergency is
+    deliberately the lower number in every row — see
+    context/features/document-system-alignment.md item 10 for why the numerals in
+    that table are the intended values and not the words beside them.
+
+    Matching by plan NAME is acceptable here only because this is a one-time
+    backfill of three known rows; the runtime lookup reads the columns. Like
+    add_benefit_wallet_pools, it fills only rows still at 0, so an admin's edits
+    survive a re-run — with the same caveat, that a deliberate 0 would be
+    re-filled.
+
+    The `subscriptions` table itself needs no step here: it is new, so
+    create_new_tables creates it.
+    """
+    launch_controls = (
+        ("standard", 6, 3),
+        ("deluxe", 8, 3),
+        ("de luxe", 8, 3),
+        ("premium", 10, 4),
+    )
+    with engine.connect() as conn:
+        conn.execute(text("""
+            ALTER TABLE plans
+                ADD COLUMN IF NOT EXISTS vesting_planned_payments INTEGER NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS vesting_emergency_payments INTEGER NOT NULL DEFAULT 0
+        """))
+        for name, planned, emergency in launch_controls:
+            conn.execute(
+                text("""
+                    UPDATE plans
+                    SET vesting_planned_payments = :planned,
+                        vesting_emergency_payments = :emergency
+                    WHERE lower(name) = :name
+                      AND vesting_planned_payments = 0
+                      AND vesting_emergency_payments = 0
+                """),
+                {"name": name, "planned": planned, "emergency": emergency},
+            )
+        conn.commit()
+
+
 # Order matters: later steps assume the columns earlier ones added.
 MIGRATIONS = (
     create_new_tables,
@@ -457,6 +506,7 @@ MIGRATIONS = (
     add_direct_provider_payouts,
     add_pack_discount_column,
     add_per_member_direct_pay_override,
+    add_monthly_vesting_thresholds,
 )
 
 
