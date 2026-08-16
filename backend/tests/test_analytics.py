@@ -3,7 +3,7 @@
 The metric it replaced counted service sessions and therefore read 0% forever,
 so the cases here pin what does and does not count as consumed benefit.
 """
-from datetime import date, timedelta
+from datetime import date
 
 from app import models
 from app.domain import plan_term_utils
@@ -112,7 +112,7 @@ def test_claim_dated_before_activation_is_outside_the_term(
         models.ReimbursementStatus.paid,
         claimed_centavos=40_000,
         approved_centavos=40_000,
-        service_date=date.today() - timedelta(days=45),
+        service_date=days_ago(45).date(),
     )
 
     assert benefit_utilization(db)["used_php"] == 0
@@ -121,6 +121,9 @@ def test_claim_dated_before_activation_is_outside_the_term(
 def test_claim_dated_on_the_activation_day_counts(
     db, make_member, make_plan, make_pet, make_service_type, make_claim, days_ago
 ):
+    """Both dates come off the same UTC clock. Using date.today() here instead
+    made this read one day AFTER activation for the ten hours a day that the
+    local date runs ahead of UTC — so the boundary it names went unchecked."""
     pet = _activated_pet(make_member, make_plan, make_pet, days_ago, days=30)
     make_claim(
         pet,
@@ -128,7 +131,7 @@ def test_claim_dated_on_the_activation_day_counts(
         models.ReimbursementStatus.paid,
         claimed_centavos=40_000,
         approved_centavos=40_000,
-        service_date=date.today() - timedelta(days=30),
+        service_date=days_ago(30).date(),
     )
 
     assert benefit_utilization(db)["used_php"] == 400

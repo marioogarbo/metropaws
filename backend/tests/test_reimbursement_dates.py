@@ -6,7 +6,7 @@ wallet_usage excludes pre-activation claims from the used and pending totals: a
 claim that slips past this check can never fail the balance test and never
 consumes benefit, so it is paid out of a pool it never touches.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from fastapi import HTTPException
@@ -17,16 +17,23 @@ ACTIVATED = date(2026, 6, 1)
 
 
 @pytest.fixture
-def planned_pet(make_plan, make_member, make_pet, days_ago):
-    """A pet whose plan started ACTIVATED days-with-a-fixed-date ago."""
+def planned_pet(make_plan, make_member, make_pet):
+    """A pet whose plan started exactly on ACTIVATED.
+
+    Pinned to a fixed instant rather than counted back from "today". Deriving it
+    mixed a LOCAL calendar date with a UTC one, and in UTC+10 those disagree for
+    ten hours of every day — which silently moved the boundary these tests exist
+    to check, and only showed up when the local date rolled over ahead of UTC.
+    """
     plan = make_plan(2999)
     member = make_member()
-    activated_days_ago = (date.today() - ACTIVATED).days
     return make_pet(
         member,
         name="Luster",
         plan_id=plan.id,
-        plan_activated_at=days_ago(activated_days_ago),
+        plan_activated_at=datetime(
+            ACTIVATED.year, ACTIVATED.month, ACTIVATED.day, tzinfo=timezone.utc
+        ),
     )
 
 
