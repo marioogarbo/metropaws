@@ -235,3 +235,65 @@ push; a straight retry succeeded, as before.
 **Production has none of this** — not the import fix, not the vesting schema. The
 import fix is the urgent half, since it is breaking real payments, and it needs
 no migration.
+
+---
+
+# Production hotfix, 2026-08-17 — the grant path, and nobody was hurt
+
+## The bug never fired
+
+Read-only check against production settled it. **No checkout has been started
+since 2026-08-06 19:16** — eight days before the reorg shipped the broken import
+on 2026-08-14 20:05. So `_grant_plan` never ran against a real payment while it
+was broken. A loaded gun, not a wound: no refunds, no remediation, nothing to
+tell a member.
+
+Three independent confirmations that every past grant did work:
+
+| Check | Result |
+| --- | --- |
+| Paid payments | 6, each pet's `plan_activated_at` matching its payment minute |
+| Paid but pet has no plan | none |
+| PawPoints `membership_activation` rows | 6 — written only by `_grant_plan`, so 1:1 |
+
+The five `pending` payments all pre-date the reorg and are ordinary abandoned
+checkouts, not failures: Koya's ₱5,999 was an upgrade attempt on a pet already
+active since 2026-07-11; three Lansss rows are retries before the one that
+succeeded on 2026-07-30; Jelly's was never paid.
+
+Worth noting separately: 23 members, 6 paid, and no checkout attempted in eleven
+days.
+
+## Shipped as a schema-free hotfix
+
+`hotfix/grant-path-imports` branched off `main` carrying **only** the import
+commit — four files, no models, no schemas, no migration. That was the point: the
+vesting work on `fix/emergency-pool-and-preactivation-claims` cannot go to
+production until its migration does, because `PlanOut` selects columns that do
+not exist there yet. Splitting the branches let the urgent fix ship without
+touching the production schema.
+
+| Step | Result |
+| --- | --- |
+| Image | `metropaws-backend:20260817-080354` |
+| Render deploy | `dep-da137p49v7es73ag0c60` → live |
+| Health | `{"status": "ok"}` |
+| Route surface | 95 paths / 117 operations, zero drift |
+| `GET /plans` | **no** vesting fields — confirms no schema-dependent code leaked in |
+
+Verified the artifact rather than trusting the branch. `docker run` on the pushed
+tag showed `app/domain/subscription_utils.py` absent and zero occurrences of
+`vesting_planned_payments`, then **executed all four repaired imports inside the
+image** — `app.domain.paw_points_utils`, `app.invoice_utils`, `app.paymongo` all
+resolve. That is the closest thing to proving the grant path works without taking
+a real payment.
+
+## State of the branches
+
+- `main` — does **not** yet carry the hotfix that production is running.
+  Reconcile this; prod running code that is not on the mainline is a trap for the
+  next person.
+- `hotfix/grant-path-imports` — deployed to production, unmerged.
+- `fix/emergency-pool-and-preactivation-claims` — emergency pool, pre-activation
+  gate, monthly subscriptions, the prod guard. On dev only. Production needs
+  `scripts/migrate.py` run first, and that needs Mario's explicit go.
