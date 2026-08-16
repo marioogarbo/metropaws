@@ -17,6 +17,7 @@ from app.domain import plan_term_utils
 from app import storage
 from app.domain import reimbursement_utils as rutils
 from app.domain import subscription_utils
+from app.domain import membership_status
 from app.routers import settings as settings_router
 
 router = APIRouter(prefix="/members/me", tags=["reimbursements"])
@@ -553,6 +554,8 @@ def get_wallet(
             continue
         prev_used, prev_pending, emg_used, emg_pending = rutils.wallet_usage(db, pet)
         term = plan_term_utils.plan_term(pet)
+        subscription = subscription_utils.for_pet(db, pet)
+        status = membership_status.status_for(pet, subscription, member)
         wallet_pets.append(
             schemas.WalletPetOut(
                 pet_id=pet.id,
@@ -567,6 +570,8 @@ def get_wallet(
                 emergency_remaining_centavos=max(0, emergency_wallet - emg_used - emg_pending),
                 plan_status=plan_term_utils.plan_status(pet),
                 plan_expires_at=term[1] if term else None,
+                membership_status=status.value,
+                membership_status_label=membership_status.label_for(status),
             )
         )
 

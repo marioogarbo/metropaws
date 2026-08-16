@@ -106,6 +106,11 @@ class WalletPetOut(BaseModel):
     # for legacy plans with no activation date (they never expire).
     plan_status: str = "active"
     plan_expires_at: Optional[datetime] = None
+    # Agreement §5.7 status. `membership_status` is the stable wire value;
+    # `membership_status_label` is the contract's exact wording, served so the
+    # app shows it without hardcoding a phrase that only the document may change.
+    membership_status: str = "fully_service_eligible"
+    membership_status_label: str = "Fully Service-Eligible"
 
 
 class WalletOut(BaseModel):
