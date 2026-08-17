@@ -9,6 +9,7 @@ import '../../../core/widgets/mp_skeleton.dart';
 import '../../../core/widgets/scale_button.dart';
 import '../../../core/widgets/staggered_reveal.dart';
 import '../../../theme.dart';
+import 'member_dashboard_screen.dart' show kNavClearance;
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event.dart';
 import '../bloc/member_state.dart';
@@ -63,7 +64,7 @@ class _EventsTabState extends State<EventsTab> {
           onRefresh: () async => _load(),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 32, 20, 40),
+            padding: const EdgeInsets.fromLTRB(20, 32, 20, 40 + kNavClearance),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

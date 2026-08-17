@@ -36,6 +36,11 @@ import 'pet_profile_screen.dart';
 import 'plan_selection_screen.dart';
 import 'reimbursement_screen.dart';
 
+/// Height the floating nav overlays: bar (62) + lifted action (16) + the
+/// margin under it. Scrollables add this so nothing ends up unreachable
+/// beneath the capsule.
+const double kNavClearance = 96;
+
 String _capFirst(String s) =>
     s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
@@ -185,6 +190,12 @@ class _MemberShellState extends State<_MemberShell> {
             ),
           ],
         ),
+        // The capsule floats OVER the content rather than sitting in a
+        // reserved strip beneath it — the page runs under it and stays
+        // partly visible, which is what makes it read as a floating object.
+        // Every scrollable below therefore ends with kNavClearance of
+        // padding so its last item can still be scrolled clear of the bar.
+        extendBody: true,
         body: IndexedStack(
           index: _currentIndex,
           children: [
@@ -796,6 +807,7 @@ class _DashboardState extends State<_Dashboard>
     }
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: kNavClearance),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3796,7 +3808,7 @@ class _AccountView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20 + kNavClearance),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -4321,6 +4333,7 @@ class _DashboardSkeletonState extends State<_DashboardSkeleton>
     }
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: kNavClearance),
       physics: const NeverScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4407,7 +4420,7 @@ class _AccountSkeletonState extends State<_AccountSkeleton>
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20 + kNavClearance),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -4542,51 +4555,50 @@ class _MpNavBar extends StatelessWidget {
     Widget tabItem(int index, _NavItem tab) {
       final isSelected = index == currentIndex;
       return Expanded(
-        child: InkWell(
+        // GestureDetector, not InkWell: the ink splash paints a rectangle that
+        // escapes the capsule's rounded ends, so tapping Home or Account showed
+        // a square corner poking out of the pill. The animated indicator below
+        // is the tap feedback, so nothing is lost by dropping the ripple.
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () => onTap(index),
-          borderRadius: BorderRadius.circular(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-                // Material-3-style active indicator: a tinted pill behind the
-                // icon with a subtle scale-in — slicker than a hairline pill.
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOutCubic,
-                  width: 52,
-                  height: 30,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? activeColor.withValues(alpha: isDark ? 0.22 : 0.12)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                // The indicator wraps the icon AND the label as one pill,
+                // rather than sitting behind the icon alone — the two are one
+                // control, and a pill around half of it reads as a stray chip.
+                color: isSelected
+                    ? activeColor.withValues(alpha: isDark ? 0.22 : 0.12)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? tab.selectedIcon : tab.icon,
+                    size: 22,
+                    color: isSelected ? activeColor : inactiveColor,
                   ),
-                  child: AnimatedScale(
-                    scale: isSelected ? 1.0 : 0.9,
-                    duration: const Duration(milliseconds: 240),
-                    curve: Curves.easeOut,
-                    child: Icon(
-                      isSelected ? tab.selectedIcon : tab.icon,
-                      size: 22,
+                  const SizedBox(height: 2),
+                  Text(
+                    tab.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: 11,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected ? activeColor : inactiveColor,
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  tab.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: 11,
-                    fontWeight: isSelected
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    color: isSelected ? activeColor : inactiveColor,
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       );
@@ -4633,7 +4645,7 @@ class _MpNavBar extends StatelessWidget {
     return Padding(
       // Inset on every side so the bar reads as a lifted object with the page
       // running underneath, not a chrome strip welded to the bottom edge.
-      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPad > 0 ? bottomPad : 12),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, (bottomPad > 0 ? bottomPad : 12) + 10),
       child: SizedBox(
         height: barHeight + lift,
         child: Stack(
@@ -4649,11 +4661,20 @@ class _MpNavBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(barHeight / 2),
+                  // Two layers, because one blur cannot do both jobs. The
+                  // tight shadow anchors the capsule to the surface; the wide,
+                  // lower one is what actually reads as height. A single
+                  // mid-blur shadow just looks like a soft edge.
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.34 : 0.12),
-                      blurRadius: 24,
-                      offset: const Offset(0, 6),
+                      color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.18),
+                      blurRadius: 30,
+                      offset: const Offset(0, 14),
                     ),
                   ],
                 ),
@@ -4663,22 +4684,27 @@ class _MpNavBar extends StatelessWidget {
                     tabItem(0, tabs[0]),
                     tabItem(1, tabs[1]),
                     SizedBox(
-                      width: circle + 12,
-                      // The label stays in the bar, on the same baseline as the
-                      // other four, so the row of labels reads as one line.
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            'Claim',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? AppColors.gold : AppColors.navy,
+                      width: circle + 4,
+                      // Mirrors a tab's column — an empty box where the icon
+                      // would be, then the same 2px gap — so the caption lands
+                      // on exactly the same baseline as the other four instead
+                      // of being nudged there by a hand-tuned padding.
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 22),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Claim',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppColors.gold : AppColors.navy,
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
