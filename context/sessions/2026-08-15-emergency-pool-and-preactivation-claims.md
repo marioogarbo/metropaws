@@ -443,3 +443,17 @@ will not.
 
 489 tests pass. Committed to `main` locally, **unpushed and undeployed** — dev
 and production are both unchanged since the release verified above.
+
+### Dev release of the monthly endpoints
+
+| Step | Result |
+| --- | --- |
+| Image | `metropaws-backend-dev:20260817-103725` |
+| Render deploy | `dep-da15fnnlk1mc7398kg00` → live, health ok |
+| `POST /payments/installment` | present |
+| `CheckoutRequest.cadence` | present |
+| `WalletPetOut` | `subscription_next_due_on` + `subscription_payments_made` present |
+| Route surface | 96 paths / 118 operations, matching the regenerated snapshot exactly |
+
+`main` pushed to `origin` at `7c0a1b3`. Production unchanged — still
+`metropaws-backend:20260817-095534`, which has the schema but not these routes.

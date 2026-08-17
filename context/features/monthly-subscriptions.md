@@ -1,7 +1,10 @@
 # Monthly subscriptions and vesting
 
-**Status:** backend complete and on `main`; **no mobile UI**, so no member can
-reach it yet. Schema is live in production (2026-08-17); the endpoints are not.
+**Status:** backend complete, on `main`, and **live on dev**
+(`metropaws-backend-dev:20260817-103725`, 96 paths / 118 operations). **No mobile
+UI**, so no member can reach it yet. Production has the **schema** (migrated
+2026-08-17) but not these endpoints — its next deploy is the first this session
+that will move the route surface, by exactly one path.
 **Decided 2026-08-16** by Mario: monthly is wanted, for members who can't afford
 the annual fee or aren't ready to commit.
 
