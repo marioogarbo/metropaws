@@ -196,13 +196,45 @@ class _MemberShellState extends State<_MemberShell> {
         // Every scrollable below therefore ends with kNavClearance of
         // padding so its last item can still be scrolled clear of the bar.
         extendBody: true,
-        body: IndexedStack(
-          index: _currentIndex,
+        body: Stack(
           children: [
-            _HomeTab(bookingEnabled: _bookingEnabled),
-            _bookingEnabled ? const _BookTab() : const EventsTab(),
-            const BenefitsTab(),
-            const _AccountTab(),
+            IndexedStack(
+              index: _currentIndex,
+              children: [
+                _HomeTab(bookingEnabled: _bookingEnabled),
+                _bookingEnabled ? const _BookTab() : const EventsTab(),
+                const BenefitsTab(),
+                const _AccountTab(),
+              ],
+            ),
+            // Fades content out as it scrolls under the capsule. Stops at
+            // 88% rather than solid: the page staying partly visible behind
+            // the bar is the whole point of extendBody, and an opaque scrim
+            // would just be the reserved strip again, drawn differently.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 110,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withValues(alpha: 0),
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withValues(alpha: 0.88),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
         bottomNavigationBar: _MpNavBar(
@@ -4562,11 +4594,17 @@ class _MpNavBar extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => onTap(index),
-          child: Center(
+          // Padding, not Center: the indicator fills the tab slot so it comes
+          // out WIDER than it is tall — an oval. Hugging the content made it
+          // roughly square, and a large radius on a square is a circle, not a
+          // capsule. Filling the slot also hands the label the full width, which
+          // is what stops "Account" ellipsizing.
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 240),
               curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 // The indicator wraps the icon AND the label as one pill,
                 // rather than sitting behind the icon alone — the two are one
@@ -4574,7 +4612,7 @@ class _MpNavBar extends StatelessWidget {
                 color: isSelected
                     ? activeColor.withValues(alpha: isDark ? 0.22 : 0.12)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(100),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
