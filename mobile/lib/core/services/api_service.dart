@@ -703,7 +703,13 @@ class ApiService {
     );
   }
 
-  static Future<void> uploadVaxCard(
+  /// Upload (or replace) a pet's vaccination card. Returns the refreshed [Pet].
+  ///
+  /// Returning the pet is the point. This returned void for months, which is
+  /// why it sat with zero callers — a caller had no updated record to hand back
+  /// through `onPetUpdated`, so the screen could never show the card it had
+  /// just uploaded. `PUT /pets/{id}` returns the pet either way.
+  static Future<Pet> uploadVaxCard(
     String petId,
     Uint8List bytes,
     String extension,
@@ -719,13 +725,14 @@ class ApiService {
       ),
     );
     final streamed = await _client.send(request);
+    final body = await streamed.stream.bytesToString();
     if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
-      final body = await streamed.stream.bytesToString();
       final detail =
           (jsonDecode(body) as Map<String, dynamic>?)?['detail']?.toString() ??
           'Upload failed';
       throw ApiException(streamed.statusCode, detail);
     }
+    return Pet.fromJson(jsonDecode(body) as Map<String, dynamic>);
   }
 
   // ── Notifications ───────────────────────────────────────────────────────

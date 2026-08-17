@@ -281,8 +281,7 @@ class _ProfileBody extends StatelessWidget {
     final hasDetails =
         (pet.birthMonth != null && pet.birthYear != null) ||
         pet.weightKg != null ||
-        pet.sex != null ||
-        (pet.notes != null && pet.notes!.isNotEmpty);
+        pet.sex != null;
 
     final sectionLabelStyle = _sectionLabelStyle(context);
 
@@ -314,7 +313,9 @@ class _ProfileBody extends StatelessWidget {
               children: [
                 Text('HEALTH RECORDS', style: sectionLabelStyle),
                 const SizedBox(height: 12),
-                _VaxSection(vaxCardUrl: pet.vaxCardUrl),
+                _VaxSection(pet: pet, onPetUpdated: onPetUpdated),
+                const SizedBox(height: 12),
+                _NotesSection(pet: pet),
               ],
             ),
           ),
@@ -391,9 +392,6 @@ class _DetailsCard extends StatelessWidget {
     if (pet.sex != null && pet.sex!.isNotEmpty) {
       final sexLabel = '${pet.sex![0].toUpperCase()}${pet.sex!.substring(1)}';
       rows.add(_RowData('Sex', sexLabel));
-    }
-    if (pet.notes != null && pet.notes!.isNotEmpty) {
-      rows.add(_RowData('Notes', pet.notes!));
     }
 
     // Label prominent, value muted — matches the settings-row convention used
@@ -576,9 +574,144 @@ class _PlanSection extends StatelessWidget {
   }
 }
 
-class _VaxSection extends StatelessWidget {
-  final String? vaxCardUrl;
-  const _VaxSection({this.vaxCardUrl});
+/// Care notes for the pet, under HEALTH RECORDS rather than PET DETAILS.
+///
+/// They were a row in the details grid, which hid them entirely when empty —
+/// so a member with no notes had nothing telling them the field existed, and a
+/// member with notes found their health information filed under identity,
+/// beside birth date and weight. Editing routes to the existing pet form; a
+/// second editor for one field would be a different affordance for the same
+/// job.
+class _NotesSection extends StatelessWidget {
+  final Pet pet;
+  const _NotesSection({required this.pet});
+
+  bool get _hasNotes => pet.notes != null && pet.notes!.trim().isNotEmpty;
+
+  void _edit(BuildContext context) {
+    final bloc = context.read<MemberBloc>();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            BlocProvider.value(value: bloc, child: PetFormScreen(pet: pet)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.sticky_note_2_outlined,
+                  size: 18, color: cs.onSurfaceVariant),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('Care notes', style: theme.textTheme.labelLarge),
+              ),
+              TextButton(
+                onPressed: () => _edit(context),
+                child: Text(_hasNotes ? 'Edit' : 'Add'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _hasNotes
+                ? pet.notes!.trim()
+                : 'Allergies, medication, or anything a vet should know about '
+                    '${pet.name}.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: _hasNotes ? cs.onSurface : cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VaxSection extends StatefulWidget {
+  final Pet pet;
+  final ValueChanged<Pet> onPetUpdated;
+
+  const _VaxSection({required this.pet, required this.onPetUpdated});
+
+  @override
+  State<_VaxSection> createState() => _VaxSectionState();
+}
+
+class _VaxSectionState extends State<_VaxSection> {
+  bool _uploading = false;
+
+  String? get vaxCardUrl => widget.pet.vaxCardUrl;
+
+  /// Attach or replace the card.
+  ///
+  /// Mirrors _PhotoCompletionSection deliberately, down to the re-entrancy
+  /// guard and the size check — this is the same job on the same screen, and a
+  /// second upload idiom would read as a different feature.
+  ///
+  /// Images only, matching what registration accepts. The backend also takes a
+  /// PDF, but adding a file picker here would put two different pickers on one
+  /// screen for one task.
+  Future<void> _addCard() async {
+    if (_uploading) return;
+
+    final picker = ImagePicker();
+    final picked =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (bytes.length > ApiService.maxUploadBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'That image is over ${ApiService.maxUploadMb} MB. Please choose a smaller one.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    // picked.name, not .path — on web the path is a blob: URL with no real
+    // extension, which sends the wrong one to the backend.
+    final ext = picked.name.split('.').last.toLowerCase();
+
+    setState(() => _uploading = true);
+    try {
+      final updated =
+          await ApiService.uploadVaxCard(widget.pet.id, bytes, ext);
+      if (!mounted) return;
+      setState(() => _uploading = false);
+      widget.onPetUpdated(updated);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _uploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not upload that card. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   Future<void> _openVaxCard(BuildContext context, String url) async {
     final uri = Uri.parse(url);
@@ -620,18 +753,37 @@ class _VaxSection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Contact your clinic to upload your vaccination record',
+              'Add a photo of the vaccination card for ${widget.pet.name}, so '
+              'you have it with you at the clinic.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _uploading ? null : _addCard,
+                icon: _uploading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_a_photo_outlined, size: 18),
+                label: Text(_uploading ? 'Uploading…' : 'Add vaccination card'),
+              ),
             ),
           ],
         ),
       );
     }
 
-    return Semantics(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Semantics(
       label: 'View vaccination card',
       button: true,
       child: InkWell(
@@ -675,6 +827,23 @@ class _VaxSection extends StatelessWidget {
           ),
         ),
       ),
+        ),
+        // A card goes out of date at the next round of shots. Without this the
+        // member is stuck again one upload later — the same dead end, deferred.
+        // Quiet by design: viewing the card is the common action, replacing it
+        // happens once a year.
+        TextButton.icon(
+          onPressed: _uploading ? null : _addCard,
+          icon: _uploading
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.refresh_rounded, size: 16),
+          label: Text(_uploading ? 'Uploading…' : 'Replace card'),
+        ),
+      ],
     );
   }
 }
