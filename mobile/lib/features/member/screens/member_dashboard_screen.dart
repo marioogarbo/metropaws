@@ -223,12 +223,12 @@ class _MemberShellState extends State<_MemberShell> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Theme.of(context)
-                            .scaffoldBackgroundColor
-                            .withValues(alpha: 0),
-                        Theme.of(context)
-                            .scaffoldBackgroundColor
-                            .withValues(alpha: 0.88),
+                        Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor.withValues(alpha: 0),
+                        Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor.withValues(alpha: 0.88),
                       ],
                     ),
                   ),
@@ -782,8 +782,10 @@ class _DashboardState extends State<_Dashboard>
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            BlocProvider.value(value: bloc, child: PetProfileScreen(pet: pet)),
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: PetProfileScreen(pet: pet),
+        ),
       ),
     );
     if (mounted) bloc.add(MemberLoadRequested());
@@ -926,9 +928,7 @@ class _DashboardState extends State<_Dashboard>
                           child: _MeasureSize(
                             onChange: (size) {
                               if (_cardHeights[i] != size.height) {
-                                setState(
-                                  () => _cardHeights[i] = size.height,
-                                );
+                                setState(() => _cardHeights[i] = size.height);
                               }
                             },
                             child: Padding(
@@ -940,9 +940,7 @@ class _DashboardState extends State<_Dashboard>
                           ),
                         );
                         if (pets.isEmpty) {
-                          return wrap(
-                            _NoPetsCard(onAddPet: navigateToAddPet),
-                          );
+                          return wrap(_NoPetsCard(onAddPet: navigateToAddPet));
                         }
                         return wrap(
                           _DigitalIdCard(
@@ -1408,7 +1406,8 @@ class _DigitalIdCard extends StatelessWidget {
                 }
               }
               final hasWallet = walletRows.isNotEmpty;
-              final canFileClaim = w != null &&
+              final canFileClaim =
+                  w != null &&
                   (w.remainingCentavos > 0 || w.emergencyRemainingCentavos > 0);
 
               // Nothing to show yet (wallet loading / fetch failed, booking off)
@@ -1491,11 +1490,10 @@ class _DigitalIdCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'Show Digital Pawprint',
-                        style: Theme.of(context).textTheme.labelLarge
-                            ?.copyWith(
-                              color: AppColors.text,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppColors.text,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -2020,9 +2018,9 @@ class _WalletSummaryRow extends StatelessWidget {
                       text: available
                           ? ' left of ${pesoFromCentavos(totalCentavos)}'
                           : ' · not available yet',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: onCardMuted,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(color: onCardMuted),
                     ),
                   ],
                 ),
@@ -4547,33 +4545,33 @@ class _MpNavBar extends StatelessWidget {
   // otherwise Events & Promos. Must stay in lockstep with _MemberShellState's
   // children list order.
   List<_NavItem> get _tabs => [
-        const _NavItem(
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home,
-          label: 'Home',
-        ),
-        bookingEnabled
-            ? const _NavItem(
-                icon: Icons.calendar_month_outlined,
-                selectedIcon: Icons.calendar_month,
-                label: 'Book',
-              )
-            : const _NavItem(
-                icon: Icons.celebration_outlined,
-                selectedIcon: Icons.celebration,
-                label: 'Events',
-              ),
-        const _NavItem(
-          icon: Icons.account_balance_wallet_outlined,
-          selectedIcon: Icons.account_balance_wallet,
-          label: 'Wallet',
-        ),
-        const _NavItem(
-          icon: Icons.person_outline,
-          selectedIcon: Icons.person,
-          label: 'Account',
-        ),
-      ];
+    const _NavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: 'Home',
+    ),
+    bookingEnabled
+        ? const _NavItem(
+            icon: Icons.calendar_month_outlined,
+            selectedIcon: Icons.calendar_month,
+            label: 'Book',
+          )
+        : const _NavItem(
+            icon: Icons.celebration_outlined,
+            selectedIcon: Icons.celebration,
+            label: 'Events',
+          ),
+    const _NavItem(
+      icon: Icons.account_balance_wallet_outlined,
+      selectedIcon: Icons.account_balance_wallet,
+      label: 'Wallet',
+    ),
+    const _NavItem(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: 'Account',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -4634,8 +4632,9 @@ class _MpNavBar extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontSize: labelSize,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: isSelected ? activeColor : inactiveColor,
                     ),
                   ),
@@ -4652,7 +4651,7 @@ class _MpNavBar extends StatelessWidget {
     // receiving taps in the overflowing region, so the button would look
     // raised and then ignore the top half of every press.
     const barHeight = 62.0;
-    const lift = 24.0;
+    const lift = 18.0;
     const circle = 52.0;
 
     // The raised gold action — visually distinct from the tabs so it reads as
@@ -4688,7 +4687,12 @@ class _MpNavBar extends StatelessWidget {
     return Padding(
       // Inset on every side so the bar reads as a lifted object with the page
       // running underneath, not a chrome strip welded to the bottom edge.
-      padding: EdgeInsets.fromLTRB(16, 0, 16, (bottomPad > 0 ? bottomPad : 12) + 10),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        (bottomPad > 0 ? bottomPad : 12) + 10,
+      ),
       child: SizedBox(
         height: barHeight + lift,
         child: Stack(
@@ -4710,12 +4714,16 @@ class _MpNavBar extends StatelessWidget {
                   // mid-blur shadow just looks like a soft edge.
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.28 : 0.10,
+                      ),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.18),
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.40 : 0.18,
+                      ),
                       blurRadius: 30,
                       offset: const Offset(0, 14),
                     ),
@@ -4742,10 +4750,12 @@ class _MpNavBar extends StatelessWidget {
                               'Claim',
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
-                                fontSize: labelSize,
-                                fontWeight: FontWeight.w700,
-                                color: isDark ? AppColors.gold : AppColors.navy,
-                              ),
+                                    fontSize: labelSize,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? AppColors.gold
+                                        : AppColors.navy,
+                                  ),
                             ),
                           ],
                         ),
