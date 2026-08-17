@@ -576,6 +576,12 @@ def get_wallet(
                 subscription_payments_made=(
                     subscription.consecutive_payments if subscription else 0
                 ),
+                preventive_available=subscription_utils.benefit_available(
+                    subscription, subscription_utils.BenefitClass.planned
+                ),
+                emergency_available=subscription_utils.benefit_available(
+                    subscription, subscription_utils.BenefitClass.emergency
+                ),
             )
         )
 

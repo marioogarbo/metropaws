@@ -129,3 +129,42 @@ def test_an_annual_payment_still_grants_the_plan(db, plan, make_member, make_pet
     _grant_plan(db, payment)
 
     assert pet.plan_activated_at is not None
+
+
+def test_granting_the_same_payment_twice_counts_it_once(db, plan, subscribed):
+    """Four independent paths call _grant_plan and two can observe 'pending' at
+    the same moment. Seen on dev 2026-08-17: a single ₱600 instalment ran the
+    body twice and left the counter at 2, so the member vested twice as fast as
+    they paid."""
+    member, pet, subscription, _ = subscribed
+    payment = _installment(db, member, pet, plan, subscription)
+
+    _grant_plan(db, payment)
+    _grant_plan(db, payment)
+
+    assert subscription.consecutive_payments == 2
+
+
+def test_granting_an_annual_payment_twice_does_not_move_activation(
+    db, plan, make_member, make_pet
+):
+    """The same guard protects the annual path: grant_plan_to_pet rebuilds the
+    pet's benefits and resets plan_activated_at, and wallet_usage windows on
+    that — so a second run would hand back a spent allowance."""
+    member = make_member()
+    pet = make_pet(member)
+    payment = models.Payment(
+        member_id=member.id,
+        plan_id=plan.id,
+        pet_id=pet.id,
+        amount_php=5999,
+        status=models.PaymentStatus.pending,
+    )
+    db.add(payment)
+    db.flush()
+
+    _grant_plan(db, payment)
+    first = pet.plan_activated_at
+    _grant_plan(db, payment)
+
+    assert pet.plan_activated_at == first

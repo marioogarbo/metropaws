@@ -93,6 +93,7 @@ class WalletPetCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _WalletPoolMeter(
+              available: c.preventiveAvailable,
               label: 'Preventive Wellness',
               totalCentavos: c.walletCentavos,
               remainingCentavos: c.remainingCentavos,
@@ -105,6 +106,7 @@ class WalletPetCard extends StatelessWidget {
               Divider(height: 1, color: cs.outline.withValues(alpha: 0.5)),
               const SizedBox(height: 16),
               _WalletPoolMeter(
+                available: c.emergencyAvailable,
                 label: 'Emergency',
                 totalCentavos: c.emergencyWalletCentavos,
                 remainingCentavos: c.emergencyRemainingCentavos,
@@ -227,7 +229,13 @@ class _MonthlyFooter extends StatelessWidget {
 /// One wallet pool inside a [WalletPetCard]: label + remaining, a progress bar,
 /// a "% used" read-out, and (optionally) a Used/Pending stat row.
 class _WalletPoolMeter extends StatelessWidget {
+  /// False while a monthly subscriber has not vested this pool. The balance
+  /// is still shown — it is real, and it is what they are working toward —
+  /// but presenting it as spendable would invite a claim the server refuses.
+  final bool available;
+
   const _WalletPoolMeter({
+    this.available = true,
     required this.label,
     required this.totalCentavos,
     required this.remainingCentavos,
@@ -259,7 +267,12 @@ class _WalletPoolMeter extends StatelessWidget {
     // Remaining balance is the member's money — a high-value number, so it
     // earns the gold accent (goldDark on light surfaces for contrast; raw
     // gold reads fine once the surface goes dark).
-    final remainingColor = isDark ? AppColors.gold : AppColors.goldDark;
+    // Gold means "yours to spend". An unvested pool is not, so it drops to
+    // muted text — the number stays legible, but stops reading as available
+    // money the member can act on.
+    final remainingColor = !available
+        ? cs.onSurfaceVariant
+        : (isDark ? AppColors.gold : AppColors.goldDark);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,12 +281,25 @@ class _WalletPoolMeter extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Text(
-                label,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: cs.onSurfaceVariant),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (!available)
+                    Text(
+                      'Not available yet',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: cs.error,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(width: 8),

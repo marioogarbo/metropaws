@@ -514,6 +514,21 @@ def _advance_subscription(
 def _grant_plan(db: Session, payment: models.Payment) -> None:
     from app.domain.paw_points_utils import award_points, has_awarded_for_reference
 
+    # Already granted — do nothing. Four independent paths call this (webhook,
+    # client poll, return page, profile reconcile) and each is supposed to check
+    # that the payment is still pending first, but two of them CAN observe
+    # 'pending' at the same moment and both proceed. Observed on dev 2026-08-17:
+    # one ₱600 instalment ran the body twice, twelve seconds apart, and advanced
+    # the vesting counter to 2 on a single payment.
+    #
+    # The PawPoints award survived that because it is keyed on payment.id; the
+    # subscription counter was not, and neither is grant_plan_to_pet, which
+    # rebuilds benefits and resets plan_activated_at every time it runs. This is
+    # the one guard that makes the whole function idempotent rather than each
+    # piece separately.
+    if payment.status == models.PaymentStatus.paid:
+        return
+
     member = (
         db.query(models.Member).filter(models.Member.id == payment.member_id).first()
     )

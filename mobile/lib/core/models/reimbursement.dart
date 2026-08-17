@@ -45,6 +45,11 @@ class WalletPet {
   // Monthly subscribers only. Both stay empty for annual members.
   final DateTime? subscriptionNextDueOn;
   final int subscriptionPaymentsMade;
+  // Whether each pool may actually be drawn on right now. Always true for an
+  // annual member; false while a monthly subscriber is vesting or in default.
+  // Defaults are true so an older backend behaves exactly as before.
+  final bool preventiveAvailable;
+  final bool emergencyAvailable;
 
   const WalletPet({
     required this.petId,
@@ -63,6 +68,8 @@ class WalletPet {
     this.membershipStatusLabel = 'Fully Service-Eligible',
     this.subscriptionNextDueOn,
     this.subscriptionPaymentsMade = 0,
+    this.preventiveAvailable = true,
+    this.emergencyAvailable = true,
   });
 
   bool get planExpired => planStatus == 'expired';
@@ -109,6 +116,8 @@ class WalletPet {
             : null,
         subscriptionPaymentsMade:
             json['subscription_payments_made'] as int? ?? 0,
+        preventiveAvailable: json['preventive_available'] as bool? ?? true,
+        emergencyAvailable: json['emergency_available'] as bool? ?? true,
       );
 }
 

@@ -224,6 +224,27 @@ def record_cleared_payment(subscription: models.Subscription, paid_on: date) -> 
         _stamp_eligible(subscription, benefit, paid_on)
 
 
+def benefit_available(
+    subscription: models.Subscription | None, benefit: BenefitClass
+) -> bool:
+    """Whether this class of benefit can be drawn on right now.
+
+    Exists so the wallet can SHOW what a member may actually use. Displaying a
+    full pool to someone who is not vested invites them to book a service the
+    claim gate will then refuse — the balance is real, but it is not yet theirs
+    to spend.
+
+    None means an annual member, who is never gated (§5.9).
+    """
+    if subscription is None:
+        return True
+    if subscription.status == models.SubscriptionStatus.suspended:
+        return False
+    if is_in_default(subscription):
+        return False
+    return payments_remaining(subscription, benefit) == 0
+
+
 def claim_block_reason(
     subscription: models.Subscription,
     benefit: BenefitClass,

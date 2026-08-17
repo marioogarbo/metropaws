@@ -116,6 +116,12 @@ class WalletPetOut(BaseModel):
     # action keys off, since nothing here bills automatically.
     subscription_next_due_on: Optional[date] = None
     subscription_payments_made: int = 0
+    # Whether each pool can actually be drawn on right now. Always true for
+    # an annual member. False while a monthly subscriber is still vesting or
+    # in default — the balance is real, but not yet theirs to spend, and a
+    # wallet that shows it as available invites a claim the server refuses.
+    preventive_available: bool = True
+    emergency_available: bool = True
 
 
 class WalletOut(BaseModel):
