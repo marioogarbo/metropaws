@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/member.dart';
 import '../../../core/models/paw_points.dart';
@@ -33,6 +36,11 @@ class _BenefitsTabState extends State<BenefitsTab> {
   bool _walletLoaded = false;
   Member? _member;
 
+  // Instalment checkout in flight. Held so the payment can be polled to
+  // completion even if the member never comes back through the deep link.
+  Timer? _pollTimer;
+  String? _activePaymentId;
+
   // The pet's plan tier, for the wallet card badge. Null when the member isn't
   // loaded yet or the pet has no active plan.
   String? _planTypeFor(String petId) {
@@ -55,10 +63,44 @@ class _BenefitsTabState extends State<BenefitsTab> {
     });
   }
 
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
   void _load() {
     final bloc = context.read<MemberBloc>();
     bloc.add(PawPointsBalanceLoadRequested());
     bloc.add(ReimbursementsLoadRequested());
+  }
+
+  /// Open the hosted checkout for an instalment, then poll until the payment
+  /// clears.
+  ///
+  /// The polling is the important half. The webhook is unreliable on dev and
+  /// the member may never return to the app through the deep link, so dropping
+  /// the payment id here is exactly what once left a paying member without
+  /// their plan. Same rule as the plan-selection flow.
+  Future<void> _launchInstalment(String url, String paymentId) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    if (!mounted) return;
+    _activePaymentId = paymentId;
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted && _activePaymentId != null) {
+        context.read<MemberBloc>().add(PaymentStatusPolled(_activePaymentId!));
+      }
+    });
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    _activePaymentId = null;
   }
 
   void _openPawPoints() {
@@ -113,7 +155,11 @@ class _BenefitsTabState extends State<BenefitsTab> {
           s is ReimbursementFailure ||
           s is MemberLoaded ||
           s is PetOperationSuccess ||
-          s is PayoutSaveSuccess,
+          s is PayoutSaveSuccess ||
+          s is CheckoutReady ||
+          s is CheckoutFailed ||
+          s is PaymentVerified ||
+          s is PaymentDeclined,
       listener: (context, state) {
         if (state is PawPointsLoaded) {
           setState(() => _balance = state.balance);
@@ -130,6 +176,28 @@ class _BenefitsTabState extends State<BenefitsTab> {
           setState(() => _member = state.member);
         } else if (state is PayoutSaveSuccess) {
           setState(() => _member = state.member);
+        } else if (state is CheckoutReady) {
+          _launchInstalment(state.checkoutUrl, state.paymentId);
+        } else if (state is CheckoutFailed) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(state.message),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ));
+        } else if (state is PaymentVerified) {
+          _stopPolling();
+          _load();
+        } else if (state is PaymentDeclined) {
+          // Without this the poll would keep firing until the tab is
+          // disposed, and the member would be told nothing.
+          _stopPolling();
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text(
+              "That payment didn't go through. You can try again.",
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ));
         }
       },
       child: RefreshIndicator(
@@ -190,6 +258,11 @@ class _BenefitsTabState extends State<BenefitsTab> {
                           wallet: entry.value,
                           showStats: true,
                           planType: _planTypeFor(entry.value.petId),
+                          onPayInstalment: entry.value.isMonthly
+                              ? () => context
+                                  .read<MemberBloc>()
+                                  .add(InstallmentRequested(entry.value.petId))
+                              : null,
                         ),
                       ),
                     )),

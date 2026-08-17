@@ -16,11 +16,17 @@ class WalletPetCard extends StatelessWidget {
   // member can see which plan the wallet comes from. Hidden when null.
   final String? planType;
 
+  /// Tapped to pay the next monthly instalment. Null hides the action — pass it
+  /// only where a checkout can actually be launched and polled, since nothing
+  /// bills automatically and a dead button here would strand a subscriber.
+  final VoidCallback? onPayInstalment;
+
   const WalletPetCard({
     super.key,
     required this.wallet,
     this.showStats = false,
     this.planType,
+    this.onPayInstalment,
   });
 
   @override
@@ -107,9 +113,113 @@ class WalletPetCard extends StatelessWidget {
                 showStats: showStats,
               ),
             ],
+            if (c.isMonthly) ...[
+              const SizedBox(height: 16),
+              Divider(height: 1, color: cs.outline.withValues(alpha: 0.5)),
+              const SizedBox(height: 14),
+              _MonthlyFooter(wallet: c, onPayInstalment: onPayInstalment),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The monthly-membership strip under the pools: what state the membership is
+/// in, when the next instalment is due, and the way to pay it.
+///
+/// It sits inside the wallet card because a subscription is per PET — a member
+/// can hold one pet annually and another monthly, and a single screen-level
+/// button could not say which one it meant.
+class _MonthlyFooter extends StatelessWidget {
+  final WalletPet wallet;
+  final VoidCallback? onPayInstalment;
+
+  const _MonthlyFooter({required this.wallet, required this.onPayInstalment});
+
+  String _dueLabel(DateTime due) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final today = DateTime.now();
+    final days = DateTime(due.year, due.month, due.day)
+        .difference(DateTime(today.year, today.month, today.day))
+        .inDays;
+    final date = '${months[due.month - 1]} ${due.day}';
+    if (days < 0) return 'Overdue since $date';
+    if (days == 0) return 'Due today';
+    if (days == 1) return 'Due tomorrow';
+    return 'Next payment $date';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final tt = theme.textTheme;
+    final due = wallet.subscriptionNextDueOn;
+    // Only a withheld membership needs explaining. A fully eligible subscriber
+    // sees the same wallet as anyone else, so labelling their status would be
+    // noise.
+    final withheld = wallet.benefitsWithheld;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                // The contract's own wording, sent by the server so the app
+                // never carries a phrase only the document may change.
+                withheld
+                    ? wallet.membershipStatusLabel
+                    : 'Monthly membership',
+                style: tt.labelLarge?.copyWith(
+                  color: withheld ? cs.error : cs.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Text(
+              '${wallet.subscriptionPaymentsMade} paid',
+              style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+        if (withheld) ...[
+          const SizedBox(height: 4),
+          Text(
+            wallet.membershipStatus == 'suspended'
+                ? 'Settle the outstanding payment to use benefits again. '
+                    'Paying late restarts the qualifying period.'
+                : 'Keep paying each month and your benefits open up.',
+            style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ],
+        if (due != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            _dueLabel(due),
+            style: tt.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+        if (onPayInstalment != null) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onPayInstalment,
+              child: const Text('Pay next instalment'),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
