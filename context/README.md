@@ -80,6 +80,11 @@ says. If a fact is derivable by reading a file, link to that file instead.
   how it happened, which tags were deleted, and the ordered rotation list that
   actually closes it. `SECRET_KEY` is rotated and deployed; everything else on
   that list is still outstanding, the admin account password first.
+- [`features/mobile-unreleased.md`](features/mobile-unreleased.md) —
+  **what is in the app but not yet on Play.** The standing answer to "what
+  changed since the last release?", plus the pre-build checklist (bump the
+  version, deploy the backend first, verify the AAB has no localhost URL).
+  Empty it when a build ships.
 - [`features/monthly-subscriptions.md`](features/monthly-subscriptions.md) —
   monthly instalment memberships and the vesting they gate (Agreement §5.2–§5.10):
   why a subscription is per pet, why an annual member has no row at all, why
