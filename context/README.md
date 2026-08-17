@@ -80,6 +80,12 @@ says. If a fact is derivable by reading a file, link to that file instead.
   how it happened, which tags were deleted, and the ordered rotation list that
   actually closes it. `SECRET_KEY` is rotated and deployed; everything else on
   that list is still outstanding, the admin account password first.
+- [`features/monthly-subscriptions.md`](features/monthly-subscriptions.md) —
+  monthly instalment memberships and the vesting they gate (Agreement §5.2–§5.10):
+  why a subscription is per pet, why an annual member has no row at all, why
+  default is derived instead of swept, and the money invariant that stops a
+  monthly payment re-granting the plan and handing back a spent allowance twelve
+  times a year. Backend complete; no mobile UI, so no member can reach it yet.
 - [`features/deployment-topology.md`](features/deployment-topology.md) —
   which repo and branch deploys to which host, which frontend calls which
   backend (staging points at *dev*), why production deploys from `master` and not

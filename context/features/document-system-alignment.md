@@ -207,24 +207,31 @@ over annual (₱3,600 vs ₱2,999; ₱7,200 vs ₱5,999), but Premium is only +8
 (₱10,800 vs ₱9,999). A uniform premium would put Premium at ~₱1,000/mo. Looks
 like an oversight on the plan where under-pricing costs most.
 
-**Build order.** (1) a subscription entity — member, plan, pet, cadence,
-consecutive-payment counter, status, next-due; (2) the two vesting gates at claim
-submission, which slot in beside `_reject_before_plan_start`; (3) the monthly
-cycle — payment link per period, reconcile, increment or reset per §5.6, plus
-reminders; (4) §5.7 member status, which becomes mandatory rather than optional
-because a member must be able to see whether they are vested. This closes items 2
-and 4 outright and part of item 1.
+**Built 2026-08-16/17 — the backend is complete.** Full design, and the five
+decisions that will look arbitrary in a diff, in
+[`monthly-subscriptions.md`](./monthly-subscriptions.md). Summary:
 
-**Blocked on two answers from Romy**, both of which change the data model:
+- Subscription entity, per pet; an annual member has **no row**, which is how
+  §5.9 exempts them.
+- Vesting thresholds as columns on `Plan` (6/3, 8/3, 10/4), gated at claim submit
+  **and** resubmit.
+- §5.7 member status, derived — **this closes item 4 outright**.
+- The §5.6 billing cycle: reset-to-zero past a grace window, with default
+  **derived** from `next_due_on` rather than swept, since this backend has no
+  scheduler.
+- Signup and instalment endpoints, member-initiated.
 
-1. **The §5.5 thresholds in writing** — see item 10. The document contradicts
-   itself and the thresholds *are* the feature.
-2. **§5.6's reset rule**, which is deliberately discretionary: reset the counter
-   to zero, or restore to last good standing? A hard reset needs a counter; a
-   restore needs payment history plus an admin override. Recommendation:
-   reset-to-zero after a configurable grace period, with an admin action to
-   restore — enforceable automatically, and keeps mercy a deliberate staff
-   decision rather than the default.
+**§5.6 was answered by Mario on 2026-08-17**: reset to zero after a configurable
+grace period, with an admin action to restore. The automatic half is built; the
+admin restore is not.
+
+**§5.5's thresholds no longer block anything** — the document resolves its own
+contradiction, see item 10 — though Romy still owes the reissued PDF.
+
+**What remains is not backend work.** The whole mobile UI (its own AAB and Play
+review), reminders, cancellation, and the §5.6 admin restore. Plus one client
+question: Premium's ₱900/mo is +8% over annual where the other two plans are both
++20%.
 
 Note §5.10, which governs the whole build: account activation, benefit
 eligibility, Service Authorization and Provider Settlement are **four separate

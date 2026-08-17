@@ -418,3 +418,28 @@ files**.
 4. **Romy:** Premium's ₱900/mo is +8% over annual where Standard and De Luxe are
    both +20%; the reissued MP-CON-001; and the item 1 authorization-vs-
    reimbursement decision.
+
+## Addendum, 2026-08-17 (later) — monthly becomes reachable
+
+The scheduler problem turned out not to be one. It blocks *reminders*, not the
+ability to pay: a member paying their own instalment from the app needs neither a
+cron job nor a saved card — and there is no card to save while only QR Ph is
+active. `POST /payments/installment` is therefore the endpoint that makes monthly
+work, and reminders become an enhancement rather than a prerequisite.
+
+`POST /payments/checkout` now takes `cadence: "monthly"` to open the arrangement.
+It defaults to `"annual"`, so the build already on Play is unaffected.
+
+Design and the reasoning behind it now live in
+[`../features/monthly-subscriptions.md`](../features/monthly-subscriptions.md)
+rather than in this log — it is a subsystem, not a session finding. Register
+items 2 and 4 are closed there.
+
+**The route surface moved for the first time this session**, deliberately:
+`test_app_routes` failed, the snapshot was regenerated, and the diff read exactly
+one added line — `POST /payments/installment`, nothing moved or dropped. Worth
+noting because every prior deploy verified at zero drift, and prod's next one
+will not.
+
+489 tests pass. Committed to `main` locally, **unpushed and undeployed** — dev
+and production are both unchanged since the release verified above.
