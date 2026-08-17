@@ -90,7 +90,8 @@ says. If a fact is derivable by reading a file, link to that file instead.
   why a subscription is per pet, why an annual member has no row at all, why
   default is derived instead of swept, and the money invariant that stops a
   monthly payment re-granting the plan and handing back a spent allowance twelve
-  times a year. Backend complete; no mobile UI, so no member can reach it yet.
+  times a year. Backend and app both built and exercised on a real device; not
+  in production, and see `mobile-unreleased.md` for the order it must ship in.
 - [`features/deployment-topology.md`](features/deployment-topology.md) —
   which repo and branch deploys to which host, which frontend calls which
   backend (staging points at *dev*), why production deploys from `master` and not
