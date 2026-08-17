@@ -76,7 +76,13 @@ class _MetroPawsAppState extends State<MetroPawsApp> {
           debugShowCheckedModeBanner: false,
           theme: buildLightTheme(),
           darkTheme: buildDarkTheme(),
-          themeMode: themeMode,
+          // LIGHT ONLY (client decision, 2026-08-17), regardless of the
+          // device setting or anything previously saved. The dark theme and
+          // ThemeCubit are kept wired but unused: dark mode is finished work
+          // that may come back, and deleting it would mean rebuilding every
+          // dark-surface decision. To restore, put `themeMode` back here and
+          // unhide the Appearance pickers.
+          themeMode: ThemeMode.light,
           // The design deliberately runs large type (28–48sp display sizes).
           // A device set to an aggressive system font scale (Samsung's "Huge"
           // / accessibility scaling can reach ~1.5–2.0×) multiplies that past

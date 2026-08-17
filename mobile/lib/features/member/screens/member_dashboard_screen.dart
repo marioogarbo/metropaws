@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event.dart';
 import '../bloc/member_state.dart';
-import '../../../core/blocs/theme_cubit.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/models/booking.dart';
 import '../../../core/models/clinic_partner.dart';
@@ -39,17 +38,6 @@ import 'reimbursement_screen.dart';
 
 String _capFirst(String s) =>
     s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-
-String? _highestPetTier(List<Pet> pets) {
-  const rank = {'Premium': 3, 'Deluxe': 2, 'Standard': 1};
-  String? best;
-  for (final p in pets) {
-    final t = p.planType;
-    if (t == null) continue;
-    if (best == null || (rank[t] ?? 0) > (rank[best] ?? 0)) best = t;
-  }
-  return best;
-}
 
 String _formatDate(DateTime d) {
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -796,7 +784,6 @@ class _DashboardState extends State<_Dashboard>
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final pets = widget.member.pets;
-    final highestTier = _highestPetTier(pets);
 
     Future<void> navigateToAddPet() async {
       final refreshed = await Navigator.push<bool>(
@@ -813,7 +800,27 @@ class _DashboardState extends State<_Dashboard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Screen heading ──────────────────────────────────────────
-          Padding(
+          // A single oversized shield, bled off the right edge at low opacity.
+          // PRODUCT.md roots this app in the physical membership kit — navy
+          // box, gold-foil embossed shield — so the greeting sits on the same
+          // emblem the member unboxed, rather than on a generic decorative
+          // shape. Clipped so it cannot widen the scroll view, and excluded
+          // from semantics because it carries no information.
+          ClipRect(
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -34,
+                  top: -18,
+                  child: ExcludeSemantics(
+                    child: Icon(
+                      Icons.shield_rounded,
+                      size: 150,
+                      color: AppColors.gold.withValues(alpha: 0.07),
+                    ),
+                  ),
+                ),
+                Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -841,18 +848,20 @@ class _DashboardState extends State<_Dashboard>
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (widget.member.isFoundingMember || highestTier != null) ...[
+                // Plan tier deliberately does NOT appear here. It was the
+                // HIGHEST tier across the member's pets, so someone with one
+                // Premium pet and two Standard ones read as "Premium" — and a
+                // monthly subscriber three payments in, with no benefits yet,
+                // read as though they had the whole plan. Tier belongs to a
+                // pet, and every pet card already carries its own badge.
+                // Founding membership is genuinely member-level, so it stays.
+                if (widget.member.isFoundingMember) ...[
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      if (widget.member.isFoundingMember) ...[
-                        _FoundingBadge(small: true),
-                        const SizedBox(width: 6),
-                      ],
-                      if (highestTier != null) TierBadge(planType: highestTier),
-                    ],
-                  ),
+                  _FoundingBadge(small: true),
                 ],
+              ],
+            ),
+                ),
               ],
             ),
           ),
@@ -3809,8 +3818,6 @@ class _AccountView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -3881,78 +3888,11 @@ class _AccountView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // Appearance / theme picker
-          _AccountSection(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.contrast_outlined,
-                          size: 20,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          'Appearance',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(color: cs.onSurface),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    BlocBuilder<ThemeCubit, ThemeMode>(
-                      builder: (context, mode) => SegmentedButton<ThemeMode>(
-                        // Drop the selected checkmark — the segment already has
-                        // its own icon + navy fill as the indicator, and the
-                        // extra check pushed "System" to truncate on narrow
-                        // screens (e.g. a Galaxy Z Flip).
-                        showSelectedIcon: false,
-                        style: SegmentedButton.styleFrom(
-                          selectedBackgroundColor: AppColors.navy,
-                          selectedForegroundColor: Colors.white,
-                          backgroundColor: cs.surfaceContainerHighest,
-                          foregroundColor: cs.onSurfaceVariant,
-                          textStyle: const TextStyle(fontSize: 13),
-                        ),
-                        segments: const [
-                          ButtonSegment(
-                            value: ThemeMode.light,
-                            label: Text('Light'),
-                            icon: Icon(Icons.light_mode_outlined, size: 15),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.system,
-                            label: Text('System'),
-                            icon: Icon(
-                              Icons.brightness_auto_outlined,
-                              size: 15,
-                            ),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.dark,
-                            label: Text('Dark'),
-                            icon: Icon(Icons.dark_mode_outlined, size: 15),
-                          ),
-                        ],
-                        selected: {mode},
-                        onSelectionChanged: (selected) =>
-                            context.read<ThemeCubit>().setMode(selected.first),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          // Appearance picker removed 2026-08-17: the app is LIGHT ONLY, so a
+          // control that cannot change anything would be worse than none.
+          // main.dart pins ThemeMode.light; ThemeCubit and buildDarkTheme()
+          // are still wired, so restoring this means putting the picker back
+          // and returning `themeMode` to the MaterialApp.
           const SizedBox(height: 12),
           // Documents — open in the browser (URLs follow the build ENV)
           _AccountSection(

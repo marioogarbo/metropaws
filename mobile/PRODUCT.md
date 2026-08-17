@@ -31,7 +31,11 @@ The design DNA comes directly from the MetroPaws membership unboxing kit: a navy
 
 ### Aesthetic Direction
 
-**Theme:** Light, Dark, and System (device default). System is the default — the app follows the phone's appearance preference. Users can override via Account settings. All three modes maintain full brand fidelity. Spacious, breathing layouts. High contrast for readability across age ranges.
+**Theme: LIGHT ONLY** (client decision, 2026-08-17). `main.dart` pins `ThemeMode.light` regardless of the device setting or any saved preference, and the Appearance picker is removed from Account. Do not design dark variants for new work, and do not reinstate the picker without asking.
+
+`buildDarkTheme()` and `ThemeCubit` are still wired but unreached — dark mode is finished work that may return, and deleting it would mean rebuilding every dark-surface decision. Restoring it is two edits: return `themeMode` to the `MaterialApp` and put the picker back.
+
+Spacious, breathing layouts. High contrast for readability across age ranges.
 
 **Visual tone:** Premium and warm. Navy + gold is the only palette — used with deliberate restraint. Gold signals prestige and high-value moments. Navy signals trust and structure. White/light surfaces carry breathing room. Nothing extra. Nothing generic.
 
