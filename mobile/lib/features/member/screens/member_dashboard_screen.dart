@@ -1353,6 +1353,7 @@ class _DigitalIdCard extends StatelessWidget {
                 if (w.walletCentavos > 0) {
                   walletRows.add(
                     _WalletSummaryRow(
+                      available: w.preventiveAvailable,
                       label: 'Preventive Wellness',
                       totalCentavos: w.walletCentavos,
                       remainingCentavos: w.remainingCentavos,
@@ -1365,6 +1366,7 @@ class _DigitalIdCard extends StatelessWidget {
                 if (w.emergencyWalletCentavos > 0) {
                   walletRows.add(
                     _WalletSummaryRow(
+                      available: w.emergencyAvailable,
                       label: 'Emergency',
                       totalCentavos: w.emergencyWalletCentavos,
                       remainingCentavos: w.emergencyRemainingCentavos,
@@ -1926,7 +1928,13 @@ class _WalletSummaryRow extends StatelessWidget {
   final Color onCardMuted;
   final VoidCallback? onTap;
 
+  /// False while a monthly subscriber has not vested this pool. The Home
+  /// card is the first thing a member sees, so showing the balance in gold
+  /// here is the loudest possible claim that the money is theirs to spend.
+  final bool available;
+
   const _WalletSummaryRow({
+    this.available = true,
     required this.label,
     required this.totalCentavos,
     required this.remainingCentavos,
@@ -1942,7 +1950,7 @@ class _WalletSummaryRow extends StatelessWidget {
     final progress = totalCentavos <= 0
         ? 0.0
         : (safeRemaining / totalCentavos).clamp(0.0, 1.0);
-    final valueColor = isDepleted
+    final valueColor = (isDepleted || !available)
         ? onCardMuted.withValues(alpha: 0.55)
         : AppColors.gold;
 
@@ -1979,7 +1987,9 @@ class _WalletSummaryRow extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: ' left of ${pesoFromCentavos(totalCentavos)}',
+                      text: available
+                          ? ' left of ${pesoFromCentavos(totalCentavos)}'
+                          : ' · not available yet',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: onCardMuted,
                       ),

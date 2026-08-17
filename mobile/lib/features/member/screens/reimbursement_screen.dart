@@ -632,6 +632,15 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     // Expired plan: the server 400s new claims; gate here too so the member
     // sees why instead of a failed round-trip.
     final planExpired = selectedWallet?.planExpired ?? false;
+    // Vesting: a monthly subscriber's pools open at different times, so this
+    // follows the category the member picked rather than the pet as a whole.
+    // Gated here for the same reason as expiry — the server refuses anyway,
+    // and being told after filling in the form is the worst way to find out.
+    final benefitLocked = selectedWallet != null &&
+        !planExpired &&
+        !(isEmergencyCategory
+            ? selectedWallet.emergencyAvailable
+            : selectedWallet.preventiveAvailable);
     final isDark = theme.brightness == Brightness.dark;
     final walletGold = isDark ? AppColors.gold : AppColors.goldDark;
 
@@ -716,6 +725,51 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                         'renew the plan from the Home tab to keep claiming.',
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: cs.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (benefitLocked) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  // Gold, not red. Nothing has gone wrong — the member is
+                  // partway through earning this, and the tone should say so.
+                  color: AppColors.gold.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.schedule_rounded, size: 18, color: walletGold),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedWallet.membershipStatusLabel,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: walletGold,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${isEmergencyCategory ? 'Emergency support' : 'Planned services'} '
+                            'for ${selectedWallet.petName} opens as the monthly '
+                            'payments continue. '
+                            '${selectedWallet.subscriptionPaymentsMade} paid so far.',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: cs.onSurface),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -986,6 +1040,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                       loading ||
                       walletExhausted ||
                       planExpired ||
+                      benefitLocked ||
                       memberNeedsPayoutMethod)
                   ? null
                   : _submit,
