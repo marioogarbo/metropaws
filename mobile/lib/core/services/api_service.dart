@@ -547,11 +547,39 @@ class ApiService {
     );
   }
 
-  static Future<CheckoutResponse> createCheckout(String planId, String petId) async {
+  /// Start paying for a plan. `cadence` is 'annual' (the default, and what the
+  /// server assumes when the field is absent) or 'monthly', which opens an
+  /// instalment subscription and charges the plan's monthly price.
+  static Future<CheckoutResponse> createCheckout(
+    String planId,
+    String petId, {
+    String cadence = 'annual',
+  }) async {
     final res = await _client.post(
       _uri(ApiConstants.paymentsCheckout),
       headers: await _headers(),
-      body: jsonEncode({'plan_id': planId, 'pet_id': petId}),
+      body: jsonEncode({
+        'plan_id': planId,
+        'pet_id': petId,
+        'cadence': cadence,
+      }),
+    );
+    return _decode(
+      res,
+      (j) => CheckoutResponse.fromJson(j as Map<String, dynamic>),
+    );
+  }
+
+  /// Pay the next instalment on a pet's existing monthly membership.
+  ///
+  /// Member-initiated because nothing bills automatically: there is no
+  /// scheduler behind the API, and no saved card to charge while QR Ph is the
+  /// only live method. This call is what keeps a monthly membership running.
+  static Future<CheckoutResponse> payInstallment(String petId) async {
+    final res = await _client.post(
+      _uri(ApiConstants.paymentsInstallment),
+      headers: await _headers(),
+      body: jsonEncode({'pet_id': petId}),
     );
     return _decode(
       res,

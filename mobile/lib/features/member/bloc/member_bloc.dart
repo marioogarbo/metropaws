@@ -26,6 +26,7 @@ class MemberBloc extends Bloc<MemberEvent, MemberState> {
     on<PawPointsBalanceLoadRequested>(_onPawPointsBalanceLoad);
     on<PlansLoadRequested>(_onPlansLoad);
     on<CheckoutRequested>(_onCheckout);
+    on<InstallmentRequested>(_onInstallment);
     on<PaymentStatusPolled>(_onPaymentPoll);
     on<ReimbursementsLoadRequested>(_onReimbursementsLoad);
     on<ReimbursementSubmitted>(_onReimbursementSubmit);
@@ -255,12 +256,34 @@ class MemberBloc extends Bloc<MemberEvent, MemberState> {
   ) async {
     emit(CheckoutLoading());
     try {
-      final response = await ApiService.createCheckout(event.planId, event.petId);
+      final response = await ApiService.createCheckout(
+        event.planId,
+        event.petId,
+        cadence: event.cadence,
+      );
       emit(CheckoutReady(checkoutUrl: response.checkoutUrl, paymentId: response.paymentId));
     } on ApiException catch (e) {
       emit(CheckoutFailed(e.message));
     } catch (_) {
       emit(CheckoutFailed('Could not start checkout. Please try again.'));
+    }
+  }
+
+  Future<void> _onInstallment(
+    InstallmentRequested event,
+    Emitter<MemberState> emit,
+  ) async {
+    // Reuses the checkout states on purpose: from the screen's point of view an
+    // instalment is the same launch-and-poll dance, so nothing downstream needs
+    // to learn a second flow.
+    emit(CheckoutLoading());
+    try {
+      final response = await ApiService.payInstallment(event.petId);
+      emit(CheckoutReady(checkoutUrl: response.checkoutUrl, paymentId: response.paymentId));
+    } on ApiException catch (e) {
+      emit(CheckoutFailed(e.message));
+    } catch (_) {
+      emit(CheckoutFailed('Could not start this payment. Please try again.'));
     }
   }
 

@@ -81,7 +81,27 @@ class PlansLoadRequested extends MemberEvent {
 class CheckoutRequested extends MemberEvent {
   final String planId;
   final String petId;
-  CheckoutRequested({required this.planId, required this.petId});
+
+  /// 'annual' or 'monthly'. Monthly opens an instalment subscription and is
+  /// charged at the plan's monthly price. Defaults to annual so every existing
+  /// caller keeps its behaviour.
+  final String cadence;
+
+  CheckoutRequested({
+    required this.planId,
+    required this.petId,
+    this.cadence = 'annual',
+  });
+}
+
+/// Pay the next instalment on a pet's monthly membership.
+///
+/// Separate from [CheckoutRequested] because nothing is being bought — no plan
+/// eligibility and no Pack Discount apply. It reuses the same checkout states,
+/// so the screen's existing launch-and-poll handling covers it unchanged.
+class InstallmentRequested extends MemberEvent {
+  final String petId;
+  InstallmentRequested(this.petId);
 }
 
 class PaymentStatusPolled extends MemberEvent {

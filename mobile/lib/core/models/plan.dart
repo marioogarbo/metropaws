@@ -3,6 +3,9 @@ class Plan {
   final String name;
   final String subtitle;
   final int price;
+  /// Monthly instalment price in whole pesos. Null when the plan is annual-only,
+  /// which is what hides the monthly option for it.
+  final int? priceMonthly;
   final String? tagline;
   final List<String> features;
   final bool isFeatured;
@@ -14,6 +17,7 @@ class Plan {
     required this.name,
     required this.subtitle,
     required this.price,
+    this.priceMonthly,
     this.tagline,
     required this.features,
     required this.isFeatured,
@@ -26,6 +30,7 @@ class Plan {
         name: json['name'] as String,
         subtitle: (json['subtitle'] as String?) ?? (json['name'] as String),
         price: json['price'] as int,
+        priceMonthly: json['price_monthly'] as int?,
         tagline: json['tagline'] as String?,
         features: List<String>.from(json['features'] as List),
         isFeatured: json['is_featured'] as bool,

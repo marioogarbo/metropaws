@@ -9,6 +9,7 @@ import '../../../core/models/pet.dart';
 import '../../../core/models/plan.dart';
 import '../../../core/models/plan_quote.dart';
 import '../../../core/widgets/agreement_checkbox.dart';
+import '../../../core/widgets/scale_button.dart';
 import '../../../theme.dart';
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event.dart';
@@ -39,6 +40,10 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
   Map<String, PlanQuote> _quotes = {};
   bool _paymentsEnabled = true;
   bool _isCheckoutLoading = false;
+
+  /// Which price the member is looking at. Presentation state, like the
+  /// selected plan — it only becomes real when checkout is dispatched.
+  String _cadence = 'annual';
   Plan? _selectedPlan;
   String? _activePaymentId;
   Timer? _pollTimer;
@@ -104,11 +109,16 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
       builder: (ctx) => _PlanConfirmSheet(
         plan: plan,
         quote: _quotes[plan.id],
+        cadence: _cadence,
         petName: widget.pet.name,
         onConfirm: () {
           Navigator.pop(ctx);
           context.read<MemberBloc>().add(
-            CheckoutRequested(planId: plan.id, petId: widget.pet.id),
+            CheckoutRequested(
+              planId: plan.id,
+              petId: widget.pet.id,
+              cadence: _cadence,
+            ),
           );
         },
       ),
@@ -186,6 +196,8 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
                   ?.add(const Duration(days: 365)),
               paymentsEnabled: _paymentsEnabled && !_isCheckoutLoading,
               onSelect: _onSelectPlan,
+              cadence: _cadence,
+              onCadenceChanged: (value) => setState(() => _cadence = value),
             ),
             if (_isCheckoutLoading)
               const ColoredBox(
@@ -216,6 +228,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
                 CheckoutRequested(
                   planId: _selectedPlan!.id,
                   petId: widget.pet.id,
+                  cadence: _cadence,
                 ),
               );
             } else {
@@ -241,6 +254,8 @@ class _PlansBody extends StatelessWidget {
   final DateTime? activeUntil;
   final bool paymentsEnabled;
   final void Function(Plan) onSelect;
+  final String cadence;
+  final ValueChanged<String> onCadenceChanged;
 
   const _PlansBody({
     required this.plans,
@@ -249,7 +264,15 @@ class _PlansBody extends StatelessWidget {
     required this.activeUntil,
     required this.paymentsEnabled,
     required this.onSelect,
+    required this.cadence,
+    required this.onCadenceChanged,
   });
+
+  /// Only offer the choice when at least one visible plan actually has a
+  /// monthly price — otherwise the toggle would switch to an option that
+  /// changes nothing.
+  bool get _anyMonthlyOffered =>
+      _visiblePlans.any((p) => p.priceMonthly != null);
 
   /// Plans worth showing a card for: purchasable right now (eligible) or the
   /// pet's own current plan (shown for reference even though it's not
@@ -371,7 +394,15 @@ class _PlansBody extends StatelessWidget {
                   ),
                 ),
               )
-            else
+            else ...[
+              if (_anyMonthlyOffered)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _CadenceToggle(
+                    cadence: cadence,
+                    onChanged: onCadenceChanged,
+                  ),
+                ),
               ..._visiblePlans.map((plan) => Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _PlanCard(
@@ -379,8 +410,10 @@ class _PlansBody extends StatelessWidget {
                   quote: quotes[plan.id],
                   paymentsEnabled: paymentsEnabled,
                   onSelect: () => onSelect(plan),
+                  cadence: cadence,
                 ),
               )),
+            ],
           ],
           const SizedBox(height: 8),
           Row(
@@ -400,6 +433,73 @@ class _PlansBody extends StatelessWidget {
   }
 }
 
+/// Annual / monthly choice. Two segments rather than a switch, because neither
+/// option is the "off" state — paying monthly is a different arrangement, not a
+/// disabled version of paying annually.
+class _CadenceToggle extends StatelessWidget {
+  final String cadence;
+  final ValueChanged<String> onChanged;
+
+  const _CadenceToggle({required this.cadence, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    Widget segment(String value, String label) {
+      final selected = cadence == value;
+      return Expanded(
+        child: ScaleButton(
+          onTap: () => onChanged(value),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? cs.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              label,
+              style: tt.labelLarge?.copyWith(
+                color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              segment('annual', 'Pay yearly'),
+              segment('monthly', 'Pay monthly'),
+            ],
+          ),
+        ),
+        if (cadence == 'monthly') ...[
+          const SizedBox(height: 8),
+          Text(
+            'Monthly memberships start with app access, and benefits open up '
+            'as your payments continue.',
+            style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _PlanCard extends StatelessWidget {
   final Plan plan;
 
@@ -409,12 +509,21 @@ class _PlanCard extends StatelessWidget {
   final bool paymentsEnabled;
   final VoidCallback onSelect;
 
+  /// 'annual' or 'monthly' — which price this card is quoting.
+  final String cadence;
+
   const _PlanCard({
     required this.plan,
     required this.quote,
     required this.paymentsEnabled,
     required this.onSelect,
+    required this.cadence,
   });
+
+  /// True only when the member picked monthly AND this plan actually offers it.
+  /// A plan with no monthly price always shows its annual figure rather than a
+  /// blank one.
+  bool get isMonthly => cadence == 'monthly' && plan.priceMonthly != null;
 
   /// CTA copy per upgrade/renewal state. 'lower_plan'/'benefits_used' never
   /// reach this card — _PlansBody hides those entirely rather than showing
@@ -514,7 +623,9 @@ class _PlanCard extends StatelessWidget {
                     children: [
                       // Pack Discount: struck-through full price ahead of the
                       // server-quoted final price. Never computed client-side.
-                      if (quote?.hasDiscount ?? false)
+                      // Instalments carry no discount — it is 15% off an ANNUAL
+                      // plan — so the strike-through is annual-only.
+                      if (!isMonthly && (quote?.hasDiscount ?? false))
                         TextSpan(
                           text: '₱${quote!.fullPhp}  ',
                           style: tt.titleMedium?.copyWith(
@@ -523,7 +634,9 @@ class _PlanCard extends StatelessWidget {
                           ),
                         ),
                       TextSpan(
-                        text: '₱${quote?.finalPhp ?? plan.price}',
+                        text: isMonthly
+                            ? '₱${plan.priceMonthly}'
+                            : '₱${quote?.finalPhp ?? plan.price}',
                         style: tt.displaySmall?.copyWith(
                           color: isFeatured ? AppColors.gold : cs.primary,
                           fontWeight: FontWeight.w800,
@@ -531,13 +644,20 @@ class _PlanCard extends StatelessWidget {
                         ),
                       ),
                       TextSpan(
-                        text: ' / year',
+                        text: isMonthly ? ' / month' : ' / year',
                         style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                       ),
                     ],
                   ),
                 ),
-                if (quote?.hasDiscount ?? false) ...[
+                if (isMonthly) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Benefits unlock as you keep paying',
+                    style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+                if (!isMonthly && (quote?.hasDiscount ?? false)) ...[
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -631,12 +751,14 @@ class _PlanConfirmSheet extends StatefulWidget {
   final PlanQuote? quote;
   final String petName;
   final VoidCallback onConfirm;
+  final String cadence;
 
   const _PlanConfirmSheet({
     required this.plan,
     required this.quote,
     required this.petName,
     required this.onConfirm,
+    required this.cadence,
   });
 
   @override
@@ -651,7 +773,12 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
   Widget build(BuildContext context) {
     final plan = widget.plan;
     final quote = widget.quote;
-    final payPhp = quote?.finalPhp ?? plan.price;
+    // Monthly charges the instalment, never the discounted annual figure —
+    // this number must match what the server is about to bill.
+    final isMonthly =
+        widget.cadence == 'monthly' && plan.priceMonthly != null;
+    final payPhp =
+        isMonthly ? plan.priceMonthly! : (quote?.finalPhp ?? plan.price);
     final petName = widget.petName;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
@@ -693,7 +820,7 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
                   RichText(
                     text: TextSpan(
                       children: [
-                        if (quote?.hasDiscount ?? false)
+                        if (!isMonthly && (quote?.hasDiscount ?? false))
                           TextSpan(
                             text: '₱${quote!.fullPhp}  ',
                             style: tt.titleSmall?.copyWith(
@@ -709,13 +836,13 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
                           ),
                         ),
                         TextSpan(
-                          text: ' / year',
+                          text: isMonthly ? ' / month' : ' / year',
                           style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                         ),
                       ],
                     ),
                   ),
-                  if (quote?.hasDiscount ?? false) ...[
+                  if (!isMonthly && (quote?.hasDiscount ?? false)) ...[
                     const SizedBox(height: 6),
                     Text(
                       '${quote!.discountPercent}% Pack Discount applied — you save ₱${quote.discountPhp}.',
@@ -723,6 +850,19 @@ class _PlanConfirmSheetState extends State<_PlanConfirmSheet> {
                         color: isDark ? AppColors.gold : AppColors.goldDark,
                         fontWeight: FontWeight.w600,
                       ),
+                    ),
+                  ],
+                  // Monthly is not a cheaper way to buy the same thing, and the
+                  // member must understand that before paying: this first
+                  // payment opens the app, not the benefits.
+                  if (isMonthly) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      'This is the first of your monthly payments. It activates '
+                      "${_cap(petName)}'s membership and app access — service "
+                      'benefits open up as your payments continue, and you pay '
+                      'each month from the app.',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     ),
                   ],
                   // Replacement transparency: an upgrade/renewal wipes the old

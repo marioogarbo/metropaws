@@ -35,6 +35,16 @@ class WalletPet {
   // file new claims until renewed (server 400s; the app gates the Submit tab).
   final String planStatus;
   final DateTime? planExpiresAt;
+  // Agreement §5.7 membership status. `membershipStatus` is the stable wire
+  // value to branch on; `membershipStatusLabel` is the contract's own wording,
+  // sent by the server so the app never hardcodes a phrase only the document
+  // may change. Older backends omit both — the defaults match how an annual
+  // member has always behaved.
+  final String membershipStatus;
+  final String membershipStatusLabel;
+  // Monthly subscribers only. Both stay empty for annual members.
+  final DateTime? subscriptionNextDueOn;
+  final int subscriptionPaymentsMade;
 
   const WalletPet({
     required this.petId,
@@ -49,9 +59,30 @@ class WalletPet {
     this.emergencyRemainingCentavos = 0,
     this.planStatus = 'active',
     this.planExpiresAt,
+    this.membershipStatus = 'fully_service_eligible',
+    this.membershipStatusLabel = 'Fully Service-Eligible',
+    this.subscriptionNextDueOn,
+    this.subscriptionPaymentsMade = 0,
   });
 
   bool get planExpired => planStatus == 'expired';
+
+  /// Whether this pet's plan is paid monthly rather than annually.
+  ///
+  /// Keyed on the payment count because the wallet only ever lists pets that
+  /// already hold a plan, and a plan is granted by the FIRST cleared instalment
+  /// — so inside this payload "has paid at least once" and "is a subscriber"
+  /// are the same set. A pet still awaiting its first instalment has no plan
+  /// yet and never reaches here.
+  bool get isMonthly => subscriptionPaymentsMade > 0;
+
+  /// Benefits are withheld right now — either vesting is incomplete or an
+  /// instalment is overdue. The server refuses the claim either way; this only
+  /// decides whether to explain that before the member tries.
+  bool get benefitsWithheld =>
+      membershipStatus == 'digital_access_active' ||
+      membershipStatus == 'vesting_in_progress' ||
+      membershipStatus == 'suspended';
 
   factory WalletPet.fromJson(Map<String, dynamic> json) => WalletPet(
         petId: json['pet_id'] as String,
@@ -69,6 +100,15 @@ class WalletPet {
         planExpiresAt: json['plan_expires_at'] != null
             ? DateTime.tryParse(json['plan_expires_at'] as String)
             : null,
+        membershipStatus:
+            json['membership_status'] as String? ?? 'fully_service_eligible',
+        membershipStatusLabel:
+            json['membership_status_label'] as String? ?? 'Fully Service-Eligible',
+        subscriptionNextDueOn: json['subscription_next_due_on'] != null
+            ? DateTime.tryParse(json['subscription_next_due_on'] as String)
+            : null,
+        subscriptionPaymentsMade:
+            json['subscription_payments_made'] as int? ?? 0,
       );
 }
 
