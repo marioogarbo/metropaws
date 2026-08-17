@@ -107,6 +107,27 @@ def start_subscription(
     return subscription
 
 
+def cancel_for_pet(db: Session, pet: models.Pet) -> None:
+    """End any live instalment arrangement for this pet.
+
+    Called when the pet's plan is bought OUTRIGHT. Nobody pays monthly and
+    annually for the same plan at once, and leaving the row behind is worse than
+    untidy: `for_pet` would keep finding it, so a member who has just paid a full
+    year up front would still be gated as an unvested subscriber, still shown
+    "Vesting in Progress", and still described as paying monthly.
+
+    Idempotent, and a no-op for the overwhelming majority of pets, which have no
+    subscription at all.
+    """
+    subscription = for_pet(db, pet)
+    if subscription is None:
+        return
+    subscription.status = models.SubscriptionStatus.cancelled
+    subscription.cancelled_at = datetime.now(timezone.utc)
+    subscription.next_due_on = None
+    db.flush()
+
+
 def benefit_class_for_category(category_name: str | None) -> BenefitClass:
     """Which threshold a claim under this service category has to clear.
 

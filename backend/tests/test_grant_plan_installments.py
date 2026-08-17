@@ -168,3 +168,41 @@ def test_granting_an_annual_payment_twice_does_not_move_activation(
     _grant_plan(db, payment)
 
     assert pet.plan_activated_at == first
+
+
+def test_buying_outright_ends_the_instalment_arrangement(db, plan, subscribed):
+    """purchase_eligibility allows a monthly subscriber to upgrade mid-term to a
+    higher plan. Paying that annually must close the subscription — otherwise
+    for_pet keeps finding it and the member stays gated as unvested despite
+    having just paid a full year up front."""
+    member, pet, subscription, _ = subscribed
+    annual = models.Payment(
+        member_id=member.id,
+        plan_id=plan.id,
+        pet_id=pet.id,
+        amount_php=9999,
+        status=models.PaymentStatus.pending,
+    )
+    db.add(annual)
+    db.flush()
+
+    _grant_plan(db, annual)
+
+    assert subscription.status == models.SubscriptionStatus.cancelled
+
+
+def test_after_buying_outright_the_pet_reads_as_annual(db, plan, subscribed):
+    member, pet, subscription, _ = subscribed
+    annual = models.Payment(
+        member_id=member.id,
+        plan_id=plan.id,
+        pet_id=pet.id,
+        amount_php=9999,
+        status=models.PaymentStatus.pending,
+    )
+    db.add(annual)
+    db.flush()
+
+    _grant_plan(db, annual)
+
+    assert pet.plan_cadence == 'annual'

@@ -559,6 +559,13 @@ def _grant_plan(db: Session, payment: models.Payment) -> None:
             if pet:
                 is_renewal = pet.plan_activated_at is not None
                 grant_plan_to_pet(db, pet, plan, member)
+                if subscription is None:
+                    # Bought outright, so any instalment arrangement for this pet
+                    # is over. Without this a monthly subscriber who upgrades to
+                    # a higher plan annually — which purchase_eligibility allows
+                    # mid-term — keeps a live subscription, and stays gated as
+                    # unvested despite having just paid a full year up front.
+                    subscription_utils.cancel_for_pet(db, pet)
         else:
             is_renewal = member.plan_type is not None
             grant_plan_to_member(db, member, plan)
