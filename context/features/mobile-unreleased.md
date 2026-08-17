@@ -46,6 +46,26 @@ Shipping this build before the prod backend deploy gives every monthly action a
 
 No backend change required; `PUT /pets/{id}` already accepted this.
 
+### 3. Light mode only, and a reworked Home header and nav
+
+- **The app is light only.** `main.dart` pins `ThemeMode.light` whatever the
+  device says, and the Appearance picker is gone from Account. `buildDarkTheme()`
+  and `ThemeCubit` stay wired but unreached, so it is two edits to restore.
+- **The plan tier badge is gone from the Home header.** It showed the HIGHEST
+  tier across a member's pets, so one Premium pet made a mixed household read as
+  Premium — and a monthly subscriber with no benefits yet read as though they
+  held the whole plan. Tier stays on each pet card, where it is accurate.
+- **PawPoints** is now the coin, the balance, and "pts", with the balance grouped
+  (1,800). The wordmark was naming what the icon already said.
+- **The bottom nav is a floating capsule** with the page running underneath it,
+  a raised centre Claim action, and an oval active indicator.
+- **Pet health records**: vaccination card add/replace, and care notes moved out
+  of Pet Details.
+
+Members on the current build will notice the theme and the navigation
+immediately, so these are worth a line in the Play release notes even though
+neither is a feature.
+
 ---
 
 ## Before building
