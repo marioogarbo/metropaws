@@ -47,6 +47,9 @@ class PetOut(BaseModel):
     plan_id: Optional[str] = None
     plan_type: Optional[str] = None
     plan_activated_at: Optional[datetime] = None
+    # 'annual' | 'monthly' — HOW the plan is paid, which the plan list needs
+    # so it does not claim a monthly subscriber holds an annual plan.
+    plan_cadence: str = "annual"
     created_at: datetime
     pet_services: List[PetServiceOut] = []
 

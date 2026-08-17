@@ -127,8 +127,27 @@ class Pet(Base):
 
     member = relationship("Member", back_populates="pets")
     plan = relationship("Plan")
+    # At most one, and usually none — only monthly subscribers have a row.
+    subscription = relationship(
+        "Subscription", back_populates="pet", uselist=False
+    )
     service_logs = relationship("ServiceLog", back_populates="pet")
     pet_services = relationship("PetService", back_populates="pet", cascade="all, delete-orphan")
+
+    @property
+    def plan_cadence(self) -> str:
+        """'monthly' when this pet's plan is paid in instalments, else
+        'annual'.
+
+        Lets a screen say HOW a plan is paid, not just which one it is.
+        Without it the plan list marks Deluxe "Current plan" under both the
+        yearly and monthly tabs, which tells a monthly subscriber they hold
+        an annual plan they never bought.
+        """
+        sub = self.subscription
+        if sub is None or sub.status == SubscriptionStatus.cancelled:
+            return "annual"
+        return "monthly"
 
     @property
     def is_profile_verified(self) -> bool:
@@ -484,7 +503,7 @@ class Subscription(Base):
     updated_at   = Column(DateTime(timezone=True), onupdate=func.now())
 
     member = relationship("Member")
-    pet    = relationship("Pet")
+    pet    = relationship("Pet", back_populates="subscription")
     plan   = relationship("Plan")
 
 

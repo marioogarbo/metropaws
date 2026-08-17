@@ -69,6 +69,9 @@ class Pet {
   final String? planId;
   final String? planType;
   final DateTime? planActivatedAt;
+  /// 'annual' or 'monthly' — HOW this pet's plan is paid. Defaults to
+  /// annual, which is what every pet was before instalments existed.
+  final String planCadence;
   final DateTime createdAt;
   final List<PetService> petServices;
 
@@ -98,6 +101,7 @@ class Pet {
     this.planId,
     this.planType,
     this.planActivatedAt,
+    this.planCadence = 'annual',
     required this.createdAt,
     this.petServices = const [],
     this.photoFullBodyUrl,
@@ -232,6 +236,7 @@ class Pet {
     notes: json['notes'] as String?,
     planId: json['plan_id'] as String?,
     planType: json['plan_type'] as String?,
+    planCadence: json['plan_cadence'] as String? ?? 'annual',
     planActivatedAt: json['plan_activated_at'] != null
         ? DateTime.parse(json['plan_activated_at'] as String)
         : null,

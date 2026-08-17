@@ -90,3 +90,25 @@ def test_a_reopened_subscription_gates_claims_again(db, plan, pet):
     )
 
     assert reason is not None
+
+
+def test_a_pet_without_a_subscription_reads_as_annual(db, make_member, make_pet):
+    """The plan list keys its badge off this — an annual member must never be
+    described as paying monthly, or vice versa."""
+    pet = make_pet(make_member())
+
+    assert pet.plan_cadence == 'annual'
+
+
+def test_a_subscribed_pet_reads_as_monthly(db, plan, pet):
+    subs.start_subscription(db, pet, plan)
+
+    assert pet.plan_cadence == 'monthly'
+
+
+def test_a_cancelled_subscription_reads_as_annual_again(db, plan, pet):
+    subscription = subs.start_subscription(db, pet, plan)
+    subscription.status = models.SubscriptionStatus.cancelled
+    db.flush()
+
+    assert pet.plan_cadence == 'annual'

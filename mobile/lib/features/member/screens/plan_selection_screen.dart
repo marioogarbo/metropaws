@@ -198,6 +198,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
               onSelect: _onSelectPlan,
               cadence: _cadence,
               onCadenceChanged: (value) => setState(() => _cadence = value),
+              petCadence: widget.pet.planCadence,
             ),
             if (_isCheckoutLoading)
               const ColoredBox(
@@ -256,6 +257,7 @@ class _PlansBody extends StatelessWidget {
   final void Function(Plan) onSelect;
   final String cadence;
   final ValueChanged<String> onCadenceChanged;
+  final String petCadence;
 
   const _PlansBody({
     required this.plans,
@@ -266,6 +268,7 @@ class _PlansBody extends StatelessWidget {
     required this.onSelect,
     required this.cadence,
     required this.onCadenceChanged,
+    required this.petCadence,
   });
 
   /// Only offer the choice when at least one visible plan actually has a
@@ -411,6 +414,7 @@ class _PlansBody extends StatelessWidget {
                   paymentsEnabled: paymentsEnabled,
                   onSelect: () => onSelect(plan),
                   cadence: cadence,
+                  petCadence: petCadence,
                 ),
               )),
             ],
@@ -445,18 +449,30 @@ class _PlanCard extends StatelessWidget {
   /// 'annual' or 'monthly' — which price this card is quoting.
   final String cadence;
 
+  /// How the pet's CURRENT plan is actually paid, which is a different
+  /// question from which price the member is browsing.
+  final String petCadence;
+
   const _PlanCard({
     required this.plan,
     required this.quote,
     required this.paymentsEnabled,
     required this.onSelect,
     required this.cadence,
+    required this.petCadence,
   });
 
   /// True only when the member picked monthly AND this plan actually offers it.
   /// A plan with no monthly price always shows its annual figure rather than a
   /// blank one.
   bool get isMonthly => cadence == 'monthly' && plan.priceMonthly != null;
+
+  /// The badge has to say HOW the plan is paid, not just which one it is.
+  /// A monthly subscriber flipping to the yearly tab was being told they
+  /// hold an annual Deluxe — a plan they never bought — because eligibility
+  /// is computed from the plan tier alone and knows nothing about cadence.
+  String get currentCadenceLabel =>
+      petCadence == 'monthly' ? 'Current · monthly' : 'Current · yearly';
 
   /// CTA copy per upgrade/renewal state. 'lower_plan'/'benefits_used' never
   /// reach this card — _PlansBody hides those entirely rather than showing
@@ -524,7 +540,7 @@ class _PlanCard extends StatelessWidget {
                           border: Border.all(color: AppColors.gold, width: 1.5),
                         ),
                         child: Text(
-                          'Current plan',
+                          currentCadenceLabel,
                           style: tt.labelSmall?.copyWith(
                             color: isDark ? AppColors.gold : AppColors.goldDark,
                             fontWeight: FontWeight.w700,
