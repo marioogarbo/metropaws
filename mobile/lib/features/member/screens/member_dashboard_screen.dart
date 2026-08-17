@@ -4584,6 +4584,11 @@ class _MpNavBar extends StatelessWidget {
     final bottomPad = MediaQuery.of(context).padding.bottom;
     final tabs = _tabs;
 
+    // Shared by the four tabs AND by the Claim caption's spacer, so the two
+    // can never fall out of alignment when one is tweaked.
+    const iconSize = 25.0;
+    const labelSize = 10.0;
+
     Widget tabItem(int index, _NavItem tab) {
       final isSelected = index == currentIndex;
       return Expanded(
@@ -4619,7 +4624,7 @@ class _MpNavBar extends StatelessWidget {
                 children: [
                   Icon(
                     isSelected ? tab.selectedIcon : tab.icon,
-                    size: 22,
+                    size: iconSize,
                     color: isSelected ? activeColor : inactiveColor,
                   ),
                   const SizedBox(height: 2),
@@ -4628,7 +4633,7 @@ class _MpNavBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 11,
+                      fontSize: labelSize,
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected ? activeColor : inactiveColor,
@@ -4647,7 +4652,7 @@ class _MpNavBar extends StatelessWidget {
     // receiving taps in the overflowing region, so the button would look
     // raised and then ignore the top half of every press.
     const barHeight = 62.0;
-    const lift = 16.0;
+    const lift = 24.0;
     const circle = 52.0;
 
     // The raised gold action — visually distinct from the tabs so it reads as
@@ -4731,13 +4736,13 @@ class _MpNavBar extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const SizedBox(height: 22),
+                            const SizedBox(height: iconSize),
                             const SizedBox(height: 2),
                             Text(
                               'Claim',
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
-                                fontSize: 11,
+                                fontSize: labelSize,
                                 fontWeight: FontWeight.w700,
                                 color: isDark ? AppColors.gold : AppColors.navy,
                               ),
