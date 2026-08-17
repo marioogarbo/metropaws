@@ -461,3 +461,42 @@ ThemeData buildDarkTheme() {
     ),
   );
 }
+
+// ── Responsive breakpoints ─────────────────────────────────────────────────
+// Widths are logical pixels (dp), which is what MediaQuery reports.
+//
+// The floor we support properly is 320dp. That is not an exotic device: it is
+// what an ordinary 360dp handset becomes at Samsung's largest "Screen zoom"
+// setting, which raises density and shrinks the effective dp width for every
+// app. Samsung is now rolling the same control out per-app, so this is getting
+// more common, not less.
+//
+// The Galaxy Z Fold cover displays sit just above that floor — roughly 329dp
+// (Fold 3/4/5), 344dp (Fold 6) and 360dp (Fold 7) — which is why `narrow` is
+// set at 360 rather than 340: a Fold 7 cover screen is exactly 360dp and
+// should still get the tightened layout, and so should a 360dp phone whose
+// owner has scaled text up.
+//
+// The Z Flip's CLOSED cover screen (~260dp) is deliberately out of scope.
+class Breakpoints {
+  /// At or below this width, rows reflow and chrome tightens.
+  static const double narrow = 360.0;
+
+  /// Material's compact/medium window boundary. Nothing uses it yet; it is
+  /// here so a future tablet layout has a named number instead of a literal.
+  static const double medium = 600.0;
+}
+
+extension ResponsiveContext on BuildContext {
+  double get screenWidth => MediaQuery.sizeOf(this).width;
+
+  bool get isNarrow => screenWidth <= Breakpoints.narrow;
+
+  /// True when the layout is squeezed EITHER by a narrow screen or by scaled-up
+  /// text. Both close the same gap, and a row that has to reflow for one has to
+  /// reflow for the other — branching on width alone leaves a 411dp phone at
+  /// 1.5x font scale broken. 14sp is the body size; past ~17 it stops fitting
+  /// beside a peso figure on one line.
+  bool get isTight =>
+      isNarrow || MediaQuery.textScalerOf(this).scale(14) > 17;
+}

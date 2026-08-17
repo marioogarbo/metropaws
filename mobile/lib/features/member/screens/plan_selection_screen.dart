@@ -429,9 +429,11 @@ class _PlansBody extends StatelessWidget {
             children: [
               Icon(Icons.lock_outline_rounded, size: 13, color: cs.onSurfaceVariant),
               const SizedBox(width: 6),
-              Text(
-                'Secured by PayMongo',
-                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              Flexible(
+                child: Text(
+                  'Secured by PayMongo',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
               ),
             ],
           ),

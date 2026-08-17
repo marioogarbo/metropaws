@@ -1260,10 +1260,12 @@ class _DoneStep extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  'Waiting for payment confirmation…',
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: cs.onSurfaceVariant),
+                Flexible(
+                  child: Text(
+                    'Waiting for payment confirmation…',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
                 ),
               ],
             ),

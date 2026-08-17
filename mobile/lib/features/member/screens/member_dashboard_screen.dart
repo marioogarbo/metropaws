@@ -1186,11 +1186,15 @@ class _NoPetsCard extends StatelessWidget {
                     color: AppColors.text,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    'Add Your Pet',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      'Add Your Pet',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -1551,13 +1555,22 @@ class _DigitalIdCard extends StatelessWidget {
               child: _ScaleButton(
                 onTap: onShowQr,
                 child: Container(
-                  height: 48,
+                  // minHeight, not height: the 48px box clipped the label at
+                  // large font scales. This keeps the 44px touch floor and
+                  // lets the button grow to two lines instead of truncating
+                  // the one action the card exists for.
+                  constraints: const BoxConstraints(minHeight: 48),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.gold,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(
@@ -1566,11 +1579,15 @@ class _DigitalIdCard extends StatelessWidget {
                         color: AppColors.text,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Show Digital Pawprint',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppColors.text,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          'Show Digital Pawprint',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: AppColors.text,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ),
                     ],
@@ -1645,11 +1662,15 @@ class _PlanActionLink extends StatelessWidget {
                 color: urgent ? AppColors.gold : onCardMuted,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: urgent ? AppColors.gold : onCardMuted,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: urgent ? AppColors.gold : onCardMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -2069,51 +2090,66 @@ class _WalletSummaryRow extends StatelessWidget {
         ? onCardMuted.withValues(alpha: 0.55)
         : accent;
 
+    final labelText = Text(
+      label,
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: onCard,
+        fontWeight: FontWeight.w600,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
+    final amountText = Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: pesoFromCentavos(safeRemaining),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: valueColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          TextSpan(
+            text: available
+                ? ' left of ${pesoFromCentavos(totalCentavos)}'
+                : ' · not available yet',
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: onCardMuted),
+          ),
+        ],
+      ),
+    );
+
+    // "Preventive Wellness" beside "₱25,000.00 left of ₱25,000.00" stops
+    // fitting on one line on a narrow screen or at a large font scale — and
+    // the amount was the UNCONSTRAINED child of that Row, so it overflowed
+    // rather than ellipsising. Stacking is the honest fix: the label keeps its
+    // meaning, the figure keeps every digit, and the meter below still spans
+    // the full width either way.
+    final meterHeader = context.isTight
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [labelText, const SizedBox(height: 3), amountText],
+          )
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Flexible(child: labelText),
+              const SizedBox(width: 8),
+              Flexible(child: amountText),
+            ],
+          );
+
     final row = Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: onCard,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: pesoFromCentavos(safeRemaining),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: valueColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextSpan(
-                      text: available
-                          ? ' left of ${pesoFromCentavos(totalCentavos)}'
-                          : ' · not available yet',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelSmall?.copyWith(color: onCardMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          meterHeader,
           const SizedBox(height: 7),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: progress),
@@ -2285,11 +2321,15 @@ class _NoPlanBlock extends StatelessWidget {
                           color: AppColors.text,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'Choose a plan',
-                          style: tt.labelLarge?.copyWith(
-                            color: AppColors.text,
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: Text(
+                            'Choose a plan',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: tt.labelLarge?.copyWith(
+                              color: AppColors.text,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -4745,9 +4785,19 @@ class _MpNavBar extends StatelessWidget {
     final bottomPad = MediaQuery.of(context).padding.bottom;
     final tabs = _tabs;
 
+    // Four labelled tabs plus a 52px circle is the tightest thing in the app.
+    // At 320dp the default insets leave ~50px of content per tab and "Account"
+    // ellipsises to "Accoun…". Reclaiming the outer margin and the inter-tab
+    // padding buys back ~9px each, which is the difference between a readable
+    // label and a truncated one. Nothing is hidden — on a nav bar the label IS
+    // the affordance, and these users span a wide age range.
+    final tight = context.isNarrow;
+    final sideInset = tight ? 8.0 : 16.0;
+    final tabPad = tight ? 2.0 : 4.0;
+
     // Shared by the four tabs AND by the Claim caption's spacer, so the two
     // can never fall out of alignment when one is tweaked.
-    const iconSize = 25.0;
+    final iconSize = tight ? 23.0 : 25.0;
     const labelSize = 10.0;
 
     Widget tabItem(int index, _NavItem tab) {
@@ -4766,7 +4816,7 @@ class _MpNavBar extends StatelessWidget {
           // capsule. Filling the slot also hands the label the full width, which
           // is what stops "Account" ellipsizing.
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: tabPad, vertical: 6),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 240),
               curve: Curves.easeOutCubic,
@@ -4853,9 +4903,9 @@ class _MpNavBar extends StatelessWidget {
       // Inset on every side so the bar reads as a lifted object with the page
       // running underneath, not a chrome strip welded to the bottom edge.
       padding: EdgeInsets.fromLTRB(
-        16,
+        sideInset,
         0,
-        16,
+        sideInset,
         (bottomPad > 0 ? bottomPad : 12) + 10,
       ),
       child: SizedBox(
@@ -4902,7 +4952,7 @@ class _MpNavBar extends StatelessWidget {
                     tabItem(0, tabs[0]),
                     tabItem(1, tabs[1]),
                     SizedBox(
-                      width: circle + 4,
+                      width: circle + (tight ? 0 : 4),
                       // Mirrors a tab's column — an empty box where the icon
                       // would be, then the same 2px gap — so the caption lands
                       // on exactly the same baseline as the other four instead
@@ -4911,7 +4961,7 @@ class _MpNavBar extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const SizedBox(height: iconSize),
+                            SizedBox(height: iconSize),
                             const SizedBox(height: 2),
                             Text(
                               'Claim',
