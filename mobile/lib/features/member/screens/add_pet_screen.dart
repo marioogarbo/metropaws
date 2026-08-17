@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/plan.dart';
 import '../../../core/models/plan_quote.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/widgets/cadence_toggle.dart';
 import '../../../core/widgets/agreement_checkbox.dart';
 import '../../../core/widgets/mp_button.dart';
 import '../../../core/widgets/mp_dropdown_field.dart';
@@ -79,6 +80,11 @@ class _AddPetScreenState extends State<AddPetScreen> {
   Map<String, PlanQuote> _quotes = {};
   bool _plansLoading = true;
   String? _selectedPlanId;
+
+  /// 'annual' or 'monthly'. Registration is the other place a plan is
+  /// bought, so it has to offer the same choice as PlanSelectionScreen --
+  /// a member who signs up here would otherwise never see monthly at all.
+  String _cadence = 'annual';
   bool _agreementAccepted = false;
 
   // Post-activation payment tracking. The payment id MUST be kept: polling
@@ -272,7 +278,11 @@ class _AddPetScreenState extends State<AddPetScreen> {
 
       final paymentsEnabled = await ApiService.fetchPaymentsEnabled();
       if (paymentsEnabled) {
-        final checkout = await ApiService.createCheckout(_selectedPlanId!, petId);
+        final checkout = await ApiService.createCheckout(
+          _selectedPlanId!,
+          petId,
+          cadence: _cadence,
+        );
         if (mounted) {
           setState(() {
             _checkoutUrl = checkout.checkoutUrl;
@@ -393,6 +403,8 @@ class _AddPetScreenState extends State<AddPetScreen> {
                     plansLoading: _plansLoading,
                     selectedPlanId: _selectedPlanId,
                     onPlanSelected: (id) => setState(() => _selectedPlanId = id),
+                    cadence: _cadence,
+                    onCadenceChanged: (v) => setState(() => _cadence = v),
                     agreementAccepted: _agreementAccepted,
                     onAgreementChanged: (v) => setState(() => _agreementAccepted = v),
                     isLoading: _isLoading,
@@ -893,6 +905,8 @@ class _PlanStep extends StatelessWidget {
   final bool plansLoading;
   final String? selectedPlanId;
   final void Function(String?) onPlanSelected;
+  final String cadence;
+  final ValueChanged<String> onCadenceChanged;
   final bool agreementAccepted;
   final ValueChanged<bool> onAgreementChanged;
   final bool isLoading;
@@ -906,6 +920,8 @@ class _PlanStep extends StatelessWidget {
     required this.plansLoading,
     required this.selectedPlanId,
     required this.onPlanSelected,
+    required this.cadence,
+    required this.onCadenceChanged,
     required this.agreementAccepted,
     required this.onAgreementChanged,
     required this.isLoading,
@@ -940,13 +956,19 @@ class _PlanStep extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           )
-        else
+        else ...[
+          if (plans.any((p) => p.priceMonthly != null)) ...[
+            CadenceToggle(cadence: cadence, onChanged: onCadenceChanged),
+            const SizedBox(height: 16),
+          ],
           ...plans.map((plan) => _PlanCard(
             plan: plan,
             quote: quotes[plan.id],
             isSelected: plan.id == selectedPlanId,
             onTap: () => onPlanSelected(plan.id),
+            cadence: cadence,
           )),
+        ],
         const SizedBox(height: 20),
         // Pre-payment agreement gate — must be re-confirmed before money moves.
         AgreementCheckbox(
@@ -982,13 +1004,19 @@ class _PlanCard extends StatelessWidget {
   final PlanQuote? quote;
   final bool isSelected;
   final VoidCallback onTap;
+  final String cadence;
 
   const _PlanCard({
     required this.plan,
     required this.quote,
     required this.isSelected,
     required this.onTap,
+    required this.cadence,
   });
+
+  /// Monthly only applies where the plan actually offers it; anything else
+  /// keeps showing its annual figure rather than a blank one.
+  bool get isMonthly => cadence == 'monthly' && plan.priceMonthly != null;
 
   static String _comma(int n) => n.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
@@ -1056,7 +1084,7 @@ class _PlanCard extends StatelessWidget {
                         children: [
                           // Pack Discount: struck-through full price ahead of
                           // the server-quoted final. Never computed on-device.
-                          if (quote?.hasDiscount ?? false)
+                          if (!isMonthly && (quote?.hasDiscount ?? false))
                             TextSpan(
                               text: '₱${_comma(quote!.fullPhp)}  ',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1065,7 +1093,9 @@ class _PlanCard extends StatelessWidget {
                               ),
                             ),
                           TextSpan(
-                            text: '₱${_comma(quote?.finalPhp ?? plan.price)} /year',
+                            text: isMonthly
+                                ? '₱${_comma(plan.priceMonthly!)} /month'
+                                : '₱${_comma(quote?.finalPhp ?? plan.price)} /year',
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.w800,
                               color: isSelected ? AppColors.gold : cs.onSurface,

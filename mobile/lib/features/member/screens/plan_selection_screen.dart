@@ -9,7 +9,7 @@ import '../../../core/models/pet.dart';
 import '../../../core/models/plan.dart';
 import '../../../core/models/plan_quote.dart';
 import '../../../core/widgets/agreement_checkbox.dart';
-import '../../../core/widgets/scale_button.dart';
+import '../../../core/widgets/cadence_toggle.dart';
 import '../../../theme.dart';
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event.dart';
@@ -398,7 +398,7 @@ class _PlansBody extends StatelessWidget {
               if (_anyMonthlyOffered)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: _CadenceToggle(
+                  child: CadenceToggle(
                     cadence: cadence,
                     onChanged: onCadenceChanged,
                   ),
@@ -429,73 +429,6 @@ class _PlansBody extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Annual / monthly choice. Two segments rather than a switch, because neither
-/// option is the "off" state — paying monthly is a different arrangement, not a
-/// disabled version of paying annually.
-class _CadenceToggle extends StatelessWidget {
-  final String cadence;
-  final ValueChanged<String> onChanged;
-
-  const _CadenceToggle({required this.cadence, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-
-    Widget segment(String value, String label) {
-      final selected = cadence == value;
-      return Expanded(
-        child: ScaleButton(
-          onTap: () => onChanged(value),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 44),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? cs.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              label,
-              style: tt.labelLarge?.copyWith(
-                color: selected ? cs.onPrimary : cs.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(
-            children: [
-              segment('annual', 'Pay yearly'),
-              segment('monthly', 'Pay monthly'),
-            ],
-          ),
-        ),
-        if (cadence == 'monthly') ...[
-          const SizedBox(height: 8),
-          Text(
-            'Monthly memberships start with app access, and benefits open up '
-            'as your payments continue.',
-            style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-        ],
-      ],
     );
   }
 }
