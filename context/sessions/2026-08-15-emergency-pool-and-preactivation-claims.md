@@ -457,3 +457,54 @@ and production are both unchanged since the release verified above.
 
 `main` pushed to `origin` at `7c0a1b3`. Production unchanged — still
 `metropaws-backend:20260817-095534`, which has the schema but not these routes.
+
+---
+
+# Device testing, 2026-08-17 — six bugs the suite could not see
+
+Mario ran the monthly flow on a real Samsung against a local backend. It found
+six defects, four of them about money, none reachable by `flutter analyze` or by
+a green test suite. Full write-up in
+[`../features/monthly-subscriptions.md`](../features/monthly-subscriptions.md);
+the one with the widest blast radius is worth repeating here because it is not a
+monthly problem:
+
+**`_grant_plan` can run twice for the same payment.** Its four callers each check
+the payment is still pending first, but two can observe that at the same instant.
+Proven on dev: one ₱600 instalment ran the body twice, twelve seconds apart. The
+PawPoints award was unaffected because it is keyed on `payment.id`; the
+subscription counter was not, and neither was `grant_plan_to_pet` — which
+rebuilds a pet's benefits and resets `plan_activated_at`, the timestamp
+`wallet_usage` windows on. So the annual path had a latent wallet-reset of its
+own. One guard at the top of the function now covers all of it.
+
+## Getting a device to run at all
+
+Worth writing down, since most of the session's friction was here rather than in
+the code.
+
+- The **emulator is unusable on this laptop** at the stock AVD settings — 2 GB
+  RAM and 4 cores on an Android 17 `ps16k` Play image. `Pixel_6` (the only
+  non-Play image of the three) was retuned to 6 GB / 8 cores / `hw.gpu.mode=host`;
+  a lighter API 34 image would help more but is not installed.
+- `flutter emulators` lists what is **configured**; `flutter run -d` sees only
+  what is **booted**. Wait for `adb shell getprop sys.boot_completed` = 1.
+- **`adb reverse tcp:8000 tcp:8000` is the right way to reach a local backend
+  from a phone** — no rebinding uvicorn, no firewall rule, no LAN IP, works with
+  Wi-Fi off. It does **not** survive a reconnect, and `flutter run` re-attaching
+  is enough to drop it. A phone that suddenly cannot log in is this, first.
+- A **release-signed build already on the device blocks a debug install**
+  (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Both the emulator (an April 1.0.0
+  build) and Mario's phone (Play 1.4.1) had to be uninstalled. The alternative —
+  an `applicationIdSuffix` so both can coexist — was offered and not taken.
+- Dev and production accounts share email addresses but are **different accounts
+  in different databases**. Production credentials will not log in to dev, and
+  every token issued before the 2026-08-14 `SECRET_KEY` rotation is dead
+  everywhere.
+
+## State
+
+`feature/mobile-monthly` (renamed from `staging` — that name already means the
+separate website repo that Vercel serves against the dev backend). 496 backend
+tests, `flutter analyze` clean. Pushed, **nothing deployed** — dev's backend
+predates these fixes and production has only the schema.

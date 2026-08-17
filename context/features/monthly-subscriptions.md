@@ -1,16 +1,43 @@
 # Monthly subscriptions and vesting
 
-**Status:** backend complete, on `main`, and **live on dev**
-(`metropaws-backend-dev:20260817-103725`, 96 paths / 118 operations). **No mobile
-UI**, so no member can reach it yet. Production has the **schema** (migrated
-2026-08-17) but not these endpoints — its next deploy is the first this session
-that will move the route surface, by exactly one path.
+**Status:** backend and mobile both built, on `feature/mobile-monthly`, and
+**exercised end to end on a real device** 2026-08-17 — a monthly Deluxe was
+bought, charged ₱600, and activated. Production has the **schema** (migrated
+2026-08-17) but neither the endpoints nor the app; dev has the backend as of
+`metropaws-backend-dev:20260817-103725`, which predates the fixes below.
 **Decided 2026-08-16** by Mario: monthly is wanted, for members who can't afford
 the annual fee or aren't ready to commit.
 
 Governed by Membership Agreement Rev. 5A §5.2–§5.10. Those sections are the spec
 — read them at [`/terms-of-service`](../../website/app/terms-of-service/page.tsx)
 before changing anything here.
+
+## Nothing here was invented
+
+Every rule traces to a clause of Rev. 5A. Worth stating because the direction
+is the opposite of how it tends to get read: the agreement **already promised**
+vesting and the system did not do it. This work closed a gap between a
+published contract and the code, in the same category as the Emergency Wallet
+being unreachable and pre-activation claims being payable.
+
+| Behaviour | Clause |
+| --- | --- |
+| Monthly instalment subscriptions exist at all | §5.2 |
+| First cleared payment buys digital access only | §5.3 |
+| Benefits need N *consecutive* cleared payments | §5.4 |
+| 6 / 8 / 10 planned, 3 / 3 / 4 emergency | §5.5 |
+| Late payment may suspend and reset the qualifying period | §5.6 |
+| Member status labels | §5.7 |
+| No benefit for a service predating the eligibility date | §5.8 |
+| Annual members skip vesting entirely | §5.9 |
+| Activation, eligibility, authorisation, settlement are separate | §5.10 |
+
+The one part **no document backs** is the monthly prices themselves
+(₱300 / ₱600 / ₱900). They appear in `seed.py`, the database and the website
+pricing toggle, but no peso figure for monthly appears in the Agreement, and
+the manual catalogue in [`document-system-alignment.md`](./document-system-alignment.md)
+records only annual prices. Unverified against the Manual PDF, which cannot be
+read in this environment.
 
 ## The rules, and where they live
 
@@ -105,18 +132,79 @@ Pack Discount applies to instalments — it is 15% off an *annual* plan as a
 joining incentive, and per-instalment it would discount the same year twelve
 times over.
 
+## The mobile side
+
+Three screens, and the count matters — see the drift note below.
+
+- **Plan selection** and **Add-a-Pet** both sell plans, so both carry the
+  `CadenceToggle` (`core/widgets/cadence_toggle.dart`, shared deliberately). The
+  toggle only appears when a visible plan actually has a `priceMonthly`.
+- **Benefits card**, **Home pet card** and the **Submit form** all render wallet
+  balances, so all three had to learn that an unvested pool is not spendable.
+
+The Pack Discount is suppressed on every monthly surface: it is 15% off a YEAR,
+so per instalment it would discount the same year twelve times.
+
+Paying an instalment reuses the existing `Checkout*` bloc states, so the
+launch-and-poll handling that stops a paid member being stranded covers it
+unchanged. `WalletPetOut` carries everything the UI needs —
+`membership_status_label` is rendered verbatim so the contract's wording is never
+compiled into a release.
+
+## Six bugs a real device found that nothing else did
+
+Recorded because every one was invisible to `flutter analyze` and to a green test
+suite, and four of them were about money.
+
+1. **Monthly never appeared at registration.** A plan is bought from TWO screens
+   and only `PlanSelectionScreen` had been taught. New members — the majority —
+   silently got annual.
+2. **`_grant_plan` is not called once per payment.** Its four callers (webhook,
+   poll, return page, profile reconcile) each check the payment is still pending,
+   but two can observe that at the same instant. On dev a single ₱600 instalment
+   ran the body twice twelve seconds apart and left the counter at 2. The
+   PawPoints award survived because it is keyed on `payment.id`; nothing else was.
+   **The guard now sits at the top of `_grant_plan`, so the whole function is
+   idempotent** — which also protects `grant_plan_to_pet` on the annual path,
+   where a second run would have reset the wallet year.
+3. **The wallet showed money that could not be spent.** The claim gate was right,
+   but a full pool in gold is the strongest possible claim that it is available.
+   Fixed server-side (`preventive_available` / `emergency_available`) rather than
+   by the app inferring it — the app has no thresholds, and duplicating the rule
+   is how surfaces drift.
+4. **"Current plan" appeared under both cadences.** `purchase_eligibility` reads
+   plan tier and term only; cadence is not part of the eligibility model at all.
+   `Pet.plan_cadence` supplies the missing half, and the badge now says
+   "Current · monthly" / "Current · yearly".
+5. **Buying outright left the subscription alive.** A monthly subscriber
+   upgrading to a higher plan annually — which §5.5's rules allow mid-term — kept
+   an active row, so they stayed gated as unvested after paying a full year up
+   front. Granting on a payment with no `subscription_id` now cancels it.
+6. **The vesting rule arrived as a red error after submitting a claim.** Correct
+   rule, wrong shape: nothing had gone wrong. Now an inline banner plus a disabled
+   button, keyed to the CATEGORY rather than the pet, because the two pools open
+   at different times and the answer differs on the same screen.
+
+### The drift pattern worth naming
+
+Three separate times now, a rule had to be taught to more than one surface, and
+the second was missed until someone looked: the Pack Discount across two plan
+screens, monthly across those same two, and pool availability across three wallet
+renderers. Before adding a fourth surface that renders a balance or sells a plan,
+extract the shared piece instead.
+
 ## Not built
 
-- **The entire mobile UI.** No monthly option at signup, no vesting display, no
-  "pay next instalment" action. This is the bulk of what remains and it is its
-  own release cycle — AAB plus Play review. `WalletPetOut` already serves
-  everything the app needs: `membership_status`, `membership_status_label`,
-  `subscription_next_due_on`, `subscription_payments_made`.
-- **Reminders** before an instalment falls due, and after it lapses.
+- **Reminders** before an instalment falls due, and after it lapses. Optional,
+  not blocking — the member can pay from the app unprompted.
 - **§5.6 admin restore** — the discretionary "restore to last approved
-  good-standing status" half of the policy. Only the automatic reset is built.
-- **Cancellation** — no endpoint sets `cancelled_at`; the status exists and is
-  honoured everywhere, but nothing can reach it yet.
+  good-standing status" half. Only the automatic reset exists.
+- **Cancellation** — `cancel_for_pet` exists and is called when a plan is bought
+  outright, but no member- or admin-facing endpoint reaches it.
+- **Same-tier cadence switching.** Deluxe monthly → Deluxe yearly is blocked
+  mid-term, because `purchase_eligibility` sees the same plan id and returns
+  `current_plan`. That is a side effect, not a decision. Allowing it needs
+  answers on crediting instalments already paid and on the wallet-year reset.
 
 ## Open with the client
 
