@@ -73,34 +73,49 @@ async def create_checkout(
             status_code=409, detail=plan_term_utils.eligibility_message(code)
         )
 
-    # Server-authoritative price: the Pack Discount (2nd/3rd pet on a lower
-    # plan) is computed here and snapshotted on the Payment row — the client
-    # never sends an amount. Exclude the pet being paid for so it can't anchor
-    # the discount on itself; `code` limits the discount to a pet's FIRST
-    # activation (upgrades and renewals pay full price).
-    quote = pricing_utils.pack_discount_quote(
-        db, member, plan, exclude_pet_id=pet.id, purchase_code=code
-    )
+    subscription = None
+    if payload.cadence == "monthly":
+        if not plan.price_monthly:
+            raise HTTPException(
+                status_code=400,
+                detail=f"The {plan.name} plan isn't available on monthly instalments.",
+            )
+        # No Pack Discount on instalments. It is 15% off an ANNUAL plan as a
+        # joining incentive for a second pet; applying it per instalment would
+        # discount the whole year twelve times over.
+        amount_php, discount_php = plan.price_monthly, 0
+        subscription = subscription_utils.start_subscription(db, pet, plan)
+        line_item_name = f"MetroPaws {plan.name} Plan — first monthly instalment"
+    else:
+        # Server-authoritative price: the Pack Discount (2nd/3rd pet on a lower
+        # plan) is computed here and snapshotted on the Payment row — the client
+        # never sends an amount. Exclude the pet being paid for so it can't anchor
+        # the discount on itself; `code` limits the discount to a pet's FIRST
+        # activation (upgrades and renewals pay full price).
+        quote = pricing_utils.pack_discount_quote(
+            db, member, plan, exclude_pet_id=pet.id, purchase_code=code
+        )
+        amount_php, discount_php = quote["final_php"], quote["discount_php"]
+        line_item_name = f"MetroPaws {plan.name} Plan"
+        if quote["discount_php"] > 0:
+            line_item_name += f" ({quote['discount_percent']}% Pack Discount)"
 
     payment = models.Payment(
         member_id=member.id,
         plan_id=plan.id,
         pet_id=pet.id,
-        amount_php=quote["final_php"],
-        discount_php=quote["discount_php"],
+        amount_php=amount_php,
+        discount_php=discount_php,
+        subscription_id=subscription.id if subscription else None,
         status=models.PaymentStatus.pending,
     )
     db.add(payment)
     db.flush()
 
-    line_item_name = f"MetroPaws {plan.name} Plan"
-    if quote["discount_php"] > 0:
-        line_item_name += f" ({quote['discount_percent']}% Pack Discount)"
-
     try:
         session = await paymongo.create_checkout_session(
             line_item_name=line_item_name,
-            amount_centavos=quote["final_php"] * 100,
+            amount_centavos=amount_php * 100,
             success_url=f"{success_base}?payment_id={payment.id}",
             cancel_url=f"{failure_base}?payment_id={payment.id}",
             reference_number=payment.id,
@@ -109,7 +124,8 @@ async def create_checkout(
                 "member_id": member.id,
                 "plan_id": plan.id,
                 "pet_id": pet.id,
-                "discount_php": str(quote["discount_php"]),
+                "discount_php": str(discount_php),
+                "cadence": payload.cadence,
             },
         )
     except Exception as e:
@@ -118,6 +134,103 @@ async def create_checkout(
 
     # Reuse provider_source_id to hold the Checkout Session id (cs_...) so no
     # DB migration is needed; the webhook matches the paid session by this id.
+    payment.provider_source_id = session["id"]
+    payment.checkout_url = session["attributes"]["checkout_url"]
+    db.commit()
+    db.refresh(payment)
+
+    return schemas.CheckoutResponse(
+        payment_id=payment.id,
+        checkout_url=payment.checkout_url,
+    )
+
+
+# NOTE: like /quotes, must be declared BEFORE /{payment_id}.
+@router.post("/installment", response_model=schemas.CheckoutResponse)
+async def pay_installment(
+    payload: schemas.InstallmentRequest,
+    current_user: models.User = Depends(auth_utils.require_member),
+    db: Session = Depends(get_db),
+):
+    """Pay the next monthly instalment on a pet's existing subscription.
+
+    Member-initiated by necessity, and that turns out to be the thing that makes
+    monthly workable at all: this backend has no scheduler to bill on a timer,
+    and PayMongo has no saved card to bill while only QR Ph is active. Paying
+    from the app needs neither. Reminders sit on top of this as an enhancement,
+    not a prerequisite.
+
+    Deliberately NOT /checkout: this is not a purchase. No upgrade or renewal
+    eligibility is evaluated and no Pack Discount applies, because nothing is
+    being bought — it is one payment against an arrangement that already exists.
+    """
+    if not get_payments_enabled(db):
+        raise HTTPException(
+            status_code=400, detail="Payments are currently disabled."
+        )
+
+    member = current_user.member
+    if not member:
+        raise HTTPException(status_code=400, detail="Member profile not found")
+
+    pet = (
+        db.query(models.Pet)
+        .filter(models.Pet.id == payload.pet_id, models.Pet.member_id == member.id)
+        .first()
+    )
+    if not pet:
+        raise HTTPException(status_code=404, detail="Pet not found")
+
+    subscription = subscription_utils.for_pet(db, pet)
+    if subscription is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{pet.name} isn't on a monthly membership.",
+        )
+
+    plan = db.query(models.Plan).filter(models.Plan.id == subscription.plan_id).first()
+    if not plan or not plan.price_monthly:
+        raise HTTPException(
+            status_code=400,
+            detail="This plan no longer offers monthly instalments. Contact support.",
+        )
+
+    base_url = config.env("BASE_URL", "http://localhost:8000").rstrip("/")
+    success_base = config.env("PAYMONGO_SUCCESS_REDIRECT", f"{base_url}/payments/return/success")
+    failure_base = config.env("PAYMONGO_FAILURE_REDIRECT", f"{base_url}/payments/return/failed")
+
+    payment = models.Payment(
+        member_id=member.id,
+        plan_id=plan.id,
+        pet_id=pet.id,
+        amount_php=plan.price_monthly,
+        subscription_id=subscription.id,
+        status=models.PaymentStatus.pending,
+    )
+    db.add(payment)
+    db.flush()
+
+    instalment_number = (subscription.consecutive_payments or 0) + 1
+    try:
+        session = await paymongo.create_checkout_session(
+            line_item_name=f"MetroPaws {plan.name} Plan — instalment {instalment_number}",
+            amount_centavos=plan.price_monthly * 100,
+            success_url=f"{success_base}?payment_id={payment.id}",
+            cancel_url=f"{failure_base}?payment_id={payment.id}",
+            reference_number=payment.id,
+            metadata={
+                "payment_id": payment.id,
+                "member_id": member.id,
+                "plan_id": plan.id,
+                "pet_id": pet.id,
+                "subscription_id": subscription.id,
+                "instalment": str(instalment_number),
+            },
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=502, detail=f"Payment provider error: {e}") from e
+
     payment.provider_source_id = session["id"]
     payment.checkout_url = session["attributes"]["checkout_url"]
     db.commit()

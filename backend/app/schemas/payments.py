@@ -1,12 +1,27 @@
 """Checkout, quotes, and payment records."""
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
 
 class CheckoutRequest(BaseModel):
     plan_id: str
+    pet_id: str
+    # "monthly" opens an installment subscription (Agreement §5.2) and charges
+    # the plan's monthly price instead of the annual one. Defaults to "annual",
+    # so an older app that never sends the field keeps its current behaviour.
+    cadence: Literal["annual", "monthly"] = "annual"
+
+
+class InstallmentRequest(BaseModel):
+    """Pay the next installment on a pet's existing monthly arrangement.
+
+    Deliberately member-initiated. This backend has no scheduler, so nothing can
+    bill a saved card on a timer — and PayMongo has no card to save while only
+    QR Ph is active. Paying from the app is what makes monthly work today;
+    reminders are an enhancement on top, not a prerequisite.
+    """
     pet_id: str
 
 

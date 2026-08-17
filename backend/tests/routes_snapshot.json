@@ -86,6 +86,7 @@
   "POST /members/me/reimbursements",
   "POST /members/me/reimbursements/{reimbursement_id}/resubmit",
   "POST /payments/checkout",
+  "POST /payments/installment",
   "POST /payments/webhook",
   "POST /pets/",
   "POST /pets/{pet_id}/activate-plan",

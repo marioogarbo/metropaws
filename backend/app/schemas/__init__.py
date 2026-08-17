@@ -77,6 +77,7 @@ from app.schemas.providers import (
 )
 from app.schemas.payments import (
     CheckoutRequest,
+    InstallmentRequest,
     CheckoutResponse,
     PlanQuoteOut,
     PaymentOut,
@@ -147,6 +148,7 @@ __all__ = [
     "BookingOut",
     "BookingStatus",
     "CheckoutRequest",
+    "InstallmentRequest",
     "CheckoutResponse",
     "ClinicBookingOut",
     "ClinicBriefOut",

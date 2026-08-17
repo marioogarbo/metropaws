@@ -111,6 +111,11 @@ class WalletPetOut(BaseModel):
     # app shows it without hardcoding a phrase that only the document may change.
     membership_status: str = "fully_service_eligible"
     membership_status_label: str = "Fully Service-Eligible"
+    # Monthly subscribers only — all None/0 for an annual member, which is how
+    # the app tells the two apart. next_due_on is what a "pay next instalment"
+    # action keys off, since nothing here bills automatically.
+    subscription_next_due_on: Optional[date] = None
+    subscription_payments_made: int = 0
 
 
 class WalletOut(BaseModel):

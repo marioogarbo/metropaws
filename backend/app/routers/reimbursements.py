@@ -572,6 +572,10 @@ def get_wallet(
                 plan_expires_at=term[1] if term else None,
                 membership_status=status.value,
                 membership_status_label=membership_status.label_for(status),
+                subscription_next_due_on=subscription.next_due_on if subscription else None,
+                subscription_payments_made=(
+                    subscription.consecutive_payments if subscription else 0
+                ),
             )
         )
 

@@ -75,6 +75,38 @@ def for_pet(db: Session, pet: models.Pet) -> models.Subscription | None:
     )
 
 
+def start_subscription(
+    db: Session, pet: models.Pet, plan: models.Plan
+) -> models.Subscription:
+    """Open (or reopen) this pet's monthly arrangement, awaiting its first payment.
+
+    Reuses the pet's existing row rather than inserting a second one — `pet_id`
+    is unique, and a member who cancelled and came back must not collide with
+    their own history. Reopening clears the counter and both eligibility stamps:
+    the new arrangement earns its vesting from scratch, which is what §5.8 means
+    by earlier payments not making prior services payable.
+    """
+    subscription = (
+        db.query(models.Subscription)
+        .filter(models.Subscription.pet_id == pet.id)
+        .first()
+    )
+    if subscription is None:
+        subscription = models.Subscription(member_id=pet.member_id, pet_id=pet.id)
+        db.add(subscription)
+
+    subscription.plan_id = plan.id
+    subscription.status = models.SubscriptionStatus.pending_first_payment
+    subscription.consecutive_payments = 0
+    subscription.emergency_eligible_since = None
+    subscription.planned_eligible_since = None
+    subscription.next_due_on = None
+    subscription.cancelled_at = None
+    subscription.suspended_at = None
+    db.flush()
+    return subscription
+
+
 def benefit_class_for_category(category_name: str | None) -> BenefitClass:
     """Which threshold a claim under this service category has to clear.
 
