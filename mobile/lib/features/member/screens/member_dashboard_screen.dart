@@ -156,10 +156,11 @@ class _MemberShellState extends State<_MemberShell> {
       },
       child: Scaffold(
         appBar: AppBar(
+          // The app bar is navy in both themes now, so the white wordmark is
+          // unconditional — the light/dark branch here was picking a navy
+          // wordmark for a navy bar.
           title: Image.asset(
-            Theme.of(context).brightness == Brightness.dark
-                ? 'assets/images/logo-full-white-metro.png'
-                : 'assets/images/logo-full.png',
+            'assets/images/logo-full-white-metro.png',
             height: 40,
             fit: BoxFit.contain,
             alignment: Alignment.centerLeft,
@@ -170,7 +171,7 @@ class _MemberShellState extends State<_MemberShell> {
               isLabelVisible: _unreadNotifications > 0,
               child: IconButton(
                 icon: const Icon(Icons.notifications_outlined),
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: AppColors.white,
                 tooltip: 'Notifications',
                 onPressed: () async {
                   final bloc = context.read<MemberBloc>();
@@ -845,35 +846,37 @@ class _DashboardState extends State<_Dashboard>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Screen heading ──────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+          // ── Member header (navy) ────────────────────────────────────
+          // One block, continuing the navy app bar down into the page
+          // rather than restarting the surface under it. Greeting, name,
+          // Founding badge, and PawPoints are all MEMBER-level facts, so
+          // they read as one zone; previously they were three unrelated
+          // things floating on cream with no boundary between "who you
+          // are" and "your pets", which is what made the screen feel
+          // structureless. The rounded foot is where the cream content
+          // field begins — the navy box, cream lining, gold seal.
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: AppColors.navy,
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(28),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.pets_rounded,
-                      size: 13,
-                      color: AppColors.gold,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_timeGreeting()},',
-                      style: tt.labelLarge?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                // The gold paw that used to sit here is gone: gold on navy
+                // is 2.9:1, and it was one of ten gold marks on a screen
+                // where gold is supposed to be the rarest thing.
+                Text(
+                  '${_timeGreeting()},',
+                  style: tt.labelLarge?.copyWith(
+                    color: AppColors.onNavyMuted,
+                  ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  widget.member.firstName,
-                  style: tt.displaySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
                 // Plan tier deliberately does NOT appear here. It was the
                 // HIGHEST tier across the member's pets, so someone with one
                 // Premium pet and two Standard ones read as "Premium" — and a
@@ -881,23 +884,64 @@ class _DashboardState extends State<_Dashboard>
                 // read as though they had the whole plan. Tier belongs to a
                 // pet, and every pet card already carries its own badge.
                 // Founding membership is genuinely member-level, so it stays.
-                if (widget.member.isFoundingMember) ...[
-                  const SizedBox(height: 10),
-                  _FoundingBadge(small: true),
-                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.member.firstName,
+                        style: tt.displaySmall?.copyWith(
+                          color: AppColors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (widget.member.isFoundingMember) ...[
+                      const SizedBox(width: 12),
+                      const _FoundingBadge.onNavy(),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.onNavyDivider,
+                ),
+                const SizedBox(height: 6),
+                // PawPoints — balance at a glance + shortcut to history and
+                // rewards. Inside the header it drops its own navy pill: a
+                // navy card on a navy block is a container that draws nothing.
+                PawPointsStrip.onNavy(
+                  balance: widget.pawPoints,
+                  onTap: () => _openPawPoints(context),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          // ── PawPoints — balance at a glance + shortcut to history/rewards
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: PawPointsStrip(
-              balance: widget.pawPoints,
-              onTap: () => _openPawPoints(context),
+          const SizedBox(height: 26),
+          // ── Pets ────────────────────────────────────────────────────
+          // "Add pet" lives HERE, next to the thing it adds to, not orphaned
+          // at the bottom of the page under the pagination dots where it read
+          // as end-of-list chrome. Adding pet 2 and 3 is also where the Pack
+          // Discount lives, so burying it was costing more than tidiness.
+          if (pets.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      pets.length == 1 ? 'Your pet' : 'Your pets',
+                      style: tt.headlineSmall,
+                    ),
+                  ),
+                  _AddPetAction(onTap: navigateToAddPet),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 12),
+          ],
           // ── Digital Pawprint carousel ────────────────────────────────
           FadeTransition(
             opacity: _cardFade,
@@ -979,41 +1023,63 @@ class _DashboardState extends State<_Dashboard>
                             margin: const EdgeInsets.symmetric(horizontal: 3),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(3),
-                              color: isActive ? AppColors.gold : cs.outline,
+                              // Navy, not gold. Pagination is structure, not a
+                              // highlight — it was spending the accent on the
+                              // least important control on the screen.
+                              color: isActive ? cs.primary : cs.outline,
                             ),
                           );
                         }),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    // ── Add another pet CTA ──────────────────────────
-                    _ScaleButton(
-                      onTap: navigateToAddPet,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_rounded,
-                            size: 15,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Add another pet',
-                            style: tt.labelMedium?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ],
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+/// "Add pet" — the trailing action on the Your pets section header. Quiet
+/// (navy label, no fill) because it sits beside a heading, but a real 44px
+/// target rather than the 15px footnote it replaced.
+class _AddPetAction extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddPetAction({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return _ScaleButton(
+      onTap: onTap,
+      child: Semantics(
+        button: true,
+        label: 'Add another pet',
+        excludeSemantics: true,
+        child: SizedBox(
+          height: 44,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_rounded, size: 18, color: cs.primary),
+                const SizedBox(width: 4),
+                Text(
+                  'Add pet',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1221,6 +1287,10 @@ class _DigitalIdCard extends StatelessWidget {
     final dividerColor = isLightStandard
         ? AppColors.greyLight
         : AppColors.white.withValues(alpha: 0.1);
+    // Gold text is 2.7:1 on the white Standard card and only reads on the
+    // near-black tier cards, so the surface picks the shade. Reserved for the
+    // wallet balance and the claim link — the two "this is yours" moments.
+    final cardAccent = isLightStandard ? AppColors.goldDark : AppColors.gold;
 
     final isVerified = pet?.vaxCardUrl != null;
     final petServices = pet?.petServices ?? [];
@@ -1387,6 +1457,7 @@ class _DigitalIdCard extends StatelessWidget {
                       remainingCentavos: w.remainingCentavos,
                       onCard: onCard,
                       onCardMuted: onCardMuted,
+                      accent: cardAccent,
                       onTap: onViewClaims,
                     ),
                   );
@@ -1400,6 +1471,7 @@ class _DigitalIdCard extends StatelessWidget {
                       remainingCentavos: w.emergencyRemainingCentavos,
                       onCard: onCard,
                       onCardMuted: onCardMuted,
+                      accent: cardAccent,
                       onTap: onViewClaims,
                     ),
                   );
@@ -1414,9 +1486,12 @@ class _DigitalIdCard extends StatelessWidget {
               // → render header + QR only, no spinner or placeholder.
               if (!hasWallet && !showSessions) return const SizedBox.shrink();
 
+              // Muted, not gold. A gold section label 40px above a gold CTA
+              // meant neither was the thing to look at, and a 10sp gold label
+              // on white is 2.7:1 regardless.
               final labelStyle = Theme.of(context).textTheme.labelSmall
                   ?.copyWith(
-                    color: AppColors.gold,
+                    color: onCardMuted,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.5,
                     fontSize: 10,
@@ -1438,7 +1513,10 @@ class _DigitalIdCard extends StatelessWidget {
                           ),
                           ...walletRows,
                           if (canFileClaim && onFileClaim != null)
-                            _FileClaimLink(onTap: onFileClaim!),
+                            _FileClaimLink(
+                              accent: cardAccent,
+                              onTap: onFileClaim!,
+                            ),
                         ],
                         if (showSessions) ...[
                           if (hasWallet) const SizedBox(height: 6),
@@ -1923,8 +2001,11 @@ class _SessionProgressRow extends StatelessWidget {
                             Container(
                               height: 6,
                               width: trackW * value,
+                              // Matches _WalletSummaryRow's bar. This row is
+                              // standby (booking off) and must not drift gold
+                              // while the live meter beside it is ink.
                               decoration: BoxDecoration(
-                                color: AppColors.gold,
+                                color: onCard,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),
@@ -1954,6 +2035,11 @@ class _WalletSummaryRow extends StatelessWidget {
   final int remainingCentavos;
   final Color onCard;
   final Color onCardMuted;
+
+  /// Contrast-safe gold for THIS card's surface: `gold` on the near-black tier
+  /// cards, `goldDark` on the white Standard one where plain gold is 2.7:1.
+  /// The Benefits hub already picked per surface; the Home card did not.
+  final Color accent;
   final VoidCallback? onTap;
 
   /// False while a monthly subscriber has not vested this pool. The Home
@@ -1968,6 +2054,7 @@ class _WalletSummaryRow extends StatelessWidget {
     required this.remainingCentavos,
     required this.onCard,
     required this.onCardMuted,
+    required this.accent,
     this.onTap,
   });
 
@@ -1980,7 +2067,7 @@ class _WalletSummaryRow extends StatelessWidget {
         : (safeRemaining / totalCentavos).clamp(0.0, 1.0);
     final valueColor = (isDepleted || !available)
         ? onCardMuted.withValues(alpha: 0.55)
-        : AppColors.gold;
+        : accent;
 
     final row = Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -2053,7 +2140,13 @@ class _WalletSummaryRow extends StatelessWidget {
                               height: 6,
                               width: trackW * value,
                               decoration: BoxDecoration(
-                                color: AppColors.gold,
+                                // The bar is structure — how much is left —
+                                // so it takes the card's own ink. The AMOUNT
+                                // above it keeps the gold: that's the member's
+                                // money and the one thing worth the accent.
+                                // Both in gold made the meter the loudest
+                                // element on a card whose CTA is also gold.
+                                color: onCard,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),
@@ -2084,8 +2177,11 @@ class _WalletSummaryRow extends StatelessWidget {
 /// Deliberately unfilled so it doesn't compete with the gold "Show Digital
 /// Pawprint" CTA lower on the card.
 class _FileClaimLink extends StatelessWidget {
+  /// The card's contrast-safe gold — plain `gold` was 2.7:1 here on the white
+  /// Standard card.
+  final Color accent;
   final VoidCallback onTap;
-  const _FileClaimLink({required this.onTap});
+  const _FileClaimLink({required this.accent, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2100,16 +2196,12 @@ class _FileClaimLink extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.add_circle_outline,
-                size: 16,
-                color: AppColors.gold,
-              ),
+              Icon(Icons.add_circle_outline, size: 16, color: accent),
               const SizedBox(width: 6),
               Text(
                 'File a claim',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.gold,
+                  color: accent,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -2216,39 +2308,54 @@ class _NoPlanBlock extends StatelessWidget {
 // ── Founding Member Badge ─────────────────────────────────────────────────
 
 class _FoundingBadge extends StatelessWidget {
-  final bool small;
-  const _FoundingBadge({this.small = false});
+  /// Solid-gold, compact treatment for navy surfaces (the Home header, beside
+  /// the member's name). A tinted gold-on-navy pill would be gold text at
+  /// 2.9:1 — invisible at 10sp. Filled gold with dark text is 6.1:1, and it is
+  /// one of the few places gold is genuinely earned: not every member is a
+  /// Founding Member, so the badge stays rare enough to be worth the accent.
+  ///
+  /// The default constructor is the roomier light-surface variant used inside
+  /// the Digital Pawprint sheet.
+  final bool _onNavy;
+
+  const _FoundingBadge() : _onNavy = false;
+
+  const _FoundingBadge.onNavy() : _onNavy = true;
 
   @override
   Widget build(BuildContext context) {
+    // On light surfaces the label was gold-on-white at 2.7:1. goldDark is the
+    // token that exists for exactly this (small text on a gold surface).
+    final inkColor = _onNavy ? AppColors.text : AppColors.goldDark;
+
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: small ? 8 : 10,
-        vertical: small ? 3 : 4,
+        horizontal: _onNavy ? 8 : 10,
+        vertical: _onNavy ? 3 : 4,
       ),
       decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.15),
+        color: _onNavy
+            ? AppColors.gold
+            : AppColors.gold.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.gold.withValues(alpha: 0.4),
-          width: 1,
-        ),
+        border: _onNavy
+            ? null
+            : Border.all(
+                color: AppColors.gold.withValues(alpha: 0.4),
+                width: 1,
+              ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.star_rounded,
-            size: small ? 10 : 12,
-            color: AppColors.gold,
-          ),
-          SizedBox(width: small ? 3 : 4),
+          Icon(Icons.star_rounded, size: _onNavy ? 10 : 12, color: inkColor),
+          SizedBox(width: _onNavy ? 3 : 4),
           Text(
             'Founding Member',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.gold,
+              color: inkColor,
               fontWeight: FontWeight.w700,
-              fontSize: small ? 10 : 11,
+              fontSize: _onNavy ? 10 : 11,
               letterSpacing: 0.3,
             ),
           ),
@@ -4362,31 +4469,75 @@ class _DashboardSkeletonState extends State<_DashboardSkeleton>
       );
     }
 
+    // Placeholders that sit ON the navy header can't use greyLight — they'd be
+    // brighter than the finished content. A white wash reads as "text loading"
+    // against navy the way greyLight does against cream.
+    Widget navyBlock({
+      double width = double.infinity,
+      required double height,
+      double radius = 8,
+    }) {
+      return AnimatedBuilder(
+        animation: _pulse,
+        builder: (_, child) =>
+            Opacity(opacity: 0.35 + _pulse.value * 0.25, child: child),
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: AppColors.white.withValues(alpha: 0.30),
+            borderRadius: BorderRadius.circular(radius),
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: kNavClearance),
       physics: const NeverScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+          // Mirrors _Dashboard's navy header, so the AnimatedSwitcher crossfade
+          // is content appearing rather than the whole page changing shape.
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: AppColors.navy,
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(28),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                block(width: 110, height: 14, radius: 7),
+                navyBlock(width: 110, height: 14, radius: 7),
                 const SizedBox(height: 8),
-                block(width: 190, height: 30, radius: 10),
+                navyBlock(width: 190, height: 30, radius: 10),
                 const SizedBox(height: 12),
-                block(width: 82, height: 24, radius: 12),
+                const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.onNavyDivider,
+                ),
+                const SizedBox(height: 14),
+                navyBlock(height: 30, radius: 8),
+                const SizedBox(height: 8),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 26),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+            child: block(width: 120, height: 20, radius: 8),
+          ),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: block(height: 480, radius: 16),
+            child: block(height: 420, radius: 16),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -4576,9 +4727,21 @@ class _MpNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeColor = isDark ? AppColors.gold : AppColors.navy;
-    final inactiveColor = isDark ? AppDarkColors.subtext : AppColors.grey;
-    final bgColor = isDark ? AppDarkColors.surface : AppColors.white;
+    // The capsule is navy. It was white-on-cream, so the only thing separating
+    // the bar from the page was a shadow, and it left navy — the primary —
+    // appearing once on the whole screen while gold did the structural work.
+    // Navy here anchors the bottom, isolates the gold action, and supplies the
+    // 30% band of the 60/30/10 split alongside the app bar and Home header.
+    final bgColor = isDark ? AppDarkColors.elevated : AppColors.navy;
+    // Gold on navy is 2.9:1 and fails even the 3:1 icon floor, so the active
+    // tab is white, not gold. That's the point: gold belongs to the raised
+    // Claim circle only, which makes it the single unmissable thing down here.
+    final activeColor = AppColors.white;
+    final inactiveColor = AppColors.onNavyMuted;
+    // The page shows through the ring, so the circle reads as punched out of
+    // the bar rather than stuck to it — and the ring, not the gold itself,
+    // is what delineates the control against navy.
+    final ringColor = Theme.of(context).scaffoldBackgroundColor;
     final bottomPad = MediaQuery.of(context).padding.bottom;
     final tabs = _tabs;
 
@@ -4613,7 +4776,7 @@ class _MpNavBar extends StatelessWidget {
                 // rather than sitting behind the icon alone — the two are one
                 // control, and a pill around half of it reads as a stray chip.
                 color: isSelected
-                    ? activeColor.withValues(alpha: isDark ? 0.22 : 0.12)
+                    ? activeColor.withValues(alpha: 0.16)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(100),
               ),
@@ -4668,13 +4831,15 @@ class _MpNavBar extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.gold,
             shape: BoxShape.circle,
-            // A bar-colored ring keeps the circle reading as lifted off the
-            // bar rather than punched through it.
-            border: Border.all(color: bgColor, width: 3),
+            // Page-colored, not bar-colored: gold against navy is 2.9:1, so
+            // the gold edge alone would not delineate the control. The cream
+            // ring is 7.4:1 on navy and does that job, while reading as the
+            // page showing through a hole in the bar.
+            border: Border.all(color: ringColor, width: 3),
             boxShadow: [
               BoxShadow(
-                color: AppColors.gold.withValues(alpha: 0.32),
-                blurRadius: 16,
+                color: AppColors.gold.withValues(alpha: 0.38),
+                blurRadius: 18,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -4711,18 +4876,20 @@ class _MpNavBar extends StatelessWidget {
                   // Two layers, because one blur cannot do both jobs. The
                   // tight shadow anchors the capsule to the surface; the wide,
                   // lower one is what actually reads as height. A single
-                  // mid-blur shadow just looks like a soft edge.
+                  // mid-blur shadow just looks like a soft edge. Navy-tinted
+                  // rather than black now that the bar itself is navy — a
+                  // neutral black shadow under a colored object reads as dirt.
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: isDark ? 0.28 : 0.10,
+                      color: AppColors.navy.withValues(
+                        alpha: isDark ? 0.40 : 0.22,
                       ),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
                     BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: isDark ? 0.40 : 0.18,
+                      color: AppColors.navy.withValues(
+                        alpha: isDark ? 0.50 : 0.28,
                       ),
                       blurRadius: 30,
                       offset: const Offset(0, 14),
@@ -4752,9 +4919,10 @@ class _MpNavBar extends StatelessWidget {
                                   ?.copyWith(
                                     fontSize: labelSize,
                                     fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? AppColors.gold
-                                        : AppColors.navy,
+                                    // Navy-on-navy would have vanished; the
+                                    // gold circle above it is what marks this
+                                    // as the action, not the caption's color.
+                                    color: activeColor,
                                   ),
                             ),
                           ],

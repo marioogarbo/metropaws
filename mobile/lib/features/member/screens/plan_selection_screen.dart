@@ -173,7 +173,11 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: Text('Plans for ${_cap(widget.pet.name)}', style: tt.titleMedium),
+          // titleMedium's ink is the body color — dark on the now-navy bar.
+          title: Text(
+            'Plans for ${_cap(widget.pet.name)}',
+            style: tt.titleMedium?.copyWith(color: AppColors.white),
+          ),
         ),
         body: SafeArea(child: _buildBody(context, cs)),
       ),

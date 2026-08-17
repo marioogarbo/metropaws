@@ -22,7 +22,22 @@ class PawPointsStrip extends StatelessWidget {
   final PawPointsBalance? balance;
   final VoidCallback onTap;
 
-  const PawPointsStrip({super.key, required this.balance, required this.onTap});
+  /// True when the strip is already sitting ON a navy surface (the Home
+  /// header). It then drops its own navy fill and renders as a plain row: a
+  /// navy pill inside a navy block is an invisible container, and nesting one
+  /// card in another is exactly the hierarchy noise the fill was meant to
+  /// create. Same coin, same number, same copy either way — the fill is the
+  /// only difference, which is what stops the two placements drifting.
+  final bool _onNavy;
+
+  const PawPointsStrip({super.key, required this.balance, required this.onTap})
+    : _onNavy = false;
+
+  const PawPointsStrip.onNavy({
+    super.key,
+    required this.balance,
+    required this.onTap,
+  }) : _onNavy = true;
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +57,15 @@ class PawPointsStrip extends StatelessWidget {
       child: ScaleButton(
         onTap: onTap,
         child: Container(
-          decoration: BoxDecoration(
-            color: cs.primary,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: _onNavy
+              ? null
+              : BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+          padding: _onNavy
+              ? const EdgeInsets.symmetric(vertical: 4)
+              : const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               const PawCoin(size: 26),
@@ -77,10 +96,12 @@ class PawPointsStrip extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
+                    // Not gold: gold on navy is 2.9:1 and fails at label size.
+                    // The gold coin to the left already carries the brand cue.
                     Text(
                       'pts',
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: AppColors.gold,
+                        color: AppColors.onNavyMuted,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -96,8 +117,11 @@ class PawPointsStrip extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
+                  // white@65% composites to 3.9:1 on navy — under the 4.5:1
+                  // floor for a 12sp label. onNavyMuted is the same read at
+                  // 4.6:1.
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.white.withValues(alpha: 0.65),
+                    color: AppColors.onNavyMuted,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -105,7 +129,7 @@ class PawPointsStrip extends StatelessWidget {
               const SizedBox(width: 4),
               Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.white.withValues(alpha: 0.65),
+                color: AppColors.onNavyMuted,
                 size: 18,
               ),
             ],

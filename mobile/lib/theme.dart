@@ -25,6 +25,19 @@ class AppColors {
   // Extended tokens (not in colorScheme — use directly)
   static const goldDark = Color(0xFF7A6020);    // small text on gold surfaces (5.5:1 on goldLight)
   static const successDark = Color(0xFF14532D); // small text on light green/gold (8.5:1 on goldLight)
+
+  // ── On-navy ramp ─────────────────────────────────────────────────────────
+  // Navy is a real SURFACE now (app bar, Home header, nav capsule), not just a
+  // fill behind white text, so it needs its own text ramp. `grey` was the
+  // reflex pick for muted-on-navy and it only reaches 3.96:1 — fine for a
+  // 25px icon, a fail for the 10sp nav label sitting under it.
+  static const onNavyMuted = Color(0xFFBFC5DC);  // 4.6:1 on navy — muted LABELS
+  static const onNavyDivider = Color(0x1FFFFFFF); // hairlines inside navy
+
+  // NOTE: `gold` on `navy` is only 2.9:1 — it fails even the 3:1 UI-component
+  // floor. Gold reads on the near-black tier cards (0xFF111219), NOT on navy.
+  // On a navy surface use white for emphasis and a SOLID gold fill (with
+  // `text` on top, 6.1:1) when something must be gold.
 }
 
 // ── Dark mode palette ──────────────────────────────────────────────────────
@@ -224,15 +237,25 @@ ThemeData buildLightTheme() {
     scaffoldBackgroundColor: AppColors.surface,
     textTheme: _buildTextTheme(AppColors.text, AppColors.greyText),
     tooltipTheme: _tooltipTheme(),
+    // The app chrome is navy and the content field is cream — the navy gift
+    // box with the cream linen interior, which is the brand's own reference
+    // object. It is also what carries the 30% band of the 60/30/10 split:
+    // before this the whole screen was cream + white with navy appearing once,
+    // so gold had drifted into doing navy's job.
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColors.white,
-      foregroundColor: AppColors.text,
+      backgroundColor: AppColors.navy,
+      foregroundColor: AppColors.white,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
+      // systemOverlayStyle is deliberately NOT set. Flutter derives the status
+      // bar style per AppBar from its own background brightness, so navy bars
+      // get light icons and the few screens that paint their own light bar
+      // (subscription) still get dark ones. Pinning `light` here would break
+      // exactly those.
       titleTextStyle: GoogleFonts.montserrat(
         fontSize: 18,
         fontWeight: FontWeight.w700,
-        color: AppColors.text,
+        color: AppColors.white,
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -291,7 +314,7 @@ ThemeData buildLightTheme() {
       thickness: 1,
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.navy,
       indicatorColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -299,8 +322,8 @@ ThemeData buildLightTheme() {
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
           color: states.contains(WidgetState.selected)
-              ? AppColors.navy
-              : AppColors.grey,
+              ? AppColors.white
+              : AppColors.onNavyMuted,
         ),
       ),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -308,7 +331,7 @@ ThemeData buildLightTheme() {
         return GoogleFonts.montserrat(
           fontSize: 12,
           fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
-          color: sel ? AppColors.navy : AppColors.grey,
+          color: sel ? AppColors.white : AppColors.onNavyMuted,
         );
       }),
     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:google_fonts/google_fonts.dart';
 import '../../../theme.dart';
 
@@ -18,9 +19,14 @@ class PaymentResultScreen extends StatelessWidget {
     final bg = isDark ? AppDarkColors.bg : AppColors.surface;
     final textColor = isDark ? AppDarkColors.text : AppColors.text;
 
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
+    // This screen has no AppBar, so nothing resets the status bar style — it
+    // arrives here holding whatever the last navy-barred screen set (light
+    // icons), which is unreadable over this light surface.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: bg,
+        body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -79,6 +85,7 @@ class PaymentResultScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

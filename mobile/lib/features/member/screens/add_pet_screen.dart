@@ -346,9 +346,13 @@ class _AddPetScreenState extends State<AddPetScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // titleMedium's ink is the body color — dark on the now-navy bar.
         title: Text(
           _step == 3 ? 'All done!' : 'Add a Pet',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.white,
+          ),
         ),
         leading: _step == 3
             ? const SizedBox.shrink()
