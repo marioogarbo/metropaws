@@ -800,27 +800,7 @@ class _DashboardState extends State<_Dashboard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Screen heading ──────────────────────────────────────────
-          // A single oversized shield, bled off the right edge at low opacity.
-          // PRODUCT.md roots this app in the physical membership kit — navy
-          // box, gold-foil embossed shield — so the greeting sits on the same
-          // emblem the member unboxed, rather than on a generic decorative
-          // shape. Clipped so it cannot widen the scroll view, and excluded
-          // from semantics because it carries no information.
-          ClipRect(
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -34,
-                  top: -18,
-                  child: ExcludeSemantics(
-                    child: Icon(
-                      Icons.shield_rounded,
-                      size: 150,
-                      color: AppColors.gold.withValues(alpha: 0.07),
-                    ),
-                  ),
-                ),
-                Padding(
+          Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -859,9 +839,6 @@ class _DashboardState extends State<_Dashboard>
                   const SizedBox(height: 10),
                   _FoundingBadge(small: true),
                 ],
-              ],
-            ),
-                ),
               ],
             ),
           ),
@@ -4567,11 +4544,10 @@ class _MpNavBar extends StatelessWidget {
       return Expanded(
         child: InkWell(
           onTap: () => onTap(index),
-          child: Padding(
-            padding: EdgeInsets.only(bottom: bottomPad),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
                 // Material-3-style active indicator: a tinted pill behind the
                 // icon with a subtle scale-in — slicker than a hairline pill.
                 AnimatedContainer(
@@ -4610,87 +4586,109 @@ class _MpNavBar extends StatelessWidget {
                     color: isSelected ? activeColor : inactiveColor,
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       );
     }
 
+    // Geometry for the floating bar. The lift is part of the bar's own height
+    // rather than a transform: a child pushed outside its parent's box stops
+    // receiving taps in the overflowing region, so the button would look
+    // raised and then ignore the top half of every press.
+    const barHeight = 62.0;
+    const lift = 16.0;
+    const circle = 52.0;
+
     // The raised gold action — visually distinct from the tabs so it reads as
     // "the thing to do", not a destination. Files a claim (opens Submit).
-    final claimItem = Expanded(
-      child: Semantics(
-        button: true,
-        label: 'File a claim',
-        child: InkWell(
-          onTap: onClaim,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: bottomPad),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: AppColors.gold,
-                    shape: BoxShape.circle,
-                    // A bar-colored ring makes the gold read as lifted/inset.
-                    border: Border.all(color: bgColor, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.30),
-                        blurRadius: 14,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.post_add,
-                    size: 22,
-                    color: AppColors.text,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Claim',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? AppColors.gold : AppColors.navy,
-                  ),
-                ),
-              ],
-            ),
+    final claimButton = Semantics(
+      button: true,
+      label: 'File a claim',
+      child: InkWell(
+        onTap: onClaim,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: circle,
+          height: circle,
+          decoration: BoxDecoration(
+            color: AppColors.gold,
+            shape: BoxShape.circle,
+            // A bar-colored ring keeps the circle reading as lifted off the
+            // bar rather than punched through it.
+            border: Border.all(color: bgColor, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.gold.withValues(alpha: 0.32),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
+          child: const Icon(Icons.post_add, size: 24, color: AppColors.text),
         ),
       ),
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        // Elevated rounded panel — reads as a lifted surface (premium) rather
-        // than a flat bar with a hairline. Soft shadow does the separating.
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.10),
-            blurRadius: 22,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+    return Padding(
+      // Inset on every side so the bar reads as a lifted object with the page
+      // running underneath, not a chrome strip welded to the bottom edge.
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPad > 0 ? bottomPad : 12),
       child: SizedBox(
-        height: 66 + bottomPad,
-        // Two tabs, the raised Claim action, then two tabs.
-        child: Row(
+        height: barHeight + lift,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
           children: [
-            tabItem(0, tabs[0]),
-            tabItem(1, tabs[1]),
-            claimItem,
-            tabItem(2, tabs[2]),
-            tabItem(3, tabs[3]),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: barHeight,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(barHeight / 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.34 : 0.12),
+                      blurRadius: 24,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                // Two tabs, a gap the raised action sits over, then two tabs.
+                child: Row(
+                  children: [
+                    tabItem(0, tabs[0]),
+                    tabItem(1, tabs[1]),
+                    SizedBox(
+                      width: circle + 12,
+                      // The label stays in the bar, on the same baseline as the
+                      // other four, so the row of labels reads as one line.
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            'Claim',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.gold : AppColors.navy,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    tabItem(2, tabs[2]),
+                    tabItem(3, tabs[3]),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(top: 0, child: claimButton),
           ],
         ),
       ),
