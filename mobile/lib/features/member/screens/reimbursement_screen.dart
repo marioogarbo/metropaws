@@ -970,7 +970,11 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
             const SizedBox(height: 16),
             MpTextField(
               controller: _referenceCtrl,
-              label: 'Receipt / reference no. (optional)',
+              // Abbreviated: the full "Receipt / reference no. (optional)"
+              // clipped to "…(optio…" at 329dp, which hides the one word that
+              // tells a member they can skip the field. "ref." keeps both
+              // meanings and the optional marker inside the field.
+              label: 'Receipt / ref. no. (optional)',
             ),
             const SizedBox(height: 16),
             MpTextField(

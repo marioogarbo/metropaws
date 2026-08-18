@@ -1836,36 +1836,56 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
           // Brand label + close button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Stack(
-              alignment: Alignment.center,
+            // A Row, not a Stack. The Stack let the centred label run
+            // underneath the close button — at 329dp it rendered as
+            // "METROPAWS STANDARD MEMBE✕", unreadable and broken-looking,
+            // because a Positioned sibling contributes nothing to the label's
+            // constraints. The leading spacer mirrors the button so the label
+            // stays optically centred rather than shunted left by it.
+            child: Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.shield_rounded, size: 13, color: AppColors.gold),
-                    const SizedBox(width: 6),
-                    Text(
-                      'METROPAWS ${(widget.member.planType ?? 'Standard').toUpperCase()} MEMBER',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                const SizedBox(width: 44),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shield_rounded,
+                        size: 13,
                         color: AppColors.gold,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w700,
                       ),
-                    ),
-                  ],
-                ),
-                Positioned(
-                  right: 0,
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, size: 18, color: onCardMuted),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    tooltip: 'Close',
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          // The tier word is dropped when space is short: the
+                          // TierBadge directly below already states it, so the
+                          // long form was spending 8 characters to repeat
+                          // itself.
+                          context.isTight
+                              ? 'METROPAWS MEMBER'
+                              : 'METROPAWS ${(widget.member.planType ?? 'Standard').toUpperCase()} MEMBER',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: AppColors.gold,
+                                letterSpacing: 1.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, size: 18, color: onCardMuted),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  tooltip: 'Close',
                 ),
               ],
             ),
