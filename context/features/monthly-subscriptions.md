@@ -1,10 +1,18 @@
 # Monthly subscriptions and vesting
 
-**Status:** backend and mobile both built, on `feature/mobile-monthly`, and
+**Status:** backend and mobile both built and **merged to `main`**, and
 **exercised end to end on a real device** 2026-08-17 — a monthly Deluxe was
 bought, charged ₱600, and activated. Production has the **schema** (migrated
 2026-08-17) but neither the endpoints nor the app; dev has the backend as of
 `metropaws-backend-dev:20260817-103725`, which predates the fixes below.
+
+**Verified 2026-08-19** by diffing prod's live OpenAPI against `main`:
+`POST /payments/installment` is the one non-PawPoints route on `main` that
+production does not serve. So **the next prod deploy — for any reason — ships
+monthly instalments server-side**, onto a schema that already supports them. The
+Play APK still lacks the mobile half, so no member reaches it through the app;
+check whether the website's pricing toggle offers monthly to web visitors before
+assuming nothing is user-visible.
 **Decided 2026-08-16** by Mario: monthly is wanted, for members who can't afford
 the annual fee or aren't ready to commit.
 

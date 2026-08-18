@@ -157,3 +157,17 @@ says. If a fact is derivable by reading a file, link to that file instead.
   amount of code reading exposes. Also: the pet card now states its plan, and the
   meter-bar redesign was built, rejected, and force-pushed away, so that
   complaint is still open.
+- [`sessions/2026-08-19-pawpoints-admin.md`](sessions/2026-08-19-pawpoints-admin.md) —
+  Romy asked whether an admin can see PawPoints per member; answering it found
+  **dev and prod both had an empty rewards catalogue**, so every live member saw
+  the app's "Rewards coming soon" empty state. The catalogue had only ever been
+  hand-pasted into the Supabase SQL editor, and nothing seeds automatically. The
+  keeper is why it hid from every surface at once: the app looked coming-soon,
+  `seed.py` looked correct, no admin page existed to notice, and the gap register's
+  warning was dismissed as stale *because* the seeder looked right — a seeder
+  existing is not its rows existing, and no test reads a real database. Also:
+  `pdftotext` **does** work here (the standing "PDFs unreadable" note was wrong),
+  and it surfaced MMS-DWP-001 Part VI — an unreferenced controlled document that
+  is the real PawPoints spec, mandating both dashboards, 12-month expiry and
+  points reversal, and conflicting with the manual's catalogue. Built
+  `/admin/paw-points`; the missing admin CRUD was the actual cause.
