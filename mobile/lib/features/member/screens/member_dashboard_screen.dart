@@ -1316,6 +1316,15 @@ class _DigitalIdCard extends StatelessWidget {
       planStatusLine = w0.membershipStatusLabel;
     }
 
+    // Hoisted: the claim link moved out of the wallet Builder into the card's
+    // own actions row, so the "is there anything left to claim" test has to be
+    // visible at card level now.
+    final wClaim = walletPet;
+    final canFileClaimNow =
+        wClaim != null &&
+        (wClaim.remainingCentavos > 0 ||
+            wClaim.emergencyRemainingCentavos > 0);
+
     final isVerified = pet?.vaxCardUrl != null;
     final petServices = pet?.petServices ?? [];
     // The Digital Pawprint QR is the pet's clinic-redemption ID; it only makes
@@ -1347,7 +1356,7 @@ class _DigitalIdCard extends StatelessWidget {
         children: [
           // ── Pet identity row ────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
             child: Row(
               children: [
                 // Tapping the pet's avatar/name opens their full profile — the
@@ -1364,9 +1373,13 @@ class _DigitalIdCard extends StatelessWidget {
                       behavior: HitTestBehavior.opaque,
                       child: Row(
                         children: [
+                          // 60, not 52. "Pet as Hero" is the first UX
+                          // principle in PRODUCT.md, and the photo is the
+                          // fastest way to tell one carousel card from the
+                          // next.
                           PetAvatar(
                             photoUrl: pet?.photoUrl,
-                            size: 52,
+                            size: 60,
                             petName: pet?.name,
                           ),
                           const SizedBox(width: 14),
@@ -1410,6 +1423,18 @@ class _DigitalIdCard extends StatelessWidget {
                                         ?.copyWith(color: onCardMuted),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                                // The badge alone is short enough to live in
+                                // the name column, which buys back the whole
+                                // row the full-width plan block cost. Any
+                                // status WORDING stays full-width below --
+                                // "Fully Service-Eligible" would not fit here.
+                                if (hasPlan && pet?.planType != null) ...[
+                                  const SizedBox(height: 8),
+                                  TierBadge(
+                                    planType: pet!.planType!,
+                                    small: true,
                                   ),
                                 ],
                               ],
@@ -1457,43 +1482,19 @@ class _DigitalIdCard extends StatelessWidget {
             ),
           ),
 
-          // ── Plan ───────────────────────────────────────────────────
-          // The plan the member actually pays for was nowhere on this card.
-          // That also left "Upgrade plan" at the foot instructing them to
-          // upgrade from an unnamed thing, and it contradicted the stated
-          // reason the tier was pulled out of the Home header ("every pet card
-          // already carries its own TierBadge" — it did not), so tier had
-          // vanished from Home entirely.
-          //
-          // Full card width rather than tucked under the name: squeezed into
-          // the name column, between a 52px avatar and the 44px overflow
-          // button, "Active until Aug 6, 2027" clipped to "Active until Aug…".
-          // The plan describes the pet, not the name.
-          if (hasPlan && pet?.planType != null)
+          // Plan status: only renders when there is something to warn
+          // about (expired, or a monthly member still vesting). A healthy
+          // annual plan says its piece with the tier badge above and spends no
+          // vertical space here.
+          if (planStatusLine != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-              child: Row(
-                children: [
-                  TierBadge(planType: pet!.planType!, small: true),
-                  if (planStatusLine != null) ...[
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        planStatusLine,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: planStatusUrgent
-                              ? AppColors.error
-                              : onCardMuted,
-                          fontWeight: planStatusUrgent
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+              child: Text(
+                planStatusLine,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: planStatusUrgent ? AppColors.error : onCardMuted,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
 
@@ -1574,7 +1575,7 @@ class _DigitalIdCard extends StatelessWidget {
                 children: [
                   Divider(height: 1, color: dividerColor),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -1584,11 +1585,6 @@ class _DigitalIdCard extends StatelessWidget {
                             child: Text('BENEFIT WALLET', style: labelStyle),
                           ),
                           ...walletRows,
-                          if (canFileClaim && onFileClaim != null)
-                            _FileClaimLink(
-                              accent: cardAccent,
-                              onTap: onFileClaim!,
-                            ),
                         ],
                         if (showSessions) ...[
                           if (hasWallet) const SizedBox(height: 6),
@@ -1617,9 +1613,10 @@ class _DigitalIdCard extends StatelessWidget {
 
           // ── Show Digital Pawprint CTA — active plans only ────────────
           if (hasPlan) ...[
-            Divider(height: 1, color: dividerColor),
+            // Spacing, not a third divider. Three horizontal rules turned this
+            // card into a small document; air separates the CTA instead.
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
               child: _ScaleButton(
                 onTap: onShowQr,
                 child: Container(
@@ -1663,15 +1660,29 @@ class _DigitalIdCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Upgrade/renew entry — the only path to plan selection for a pet
-            // that already has a plan. Copy is status-aware from the local
-            // activation date (display only; the server enforces eligibility).
-            if (onSubscribe != null)
-              _PlanActionLink(
-                activatedAt: pet?.planActivatedAt,
-                onCardMuted: onCardMuted,
-                onTap: onSubscribe!,
+            // Both secondary actions share one row instead of stacking into
+            // two 44px strips. Wrap, not Row: "Plan ends soon -- Renew now"
+            // beside "File a claim" does not fit at 329dp, and Wrap drops to a
+            // second line only when it must rather than always.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 2, 18, 6),
+              child: Wrap(
+                spacing: 18,
+                children: [
+                  if (canFileClaimNow && onFileClaim != null)
+                    _FileClaimLink(accent: cardAccent, onTap: onFileClaim!),
+                  // The only path to plan selection for a pet that already has
+                  // a plan. Copy is status-aware from the local activation date
+                  // (display only; the server enforces eligibility).
+                  if (onSubscribe != null)
+                    _PlanActionLink(
+                      activatedAt: pet?.planActivatedAt,
+                      onCardMuted: onCardMuted,
+                      onTap: onSubscribe!,
+                    ),
+                ],
               ),
+            ),
           ],
         ],
       ),
@@ -1718,11 +1729,10 @@ class _PlanActionLink extends StatelessWidget {
       child: Semantics(
         button: true,
         label: label,
-        child: Container(
+        child: SizedBox(
           height: 44,
-          alignment: Alignment.center,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 urgent ? Icons.autorenew_rounded : Icons.trending_up_rounded,
@@ -2188,41 +2198,59 @@ class _WalletSummaryRow extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
     );
 
+    // "₱2,000.00 left", not "₱2,000.00 left of ₱2,000.00". The old string was
+    // 27 characters and could not share a line with the pool name at any width
+    // this app runs at, which forced the label and the figure onto separate
+    // rows and made each meter three lines tall. Two meters plus a heading was
+    // then most of the card.
+    //
+    // Dropping the ceiling is not a real loss: the BAR is the ceiling, drawn
+    // to scale right underneath, and the Benefits hub carries the exact
+    // used / pending / total breakdown one tap away. "left" stays because
+    // a bare peso figure beside a full bar is ambiguous about which it is.
     final amountText = Text.rich(
       TextSpan(
         children: [
-          TextSpan(
-            text: pesoFromCentavos(safeRemaining),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: valueColor,
-              fontWeight: FontWeight.w700,
+          if (available) ...[
+            TextSpan(
+              text: pesoFromCentavos(safeRemaining),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: valueColor,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-          TextSpan(
-            text: available
-                ? ' left of ${pesoFromCentavos(totalCentavos)}'
-                : ' · not available yet',
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: onCardMuted),
-          ),
+            TextSpan(
+              text: ' left',
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: onCardMuted),
+            ),
+          ] else
+            TextSpan(
+              text: 'Not available yet',
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: onCardMuted),
+            ),
         ],
       ),
     );
 
-    // Always stacked, at every width. Side by side, "Preventive Wellness" and
-    // "₱2,000.00 left of ₱2,000.00" do not both fit inside this card even at
-    // 384dp — one of the two always loses characters, and which one loses them
-    // just depends on how the flex is arranged. Neither is acceptable: the
-    // label names the pool and the figure is the member's money. Stacking
-    // costs one line and truncates nothing at any width.
-    final meterHeader = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [labelText, const SizedBox(height: 3), amountText],
+    // One line now that the figure is short: pool name left, balance right,
+    // bar beneath. The label flexes and the figure does not, because the money
+    // is the content and "Preventive Wellness" survives an ellipsis better
+    // than a peso amount does.
+    final meterHeader = Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(child: labelText),
+        const SizedBox(width: 10),
+        amountText,
+      ],
     );
 
     final row = Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2303,9 +2331,11 @@ class _FileClaimLink extends StatelessWidget {
       child: Semantics(
         button: true,
         label: 'File a claim',
-        child: Container(
+        // SizedBox, not Container+alignment: an aligned Container expands to
+        // the full width it is offered, which inside a Wrap means one link per
+        // line no matter how much room is left.
+        child: SizedBox(
           height: 44,
-          alignment: Alignment.centerLeft,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
