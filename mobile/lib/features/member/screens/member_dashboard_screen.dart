@@ -63,18 +63,6 @@ String _formatDate(DateTime d) {
   return '${weekdays[d.weekday - 1]}, ${d.day} ${months[d.month - 1]} ${d.year}';
 }
 
-/// "Aug 6, 2027". Deliberately without the weekday that [_formatDate] adds:
-/// nobody needs the day of the week a plan lapses. Matches the format
-/// plan_selection already uses so the two screens quote the same date the
-/// same way.
-String _formatPlanDate(DateTime d) {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  return '${months[d.month - 1]} ${d.day}, ${d.year}';
-}
-
 /// Home and Account render the member profile from the SHARED [MemberBloc],
 /// which also serves wallet, promos, notifications, bookings and PawPoints —
 /// including a notification-count poll that fires every 60s for the whole life
@@ -1308,17 +1296,16 @@ class _DigitalIdCard extends StatelessWidget {
     // wallet balance and the claim link — the two "this is yours" moments.
     final cardAccent = isLightStandard ? AppColors.goldDark : AppColors.gold;
 
-    // What the member wants to know beside the tier: how long it lasts.
+    // A healthy annual plan shows the tier and NOTHING else (client decision,
+    // 2026-08-18): the expiry date is not what the member opens Home to find
+    // out, and plan_selection already states it where it matters — at the
+    // point of upgrading or renewing.
     //
-    // NOT "Renews on ...". Nothing bills automatically — there is no scheduler
-    // behind the API and no saved card — so promising a renewal would be a
-    // false statement about their money. "Active until" is what plan_selection
-    // already says, and it is true.
-    //
-    // A monthly member gets the server's own §5.7 wording verbatim, because
-    // their standing ("Digital Access Active", "Vesting in Progress", ...) is
-    // a contract term we must not paraphrase, and because a monthly member is
-    // NOT yet covered — a bare date here would imply they were.
+    // The two statuses that remain are not dates, they are warnings:
+    //   - Expired, which stops claims working and needs to be seen.
+    //   - The server's verbatim §5.7 label for monthly members, because they
+    //     are NOT yet covered while vesting and the bare tier badge would
+    //     imply they were. Never paraphrase it; it is a contract term.
     final w0 = walletPet;
     String? planStatusLine;
     var planStatusUrgent = false;
@@ -1327,13 +1314,6 @@ class _DigitalIdCard extends StatelessWidget {
       planStatusUrgent = true;
     } else if (w0 != null && w0.isMonthly) {
       planStatusLine = w0.membershipStatusLabel;
-    } else {
-      final until =
-          w0?.planExpiresAt ??
-          pet?.planActivatedAt?.add(const Duration(days: 365));
-      if (until != null) {
-        planStatusLine = 'Active until ${_formatPlanDate(until)}';
-      }
     }
 
     final isVerified = pet?.vaxCardUrl != null;
@@ -1412,9 +1392,17 @@ class _DigitalIdCard extends StatelessWidget {
                                     pet?.species != null) ...[
                                   const SizedBox(height: 4),
                                   Text(
+                                    // Species is stored lowercase for older
+                                    // pets ("dog"); pet_form_screen only
+                                    // started offering "Dog"/"Cat" later, so
+                                    // the data is mixed and the display has to
+                                    // normalise it. clinic_scanner does the
+                                    // same thing inline.
                                     [
-                                      if (pet?.species != null) pet!.species!,
-                                      if (pet?.breed != null) pet!.breed!,
+                                      if (pet?.species != null)
+                                        _capFirst(pet!.species!),
+                                      if (pet?.breed != null)
+                                        _capFirst(pet!.breed!),
                                     ].join(' · '),
                                     style: Theme.of(context)
                                         .textTheme
@@ -1847,7 +1835,7 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
     final pet = widget.pet;
     if (pet == null) return '';
     return [
-      if (pet.breed != null) pet.breed!,
+      if (pet.breed != null) _capFirst(pet.breed!),
       if (pet.computedAge != null)
         '${pet.computedAge!} yr${pet.computedAge! != 1 ? "s" : ""}',
     ].join(' · ');
