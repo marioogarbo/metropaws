@@ -274,54 +274,69 @@ class _WalletPoolMeter extends StatelessWidget {
         ? cs.onSurfaceVariant
         : (isDark ? AppColors.gold : AppColors.goldDark);
 
+    final labelBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: cs.onSurfaceVariant),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (!available)
+          Text(
+            'Not available yet',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: cs.error,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+      ],
+    );
+
+    // The amount block is inflexible, so on a narrow screen it wrapped to two
+    // lines and crossAxisAlignment.end dropped "Preventive Wellness" down to
+    // the second line's baseline — the label read as belonging to the wrong
+    // row. Stacking is the same reflow the Home card's meter uses; keeping the
+    // two consistent is the point of them sharing a visual.
+    final tight = context.isTight;
+    final amountBlock = Column(
+      crossAxisAlignment:
+          tight ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      children: [
+        Text(
+          pesoFromCentavos(remainingCentavos),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: remainingColor,
+          ),
+        ),
+        Text(
+          'left of ${pesoFromCentavos(totalCentavos)}',
+          style: theme.textTheme.labelSmall
+              ?.copyWith(color: cs.onSurfaceVariant),
+        ),
+      ],
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (!available)
-                    Text(
-                      'Not available yet',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: cs.error,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  pesoFromCentavos(remainingCentavos),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: remainingColor,
-                  ),
-                ),
-                Text(
-                  'left of ${pesoFromCentavos(totalCentavos)}',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: cs.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ],
-        ),
+        if (tight)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [labelBlock, const SizedBox(height: 4), amountBlock],
+          )
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(child: labelBlock),
+              const SizedBox(width: 8),
+              amountBlock,
+            ],
+          ),
         const SizedBox(height: 10),
         ClipRRect(
           borderRadius: BorderRadius.circular(100),

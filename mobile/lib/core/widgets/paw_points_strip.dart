@@ -47,6 +47,12 @@ class PawPointsStrip extends StatelessWidget {
     // next to "1,800".
     final pointsText = balance != null ? _grouped(balance!.currentBalance) : '—';
 
+    // Measured on a 329dp Fold cover screen: the balance and "pts" leave the
+    // trailing label ~92dp, and "History & Rewards" needs ~107dp, so it
+    // ellipsised to "History & Rewa…" — a label that has stopped saying
+    // anything. The short form still names where the tap goes.
+    final actionLabel = context.isTight ? 'Rewards' : 'History & Rewards';
+
     return Semantics(
       button: true,
       label: balance != null
@@ -109,21 +115,26 @@ class PawPointsStrip extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Flexible so the label shrinks/ellipsizes before it can force a
-              // RenderFlex overflow at large text scales.
-              Flexible(
-                child: Text(
-                  'History & Rewards',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  // white@65% composites to 3.9:1 on navy — under the 4.5:1
-                  // floor for a 12sp label. onNavyMuted is the same read at
-                  // 4.6:1.
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.onNavyMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
+              // NOT Flexible. Expanded (the balance) and Flexible (this label)
+              // both default to flex: 1, so Row split the free space 50/50
+              // regardless of need — and inside the Benefits hub's pill, whose
+              // 16dp padding costs another 32dp, the balance's half was too
+              // small and "1,800" rendered as "1,8…". Truncating the member's
+              // points balance is the worst possible thing this widget can do.
+              // Natural width here hands every spare pixel to the number, and
+              // the label is ours and short (isTight already swaps in the
+              // compact wording, and isTight fires on large font scales too).
+              Text(
+                actionLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                // white@65% composites to 3.9:1 on navy — under the 4.5:1
+                // floor for a 12sp label. onNavyMuted is the same read at
+                // 4.6:1.
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.onNavyMuted,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(width: 4),
