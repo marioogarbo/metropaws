@@ -17,6 +17,7 @@ import {
   Wallet,
   Banknote,
   MapPin,
+  PawPrint,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutAction } from "@/app/admin/actions";
@@ -29,6 +30,7 @@ const NAV_LINKS = [
   { href: "/admin/payments", label: "Payments", icon: Wallet },
   { href: "/admin/reservations", label: "Reservations", icon: BookMarked },
   { href: "/admin/reimbursements", label: "Reimbursements", icon: Receipt },
+  { href: "/admin/paw-points", label: "PawPoints", icon: PawPrint },
   { href: "/admin/providers", label: "Providers", icon: Banknote },
   // "Directory" rather than a second "Providers": the entry above is the
   // reimbursement payout list, this one is the public website listing.

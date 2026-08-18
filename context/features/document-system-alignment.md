@@ -313,10 +313,51 @@ Where implemented the values match exactly. Referral and birthday bonus are
 self-contained and could ship without item 1; reminder-completed depends on
 wellness reminders existing.
 
-The manual also prints a 7-tier rewards catalogue (250 → 5,000 pts). The
-`PawPointsReward` table is admin-managed and **not seeded**, so the live
-catalogue is whatever an admin entered — verify it against the manual before the
-manual is handed to a member. The manual hedges these as "Sample", which helps.
+The manual also prints a 7-tier rewards catalogue (250 → 5,000 pts). **Resolved
+2026-08-18** — all seven are in `seed_paw_points_rewards`, seeded to dev and
+prod, and now editable from `/admin/paw-points`.
+
+Both databases held **zero** reward rows until that date, so
+`GET /paw-points/rewards` returned `[]` and every member — including every live
+one on the released APK — saw the app's "Rewards coming soon" empty state. The
+catalogue had only ever been inserted by hand-pasting the since-deleted
+`migrations/add_paw_points.sql` into the Supabase SQL editor, and that paste never
+reached prod. Nothing seeds on startup or in `deploy.ps1`, and until now no admin
+endpoint could write the table, so the gap was invisible from every surface.
+
+Three seeded names had also been trimmed against the manual, dropping the "or …"
+alternatives (e.g. "PHP 100 Wellness Credit" for "PHP 100 Wellness Credit **or
+approved reward equivalent**") — the substitution room MMS-DWP-001 §66 relies on.
+Restored in `seed.py`. Note `seed_paw_points_rewards` matches on **name**, so
+editing a reward's name there and re-running inserts a duplicate rather than
+updating it; change the catalogue through the admin page instead.
+
+### MMS-DWP-001 Part VI is the real PawPoints spec, and it conflicts
+
+`website/MMS-DWP-001_Digital_Wellness_Platform_Framework_Rev1_PawPoints_Rewards.pdf`
+— a CEO-owned Controlled Document referenced by nothing in this repo. §61–70
+specify what the manual does not: redemption (§66, app or CSR, Operations
+approves, Technology deducts), **expiry at 12 months from issuance** or at
+membership lapse past the grace period (§67), points **reversal** on refunded or
+reversed transactions (§67), and both dashboards (§69).
+
+Against those requirements, still open:
+
+| §69 requires | Status |
+| --- | --- |
+| Member: balance, earned, available rewards | ✅ |
+| Member: pending / redeemed / expired | ❌ no such concepts in the model |
+| Admin: issued, redeemed, outstanding, top earners | ✅ `/admin/paw-points` |
+| Admin: expired, reward cost, liability estimate | ❌ no cost per reward is stored |
+| §66 redemption | ❌ the Rewards tab has no Redeem action at all |
+| §67 expiry + reversal | ❌ nothing expires; a refunded payment keeps its points |
+
+Its earning matrix and catalogue also **disagree with the manual's** — different
+activities, and a catalogue running to 10,000 pts across 11 tiers. The code
+follows the manual (later, member-facing, and hedged as "Sample"); the framework
+says values "may be adjusted by management prior to launch". Romy still has to
+confirm which governs. Do not publish the framework — it is marked Confidential
+& Proprietary and is deliberately not in `public/`.
 
 ## 7. The Digital Pet Passport stores a photo, not a record
 

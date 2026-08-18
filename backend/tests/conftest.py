@@ -81,9 +81,7 @@ def make_member(db):
         db.flush()
         member = models.Member(
             user_id=user.id,
-            first_name="Test",
-            last_name="Member",
-            **overrides,
+            **{"first_name": "Test", "last_name": "Member", **overrides},
         )
         db.add(member)
         db.flush()
