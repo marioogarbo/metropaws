@@ -63,6 +63,18 @@ String _formatDate(DateTime d) {
   return '${weekdays[d.weekday - 1]}, ${d.day} ${months[d.month - 1]} ${d.year}';
 }
 
+/// "Aug 6, 2027". Deliberately without the weekday that [_formatDate] adds:
+/// nobody needs the day of the week a plan lapses. Matches the format
+/// plan_selection already uses so the two screens quote the same date the
+/// same way.
+String _formatPlanDate(DateTime d) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return '${months[d.month - 1]} ${d.day}, ${d.year}';
+}
+
 /// Home and Account render the member profile from the SHARED [MemberBloc],
 /// which also serves wallet, promos, notifications, bookings and PawPoints —
 /// including a notification-count poll that fires every 60s for the whole life
@@ -1296,6 +1308,34 @@ class _DigitalIdCard extends StatelessWidget {
     // wallet balance and the claim link — the two "this is yours" moments.
     final cardAccent = isLightStandard ? AppColors.goldDark : AppColors.gold;
 
+    // What the member wants to know beside the tier: how long it lasts.
+    //
+    // NOT "Renews on ...". Nothing bills automatically — there is no scheduler
+    // behind the API and no saved card — so promising a renewal would be a
+    // false statement about their money. "Active until" is what plan_selection
+    // already says, and it is true.
+    //
+    // A monthly member gets the server's own §5.7 wording verbatim, because
+    // their standing ("Digital Access Active", "Vesting in Progress", ...) is
+    // a contract term we must not paraphrase, and because a monthly member is
+    // NOT yet covered — a bare date here would imply they were.
+    final w0 = walletPet;
+    String? planStatusLine;
+    var planStatusUrgent = false;
+    if (w0 != null && w0.planExpired) {
+      planStatusLine = 'Expired';
+      planStatusUrgent = true;
+    } else if (w0 != null && w0.isMonthly) {
+      planStatusLine = w0.membershipStatusLabel;
+    } else {
+      final until =
+          w0?.planExpiresAt ??
+          pet?.planActivatedAt?.add(const Duration(days: 365));
+      if (until != null) {
+        planStatusLine = 'Active until ${_formatPlanDate(until)}';
+      }
+    }
+
     final isVerified = pet?.vaxCardUrl != null;
     final petServices = pet?.petServices ?? [];
     // The Digital Pawprint QR is the pet's clinic-redemption ID; it only makes
@@ -1428,6 +1468,46 @@ class _DigitalIdCard extends StatelessWidget {
               ],
             ),
           ),
+
+          // ── Plan ───────────────────────────────────────────────────
+          // The plan the member actually pays for was nowhere on this card.
+          // That also left "Upgrade plan" at the foot instructing them to
+          // upgrade from an unnamed thing, and it contradicted the stated
+          // reason the tier was pulled out of the Home header ("every pet card
+          // already carries its own TierBadge" — it did not), so tier had
+          // vanished from Home entirely.
+          //
+          // Full card width rather than tucked under the name: squeezed into
+          // the name column, between a 52px avatar and the 44px overflow
+          // button, "Active until Aug 6, 2027" clipped to "Active until Aug…".
+          // The plan describes the pet, not the name.
+          if (hasPlan && pet?.planType != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Row(
+                children: [
+                  TierBadge(planType: pet!.planType!, small: true),
+                  if (planStatusLine != null) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        planStatusLine,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: planStatusUrgent
+                              ? AppColors.error
+                              : onCardMuted,
+                          fontWeight: planStatusUrgent
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
 
           // ── Benefit Wallet — the pet's membership value now that booking/
           //    sessions are on standby. Legacy session rows still render below
@@ -2142,27 +2222,16 @@ class _WalletSummaryRow extends StatelessWidget {
       ),
     );
 
-    // "Preventive Wellness" beside "₱25,000.00 left of ₱25,000.00" stops
-    // fitting on one line on a narrow screen or at a large font scale — and
-    // the amount was the UNCONSTRAINED child of that Row, so it overflowed
-    // rather than ellipsising. Stacking is the honest fix: the label keeps its
-    // meaning, the figure keeps every digit, and the meter below still spans
-    // the full width either way.
-    final meterHeader = context.isTight
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [labelText, const SizedBox(height: 3), amountText],
-          )
-        : Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Flexible(child: labelText),
-              const SizedBox(width: 8),
-              Flexible(child: amountText),
-            ],
-          );
+    // Always stacked, at every width. Side by side, "Preventive Wellness" and
+    // "₱2,000.00 left of ₱2,000.00" do not both fit inside this card even at
+    // 384dp — one of the two always loses characters, and which one loses them
+    // just depends on how the flex is arranged. Neither is acceptable: the
+    // label names the pool and the figure is the member's money. Stacking
+    // costs one line and truncates nothing at any width.
+    final meterHeader = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [labelText, const SizedBox(height: 3), amountText],
+    );
 
     final row = Padding(
       padding: const EdgeInsets.only(bottom: 14),
