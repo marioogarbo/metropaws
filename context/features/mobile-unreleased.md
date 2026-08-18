@@ -8,7 +8,7 @@ version in [`android-distribution.md`](./android-distribution.md).
 | --- | --- |
 | Live on Play | **1.4.1 (versionCode 9)**, published 2026-08-14 |
 | `pubspec.yaml` | still `1.4.1+9` — **must be bumped before any build** |
-| Branches holding this work | `main` (monthly), `feature/pet-records` (pet records) |
+| Branches holding this work | `main` (monthly, chrome/Home/narrow-screen), `feature/pet-records` (pet records) |
 
 ---
 
@@ -65,6 +65,30 @@ No backend change required; `PUT /pets/{id}` already accepted this.
 Members on the current build will notice the theme and the navigation
 immediately, so these are worth a line in the Play release notes even though
 neither is a feature.
+
+### 4. Navy app chrome, a restructured Home, and narrow-screen support
+
+Added 2026-08-18. Detail and the measured contrast figures are in
+[`../sessions/2026-08-18-navy-chrome-and-narrow-screens.md`](../sessions/2026-08-18-navy-chrome-and-narrow-screens.md).
+
+- **The app chrome is navy** — app bar, Home header block, and the nav capsule —
+  with the cream content field between them. Six screens were already overriding
+  the app bar to navy by hand, so this mostly makes the theme agree with what the
+  app was doing. Every screen looks different; worth a release note.
+- **Home is restructured.** Greeting, name, Founding badge and PawPoints merge
+  into one navy header. "Add another pet" moves out of the page footer (where it
+  sat under the pagination dots as the quietest thing on screen) into a "Your
+  pets" section header — that is the entry point the Pack Discount depends on.
+- **The Home pet card states the plan.** It previously showed none, which left
+  "Upgrade plan" asking members to upgrade from an unnamed thing. Tier badge
+  only; **no expiry date**, by client decision.
+- **Narrow screens down to 320dp.** Not exotic: that is a normal 360dp phone at
+  Samsung's largest Screen zoom. Fixed six defects that only appeared on a real
+  device, including the PawPoints **balance** truncating to "1,8…" and every form
+  in the app clipping its validation messages to one line.
+
+Nothing here needs a backend change and nothing here is gated on the monthly
+deploy, so this half can ship whenever a build goes out.
 
 ---
 

@@ -146,3 +146,14 @@ says. If a fact is derivable by reading a file, link to that file instead.
   read-only audit of both databases confirmed production was affected by the
   first but that no emergency claim has ever been filed, so nothing was mispaid —
   and settled the duplicate `member_services` question at zero rows.
+- [`sessions/2026-08-18-navy-chrome-and-narrow-screens.md`](sessions/2026-08-18-navy-chrome-and-narrow-screens.md) —
+  made the app chrome navy and rebalanced Home to 60/30/10 (gold appeared ten
+  times on one screen, navy once), then supported narrow screens down to 320dp —
+  a normal phone at Samsung's largest Screen zoom, not just Fold cover displays.
+  Records the measured contrast figures, including that **gold on navy is 2.9:1
+  and fails even the 3:1 UI floor**. The keeper: two commits written from static
+  analysis caught none of the six defects that mattered, all of which needed the
+  app rendered on a device — among them a `Stack`/`Positioned` overlap that no
+  amount of code reading exposes. Also: the pet card now states its plan, and the
+  meter-bar redesign was built, rejected, and force-pushed away, so that
+  complaint is still open.
