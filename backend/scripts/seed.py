@@ -327,12 +327,16 @@ FAQS = [
 # editor by hand and could not be re-run: its ids came from gen_random_uuid(),
 # so ON CONFLICT DO NOTHING never matched and a second run duplicated all seven.
 # Matching on name here makes it idempotent like every other step.
+# Names carry the manual's full wording, including each "or …" alternative. Those
+# alternatives are the substitution room the catalogue is published with — the
+# framework lets MetroPaws swap in an equivalent reward when one runs out — so
+# trimming them to a shorter title quietly narrows what the member was promised.
 PAW_POINTS_REWARDS = [
     ("Digital Responsible Fur Parent Badge", "Low-cost recognition reward", 250, "recognition", 1),
-    ("MetroPaws Pet Tag or Sticker Pack", "Subject to availability", 500, "merchandise", 2),
-    ("Pet Wellness Checklist Kit or Event Priority Slot", "Designed to support wellness engagement", 750, "merchandise", 3),
-    ("PHP 100 Wellness Credit", "Subject to reward budget and program rules", 1000, "credit", 4),
-    ("Grooming Add-On or Nail Trim Voucher", "Partner availability may apply", 1500, "voucher", 5),
+    ("MetroPaws Pet Tag, Sticker Pack or Small Merchandise Item", "Subject to availability", 500, "merchandise", 2),
+    ("Pet Wellness Checklist Kit or Member Event Priority Slot", "Designed to support wellness engagement", 750, "merchandise", 3),
+    ("PHP 100 Wellness Credit or Approved Reward Equivalent", "Subject to reward budget and program rules", 1000, "credit", 4),
+    ("Grooming Add-On, Nail Trim Support or Merchandise Voucher", "Partner availability may apply", 1500, "voucher", 5),
     ("Premium Member Gift Pack or VIP Event Access", "Ideal for Premium and loyal members", 2500, "merchandise", 6),
     ("Special Annual Recognition Reward", "For top engaged members only", 5000, "recognition", 7),
 ]
