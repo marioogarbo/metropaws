@@ -23,6 +23,12 @@ reverse holds: a member still on the 1.4.0 APK cannot take any Play update —
 1.4.1, nor 1.5.0 when promoted — and gets no prompt saying so. They must
 uninstall and reinstall from Play, losing nothing but their session.
 
+**Decision (Mario, 2026-08-19): the APK route is closed and nothing will be done
+about the members left on it.** Google Play is the only channel now. No outreach,
+no in-app notice, no attempt to count the installs. Keep the rest of this file as
+the explanation for any "App not installed" report that surfaces later — it is
+reference, not a backlog item.
+
 ## The core constraint
 
 **Installing one over the other fails with "App not installed."** Members

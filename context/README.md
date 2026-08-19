@@ -49,10 +49,10 @@ says. If a fact is derivable by reading a file, link to that file instead.
 ### Features
 - [`features/android-distribution.md`](features/android-distribution.md) —
   the two Android install routes and why they are mutually incompatible. **The
-  direct APK was retired 2026-08-03**, so the site now offers Play alone — but
-  the constraint inverted rather than ended: Play is now ahead of the last APK,
-  and a member still holding one cannot take any Play update, with nothing
-  telling them so.
+  direct APK was retired 2026-08-03 and the route is closed** (decided
+  2026-08-19) — Play is the only channel. Kept as the explanation for any "App
+  not installed" report from a member still holding the old APK, since Play is
+  now ahead of it; not an open task.
 - [`features/provider-nomination.md`](features/provider-nomination.md) —
   **proposed, not built.** Letting members nominate their own groomer/clinic so
   direct-to-provider payouts become reachable, and why members must never
