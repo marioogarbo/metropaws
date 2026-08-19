@@ -1,15 +1,27 @@
 # Android distribution — two routes, mutually incompatible
 
-**Status:** active constraint as of 2026-07-30
-**Owns:** `website/lib/app-download.ts`, `website/components/app-store-buttons.tsx`, `website/app/download/page.tsx`
+**Status:** the second route is **retired** (2026-08-03, `284bb31` + `dcf2a28`).
+The website offers Play only, `/download` is deleted and 307s to the listing, and
+`website/lib/app-download.ts` holds no APK constants. **The constraint below is
+not historical, though** — it still binds every member who installed the direct
+APK before that date and has not switched, and they are invisible to Play's
+update numbers.
+**Owns:** `website/lib/app-download.ts`, `website/components/app-store-buttons.tsx`
+(`website/app/download/page.tsx` no longer exists)
 
-MetroPaws Android (`com.metropaws.mobile`) is installable two ways, and a
+MetroPaws Android (`com.metropaws.mobile`) was installable two ways, and a
 device can only ever hold one of them.
 
 | Route | Serves | Signed by |
 | --- | --- | --- |
-| Google Play | the reviewed release (v1.3.1, versionCode 7, live 2026-07-24) | Google's app signing key |
-| Direct APK | a newer local build, hosted on Google Drive | the upload keystore |
+| Google Play | the reviewed release (v1.4.1, versionCode 9, live 2026-08-14) | Google's app signing key |
+| Direct APK | **retired 2026-08-03.** Last published 1.4.0; still installed on an unknown number of devices | the upload keystore |
+
+**Play is now ahead of the APK, which inverts the original premise.** This file
+was written when local builds ran ahead of the Play listing. Since 2026-08-03 the
+reverse holds: a member still on the 1.4.0 APK cannot take any Play update —
+1.4.1, nor 1.5.0 when promoted — and gets no prompt saying so. They must
+uninstall and reinstall from Play, losing nothing but their session.
 
 ## The core constraint
 
@@ -49,11 +61,13 @@ The APK build runs ahead of the Play release. Shipping to Play costs a
 review cycle, so newer features land in the APK first and the Play listing
 lags. **This is a release-cadence gap, not an intended architecture.**
 
-The intended end state is Play-only: bump past `1.3.1+7`, build the AAB with
-`--dart-define=ENV=prod`, promote internal → production, then retire the APK
-path and delete `APK_HREF` / `APK_VERSION` from
-`website/lib/app-download.ts`. Every day both routes stay live adds members
-who can't move to Play without uninstalling.
+**This end state was reached on 2026-08-03.** The plan read: bump past
+`1.3.1+7`, build the AAB with `--dart-define=ENV=prod`, promote internal →
+production, then retire the APK path and delete `APK_HREF` / `APK_VERSION` from
+`website/lib/app-download.ts`. All of it is done — the constants are gone and the
+release cadence is Play-only. What the plan did not resolve is the population
+already holding an APK; nothing reaches them automatically, so a switch has to be
+asked for.
 
 Best practice worth restating, because it was briefly misunderstood with the
 client: you do **not** wait for a "final and complete" version before
@@ -63,21 +77,23 @@ member automatically.
 
 ## How the website presents it
 
-`AppStoreButtons` (hero, homepage) renders the APK badge first, then Google
-Play — deliberate order, client's call. Both are real links; the Play badge
-targets the plain HTTPS listing URL, which Android intercepts and deep-links
-into the Play Store app. **Never use `market://`** — it adds nothing on
-Android and breaks on desktop.
+**Rewritten 2026-08-19 — the previous description of this section was obsolete.**
+`AppStoreButtons` now renders exactly two badges: Google Play (a real link to the
+plain HTTPS listing, which Android intercepts and deep-links into the Play Store
+app) and a deliberately inert App Store badge showing `IOS_STATUS_LABEL`, since
+there is no iOS listing to point at. **Never use `market://`** — it adds nothing
+on Android and breaks on desktop.
 
-The incompatibility is surfaced in three places, because a member who taps
-the wrong button second hits a dead end:
+The three incompatibility warnings this file used to list are **all gone**, along
+with the APK badge and the `/download` page that carried two of them. That was
+correct once the site stopped offering the APK — a warning about choosing between
+two routes is confusing when only one is on offer.
 
-1. Homepage hero caption — "Pick one — the two versions can't replace each other"
-2. `/download` hero — bordered callout below the two CTAs
-3. `/download` FAQ — "Can I switch between the two later?"
-
-Anything that reduces those warnings needs to account for the fact that the
-failure mode is silent from the website's side: Android reports it, we don't.
+**The gap that leaves:** a member already holding the retired APK gets no signal
+from anywhere. The site no longer mentions the incompatibility, Play cannot see
+them, and Android reports the failure only at install time as a bare "App not
+installed". If the APK population turns out to matter, reaching them needs an
+email or an in-app notice, not a website change.
 
 ## Related external state
 
@@ -86,12 +102,15 @@ Facts that live in Play Console, not in this repo:
 - **Production is published to 1 country / region.** The Play link silently
   returns "item not found" everywhere else. Confirm this matches intent
   before any wider marketing push.
-- **Internal testing track holds versionCode 7** and is still enabled. An
-  account on the tester list is served the internal build over production,
-  forever, regardless of install state — track priority is
+- **Internal testing track holds versionCode 10 (1.5.0)**, uploaded
+  2026-08-19 11:55, and is still enabled. It previously held 7. An account
+  on the tester list is served the internal build over production, forever,
+  regardless of install state — track priority is
   `internal > closed > open > production` and is per-Google-account.
   Testing tracks have no "halt rollout"; the only way to switch one off is
-  to empty its tester list.
+  to empty its tester list. Harmless while internal and production hold the
+  same build; the trap is when production moves ahead and testers silently
+  stay behind on an older internal one.
 - **Env is baked in at build time.** `mobile/lib/core/constants/api_constants.dart`
   defaults release builds to `prod`, so a forgotten `--dart-define` is safe.
   To confirm what a shipped build points at: Account tab → bottom version

@@ -6,9 +6,20 @@ version in [`android-distribution.md`](./android-distribution.md).
 
 | | |
 | --- | --- |
-| Live on Play | **1.4.1 (versionCode 9)**, published 2026-08-14 |
-| `pubspec.yaml` | still `1.4.1+9` — **must be bumped before any build** |
-| Branches holding this work | `main` (monthly, chrome/Home/narrow-screen), `feature/pet-records` (pet records) |
+| Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
+| Internal testing track | **1.5.0 (versionCode 10)**, uploaded 2026-08-19 11:55 |
+| `pubspec.yaml` | `1.5.0+10` (bumped in `c69d5f2`) |
+| Branches holding this work | all merged into `main` — verified 2026-08-19 with `git branch --merged main` |
+
+**Status 2026-08-19: everything below is built, verified, and sitting on the
+internal testing track. It is not on production**, so this file stays full.
+Empty it when 10 is promoted, not before. The one thing gating promotion is the
+monthly pricing question at the foot of this file — the prices are already live
+in the prod database, and this build is the first that lets a member reach them.
+
+Do not trust an older reading of this table: the branch row previously named
+`feature/pet-records` as separate, and section 1 previously said the monthly
+endpoints were missing from production. Both were stale by 2026-08-19.
 
 ---
 
@@ -30,9 +41,14 @@ A plan can be paid monthly, not just annually. Governed by Agreement Rev. 5A
 - Unvested pools are shown muted and marked "not available yet" on the Benefits
   card, the Home pet card, and the Submit form.
 
-**Hard dependency:** the monthly endpoints do not exist in production yet.
-Shipping this build before the prod backend deploy gives every monthly action a
-404. Order is: prod backend deploy → then the AAB.
+**Hard dependency — CLEARED 2026-08-19.** This previously read "the monthly
+endpoints do not exist in production yet". They do now, verified by reading
+`https://metropaws-backend.onrender.com/openapi.json` directly: `/payments/installment`
+and `/payments/quotes` are present, and so are `cadence`, `price_monthly`,
+`membership_status`, `subscription_next_due_on`, `subscription_payments_made`
+and the vesting fields. `GET /plans` returns real monthly prices on all three
+plans. The upgrade/renewal work is live in the same deploy — `PlanQuoteOut`
+carries `eligible` / `eligibility` / `is_current`. No 404 surface remains.
 
 ### 2. Pet health records
 
@@ -102,7 +118,25 @@ deploy, so this half can ship whenever a build goes out.
    signed with `META-INF/UPLOAD.RSA`, `metropaws-backend.onrender.com` compiled
    in, and **neither the dev URL nor `localhost:8000` present**. A build that
    fell back to localhost is what caused the "login credentials are incorrect"
-   Play rejection.
+   Play rejection. Unzip the AAB and search **every** ABI slice of
+   `base/lib/*/libapp.so`, not just `arm64-v8a`.
+
+   **Do not use `strings` for this — it is not installed in this repo's Git Bash,
+   and the check fails open.** `strings ... | grep -c` reports `0` for a missing
+   binary exactly as it does for an absent URL, so all three must-be-ABSENT rows
+   "pass" while the build is never actually read. Search the bytes instead:
+
+   ```bash
+   python -c "
+   import pathlib
+   d = pathlib.Path(r'<extracted>/base/lib/arm64-v8a/libapp.so').read_bytes()
+   for u in ['metropaws-backend.onrender.com','metropaws-backend-dev.onrender.com','localhost:8000']:
+       print(d.count(u.encode()), u)"
+   ```
+
+   The must-be-PRESENT rows are what make this honest: prod host and
+   `metropaws.ph` should both count **4**. If a present-check reads `0`, the
+   tooling is broken, not the build.
 4. Build with `--dart-define=ENV=prod`. Release builds default to prod even if
    it is forgotten, but do not rely on that.
 5. See [`mobile-prod-build`](./android-distribution.md) and the memory of the
@@ -116,6 +150,9 @@ document) or on Premium being **+8%** over annual where the other two plans are
 than a rebuild — but the copy and the member's experience of the waiting period
 depend on the answer.
 
-**The pet-records half has no such blocker.** If monthly needs to wait, it can
-ship on its own from `feature/pet-records` rebased onto the last pre-monthly
-commit — worth considering, since it fixes a dead end that affects members today.
+**The pet-records half has no such blocker** — but as of 2026-08-19 the split is
+no longer free. Everything is merged into `main` and built together as
+1.5.0+10, so shipping pet records alone now means a fresh branch off the last
+pre-monthly commit, a new versionCode, and a second upload. The cheaper lever is
+the prices themselves: they are rows in the prod database, so correcting them
+needs no build at all. Prefer fixing the number over splitting the release.

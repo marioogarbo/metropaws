@@ -48,8 +48,11 @@ says. If a fact is derivable by reading a file, link to that file instead.
 
 ### Features
 - [`features/android-distribution.md`](features/android-distribution.md) —
-  the two Android install routes (Google Play + direct APK), why they are
-  mutually incompatible, and how the website presents the choice.
+  the two Android install routes and why they are mutually incompatible. **The
+  direct APK was retired 2026-08-03**, so the site now offers Play alone — but
+  the constraint inverted rather than ended: Play is now ahead of the last APK,
+  and a member still holding one cannot take any Play update, with nothing
+  telling them so.
 - [`features/provider-nomination.md`](features/provider-nomination.md) —
   **proposed, not built.** Letting members nominate their own groomer/clinic so
   direct-to-provider payouts become reachable, and why members must never
@@ -83,15 +86,18 @@ says. If a fact is derivable by reading a file, link to that file instead.
 - [`features/mobile-unreleased.md`](features/mobile-unreleased.md) —
   **what is in the app but not yet on Play.** The standing answer to "what
   changed since the last release?", plus the pre-build checklist (bump the
-  version, deploy the backend first, verify the AAB has no localhost URL).
-  Empty it when a build ships.
+  version, deploy the backend first, verify the AAB has no localhost URL —
+  including the byte-search command that replaces a `strings` check which
+  fails open). 1.5.0+10 is built and on internal testing; empty this when it
+  is promoted to production, not before.
 - [`features/monthly-subscriptions.md`](features/monthly-subscriptions.md) —
   monthly instalment memberships and the vesting they gate (Agreement §5.2–§5.10):
   why a subscription is per pet, why an annual member has no row at all, why
   default is derived instead of swept, and the money invariant that stops a
   monthly payment re-granting the plan and handing back a spent allowance twelve
-  times a year. Backend and app both built and exercised on a real device; not
-  in production, and see `mobile-unreleased.md` for the order it must ship in.
+  times a year. Backend and app both built and exercised on a real device. **The
+  backend half is now live in production** (verified 2026-08-19); the app half is
+  on the internal testing track in 1.5.0+10 and gated on the unconfirmed prices.
 - [`features/deployment-topology.md`](features/deployment-topology.md) —
   which repo and branch deploys to which host, which frontend calls which
   backend (staging points at *dev*), why production deploys from `master` and not
@@ -171,3 +177,15 @@ says. If a fact is derivable by reading a file, link to that file instead.
   is the real PawPoints spec, mandating both dashboards, 12-month expiry and
   points reversal, and conflicting with the manual's catalogue. Built
   `/admin/paw-points`; the missing admin CRUD was the actual cause.
+- [`sessions/2026-08-19-play-release-1-5-0.md`](sessions/2026-08-19-play-release-1-5-0.md) —
+  built, verified and uploaded 1.5.0+10 to the **internal testing** track: monthly
+  instalments, pet records, light-only theme and navy chrome, all 26 mobile
+  commits since the 1.4.1 release. The keeper is a verification that **failed
+  open** — `strings` is not installed here, so the AAB's compiled-in-URL check
+  returned `0` for every host while reading nothing, which is indistinguishable
+  from a clean build on exactly the two rows that guard against a Play rejection;
+  the must-be-present row is what exposed it. Also found `mobile-unreleased.md`
+  stale in both directions (a cleared blocker still declared, shipped work still
+  listed as a separate branch), and the direct-APK route retired since
+  2026-08-03 with its incompatibility now pointing the other way. Promotion to
+  production is gated on the unconfirmed ₱300/₱600/₱900 monthly prices.
