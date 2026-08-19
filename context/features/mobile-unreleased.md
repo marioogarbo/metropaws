@@ -9,11 +9,12 @@ version in [`android-distribution.md`](./android-distribution.md).
 | Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
 | Internal testing track | **1.5.0 (versionCode 10)**, uploaded 2026-08-19 11:55 |
 | `pubspec.yaml` | `1.5.0+10` (bumped in `c69d5f2`) |
-| Branches holding this work | all merged into `main` — verified 2026-08-19 with `git branch --merged main` |
+| Branches holding this work | all merged into `main` — verified 2026-08-19 with `git branch --merged main` — **except** the auth redesign (§5), on `feature/auth-pet-friendly-redesign`, unmerged as of 2026-08-19 |
 
-**Status 2026-08-19: everything below is built, verified, and sitting on the
-internal testing track. It is not on production**, so this file stays full.
-Empty it when 10 is promoted, not before. The one thing gating promotion is the
+**Status 2026-08-19: sections 1–4 are built, verified, and sitting on the
+internal testing track. They are not on production**, so this file stays full.
+Empty sections 1–4 when 10 is promoted, not before — **but not §5**, which
+landed after 10 was uploaded and is in no build at all (see below). The one thing gating promotion is the
 monthly pricing question at the foot of this file — the prices are already live
 in the prod database, and this build is the first that lets a member reach them.
 
@@ -105,6 +106,43 @@ Added 2026-08-18. Detail and the measured contrast figures are in
 
 Nothing here needs a backend change and nothing here is gated on the monthly
 deploy, so this half can ship whenever a build goes out.
+
+### 5. Pet-friendly auth screens — NOT in versionCode 10
+
+**This section is in no uploaded build.** It landed after 1.5.0+10 went to
+internal testing at 11:55 on 2026-08-19, so promoting 10 does not ship it, and
+this section must survive the emptying of the four above. Session record:
+[`2026-08-19-auth-screen-redesign.md`](../sessions/2026-08-19-auth-screen-redesign.md).
+
+Login, register (email gate + step 1) and forgot-password rebuilt as one
+surface: photo header with a rounded foot, brand lockup and a screen-specific
+line; a paw-track trail behind the cream form; warm pet-voiced copy; a 36sp
+heading that steps down to 28sp on narrow or text-scaled screens; the form
+centred while it fits; and the header collapsing to a band while the keyboard is
+up, which is the difference between a reachable Sign In button and one the
+member has to go looking for.
+
+**Two of these are fixes to live defects, not new design:**
+
+- Secondary auth links were `AppColors.gold` on cream — **~2.7:1**, failing
+  since those screens were written. They are navy now.
+- The auth screens showed **dark** status-bar icons over the photograph, because
+  an AppBar-less screen inherits whatever the previous one set. An
+  `AnnotatedRegion` in the strip pins them light.
+
+New shared widgets: `core/widgets/mp_paw_backdrop.dart` (`MpPawBackdrop` +
+`MpCentredScroll`) and `MpFieldIcon` in `mp_text_field.dart`. All three screens
+now take their header height from one rule, `MpBrandPhotoStrip.heightFor` — they
+previously used two different multipliers while showing the *same* photograph.
+
+Verified on a physical SM S947B including a simulated 320dp width; the
+forgot-password success state and register step 1 were not verified as rendered
+(step 1 needs the local backend). `flutter analyze` is unchanged at 21
+pre-existing issues.
+
+**One decision outstanding:** whether the paw trail should stay pinned to the
+screen or keep travelling with the page when the header collapses. It no longer
+deforms either way.
 
 ---
 

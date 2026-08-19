@@ -16,6 +16,7 @@ import '../../../core/widgets/mp_button.dart';
 import '../../../core/widgets/mp_dropdown_field.dart';
 import '../../../core/widgets/mp_error_banner.dart';
 import '../../../core/widgets/mp_brand_photo_strip.dart';
+import '../../../core/widgets/mp_paw_backdrop.dart';
 import '../../../core/widgets/mp_text_field.dart';
 import '../../../theme.dart';
 
@@ -146,8 +147,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rawHeight = MediaQuery.of(context).size.height * 0.22;
-    final headerHeight = rawHeight.clamp(130.0, double.infinity);
+    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardIsUp.
+    final compact = MpBrandPhotoStrip.keyboardIsUp(context);
 
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
@@ -162,12 +163,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             MpBrandPhotoStrip(
               imagePath: 'assets/images/pet-care-register.jpg',
-              tagline: 'Your pet\'s digital home starts here.',
-              height: headerHeight,
+              tagline: 'Two minutes to join.',
+              height: MpBrandPhotoStrip.heightFor(context),
+              compact: compact,
             ),
             Expanded(
-              child: SafeArea(
-                top: false,
+              child: MpPawBackdrop(
                 child: !_emailVerified
                     ? _EmailGate(
                         formKey: _emailPreKey,
@@ -329,7 +330,7 @@ class _EmailGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return SingleChildScrollView(
+    return MpCentredScroll(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
       child: AutofillGroup(
         child: Form(
@@ -338,13 +339,19 @@ class _EmailGate extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Get started',
-                style: Theme.of(context).textTheme.displaySmall,
+                'Join the club.',
+                // Steps down a level on a narrow or text-scaled screen rather
+                // than shrinking to fit — same call LoginScreen makes.
+                style: (context.isTight
+                        ? Theme.of(context).textTheme.displaySmall
+                        : Theme.of(context).textTheme.displayMedium)
+                    ?.copyWith(
+                        fontWeight: FontWeight.w800, letterSpacing: -0.5),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
-                'Enter your email to create your account.',
-                style: Theme.of(context).textTheme.bodyMedium
+                "Start with your email address, and we'll check it's free.",
+                style: Theme.of(context).textTheme.bodyLarge
                     ?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: 28),
@@ -365,6 +372,7 @@ class _EmailGate extends StatelessWidget {
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 textInputAction: TextInputAction.done,
+                prefix: const MpFieldIcon(Icons.mail_outline_rounded),
                 onFieldSubmitted: (_) => onContinue(),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Enter your email';
@@ -512,12 +520,13 @@ class _Step1 extends StatelessWidget {
           children: [
             Text(
               'Fur parent details',
-              style: Theme.of(context).textTheme.displaySmall,
+              style: Theme.of(context).textTheme.displaySmall
+                  ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.4),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
-              'We just need a few details to get you started.',
-              style: Theme.of(context).textTheme.bodyMedium
+              'A few details about you, then we can talk about your pet.',
+              style: Theme.of(context).textTheme.bodyLarge
                   ?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 24),
@@ -563,6 +572,7 @@ class _Step1 extends StatelessWidget {
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
               textInputAction: TextInputAction.next,
+              prefix: const MpFieldIcon(Icons.mail_outline_rounded),
               onFieldSubmitted: (_) =>
                   FocusScope.of(context).requestFocus(phoneFocus),
               validator: (v) {
@@ -613,6 +623,7 @@ class _Step1 extends StatelessWidget {
               obscure: obscure,
               autofillHints: const [AutofillHints.newPassword],
               textInputAction: TextInputAction.done,
+              prefix: const MpFieldIcon(Icons.lock_outline_rounded),
               validator: (v) =>
                   v == null || v.length < 8 ? 'At least 8 characters' : null,
               suffix: IconButton(

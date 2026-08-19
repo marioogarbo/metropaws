@@ -8,6 +8,8 @@ import '../../../core/widgets/mp_button.dart';
 import '../../../core/widgets/mp_text_field.dart';
 import '../../../core/widgets/mp_error_banner.dart';
 import '../../../core/widgets/mp_brand_photo_strip.dart';
+import '../../../core/widgets/mp_paw_backdrop.dart';
+import '../../../core/widgets/staggered_reveal.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -42,49 +44,61 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final headerHeight = MediaQuery.of(context).size.height * 0.28;
+    final theme = Theme.of(context);
+    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardIsUp.
+    final compact = MpBrandPhotoStrip.keyboardIsUp(context);
 
     return Scaffold(
       body: Column(
         children: [
-          // ── Brand photo strip — "navy gift box" identity anchor ────────────
           MpBrandPhotoStrip(
             imagePath: 'assets/images/pet-care-login.jpg',
-            tagline: 'Your pet\'s digital home.',
-            height: headerHeight,
+            tagline: 'Membership in your pocket.',
+            height: MpBrandPhotoStrip.heightFor(context),
+            compact: compact,
           ),
-          // ── Scrollable form ────────────────────────────────────────────────
           Expanded(
-            child: SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 32,
-                ),
+            child: MpPawBackdrop(
+              child: MpCentredScroll(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
                 child: AutofillGroup(
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Welcome home.',
-                          style: Theme.of(context).textTheme.displaySmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Sign in to your MetroPaws account.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
+                        StaggeredReveal(
+                          index: 0,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome home.',
+                                // The one element on the page that should
+                                // feel too big. It steps down a level rather
+                                // than shrinking to fit when the screen is
+                                // narrow or the text is scaled up.
+                                style:
+                                    (context.isTight
+                                            ? theme.textTheme.displaySmall
+                                            : theme.textTheme.displayMedium)
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.5,
+                                        ),
                               ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Sign in to check in on your pets.',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 28),
-                        // ── Error banner — derived from BLoC state ─────────
+                        // ── Error banner — derived from BLoC state ────────
                         BlocBuilder<AuthBloc, AuthState>(
                           builder: (context, state) {
                             if (state is AuthFailure) {
@@ -96,124 +110,143 @@ class _LoginScreenState extends State<LoginScreen> {
                             return const SizedBox.shrink();
                           },
                         ),
-                        MpTextField(
-                          controller: _emailCtrl,
-                          label: 'Email address',
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.email],
-                          textInputAction: TextInputAction.next,
-                          onFieldSubmitted: (_) => FocusScope.of(
-                            context,
-                          ).requestFocus(_passwordFocus),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) {
-                              return 'Email address is required';
-                            }
-                            if (!RegExp(
-                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                            ).hasMatch(v)) {
-                              return 'Enter a valid email address';
-                            }
-                            return null;
-                          },
+                        StaggeredReveal(
+                          index: 1,
+                          child: MpTextField(
+                            controller: _emailCtrl,
+                            label: 'Email address',
+                            keyboardType: TextInputType.emailAddress,
+                            autofillHints: const [AutofillHints.email],
+                            textInputAction: TextInputAction.next,
+                            prefix: const MpFieldIcon(
+                              Icons.mail_outline_rounded,
+                            ),
+                            onFieldSubmitted: (_) => FocusScope.of(
+                              context,
+                            ).requestFocus(_passwordFocus),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return 'Email address is required';
+                              }
+                              if (!RegExp(
+                                r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                              ).hasMatch(v)) {
+                                return 'Enter a valid email address';
+                              }
+                              return null;
+                            },
+                          ),
                         ),
                         const SizedBox(height: 16),
-                        MpTextField(
-                          controller: _passwordCtrl,
-                          focusNode: _passwordFocus,
-                          label: 'Password',
-                          obscure: _obscure,
-                          autofillHints: const [AutofillHints.password],
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _submit(),
-                          validator: (v) => v == null || v.length < 8
-                              ? 'Password must be at least 8 characters'
-                              : null,
-                          suffix: IconButton(
-                            tooltip: _obscure
-                                ? 'Show password'
-                                : 'Hide password',
-                            icon: Icon(
-                              _obscure
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
-                        ),
-                        // ── Forgot password — quiet escape hatch ──────────
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordScreen(),
-                              ),
-                            ),
-                            style: TextButton.styleFrom(
-                              minimumSize: const Size(44, 44),
-                              padding: const EdgeInsets.only(right: 8),
-                            ),
-                            child: Text(
-                              'Forgot password?',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: AppColors.gold,
-                                    fontWeight: FontWeight.w600,
+                        StaggeredReveal(
+                          index: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              MpTextField(
+                                controller: _passwordCtrl,
+                                focusNode: _passwordFocus,
+                                label: 'Password',
+                                obscure: _obscure,
+                                autofillHints: const [AutofillHints.password],
+                                textInputAction: TextInputAction.done,
+                                prefix: const MpFieldIcon(
+                                  Icons.lock_outline_rounded,
+                                ),
+                                onFieldSubmitted: (_) => _submit(),
+                                validator: (v) => v == null || v.length < 8
+                                    ? 'Password must be at least 8 characters'
+                                    : null,
+                                suffix: IconButton(
+                                  tooltip: _obscure
+                                      ? 'Show password'
+                                      : 'Hide password',
+                                  icon: Icon(
+                                    _obscure
+                                        ? Icons.visibility_off_rounded
+                                        : Icons.visibility_rounded,
+                                    color: theme.colorScheme.onSurfaceVariant,
                                   ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        BlocBuilder<AuthBloc, AuthState>(
-                          builder: (context, state) {
-                            final loading = state is AuthLoading;
-                            return MpButton(
-                              label: 'Sign In',
-                              onPressed: loading ? null : _submit,
-                              loading: loading,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        Center(
-                          child: TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterScreen(),
+                                  onPressed: () =>
+                                      setState(() => _obscure = !_obscure),
+                                ),
                               ),
-                            ),
-                            style: TextButton.styleFrom(
-                              minimumSize: const Size(44, 44),
-                            ),
-                            child: RichText(
-                              text: TextSpan(
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
+                              // Sits on the field's trailing edge, next to
+                              // the eye the member just reached for after a
+                              // failed attempt.
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
                                     ),
-                                children: [
-                                  const TextSpan(
-                                    text: "Don't have an account? ",
                                   ),
-                                  TextSpan(
-                                    text: 'Join now',
-                                    style: TextStyle(
-                                      color: AppColors.gold,
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(44, 44),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Forgot password?',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: AppColors.navy,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        StaggeredReveal(
+                          index: 3,
+                          child: Column(
+                            children: [
+                              BlocBuilder<AuthBloc, AuthState>(
+                                builder: (context, state) {
+                                  final loading = state is AuthLoading;
+                                  return MpButton(
+                                    label: 'Sign In',
+                                    onPressed: loading ? null : _submit,
+                                    loading: loading,
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              TextButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RegisterScreen(),
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(44, 44),
+                                ),
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    children: const [
+                                      TextSpan(text: 'Not a member yet? '),
+                                      TextSpan(
+                                        text: 'Join the club',
+                                        style: TextStyle(
+                                          color: AppColors.navy,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

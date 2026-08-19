@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../theme.dart';
+
 class MpTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -18,6 +20,7 @@ class MpTextField extends StatelessWidget {
   final int? maxLength;
   final int? maxLines;
   final List<TextInputFormatter>? inputFormatters;
+
   /// Overrides the field's text style — e.g. `fontFeatures:
   /// [FontFeature.tabularFigures()]` for currency/amount fields so digits
   /// don't shift width while typing. Leave null everywhere else; it has no
@@ -69,5 +72,20 @@ class MpTextField extends StatelessWidget {
         counterText: '',
       ),
     );
+  }
+}
+
+/// Leading mark for a text field. The membership spans a broad age range and
+/// mixed digital comfort, so an icon makes a field's job legible before the
+/// label is read. Navy at partial alpha, not gold: gold marks money and
+/// actions, and a field ornament is neither.
+class MpFieldIcon extends StatelessWidget {
+  final IconData icon;
+
+  const MpFieldIcon(this.icon, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(icon, size: 20, color: AppColors.navy.withValues(alpha: 0.55));
   }
 }

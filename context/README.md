@@ -88,8 +88,9 @@ says. If a fact is derivable by reading a file, link to that file instead.
   changed since the last release?", plus the pre-build checklist (bump the
   version, deploy the backend first, verify the AAB has no localhost URL —
   including the byte-search command that replaces a `strings` check which
-  fails open). 1.5.0+10 is built and on internal testing; empty this when it
-  is promoted to production, not before.
+  fails open). 1.5.0+10 is built and on internal testing; empty sections 1–4
+  when it is promoted to production, not before — but **not** §5, the auth
+  redesign, which landed after 10 was uploaded and is in no build at all.
 - [`features/monthly-subscriptions.md`](features/monthly-subscriptions.md) —
   monthly instalment memberships and the vesting they gate (Agreement §5.2–§5.10):
   why a subscription is per pet, why an annual member has no row at all, why
@@ -177,6 +178,19 @@ says. If a fact is derivable by reading a file, link to that file instead.
   is the real PawPoints spec, mandating both dashboards, 12-month expiry and
   points reversal, and conflicting with the manual's catalogue. Built
   `/admin/paw-points`; the missing admin CRUD was the actual cause.
+- [`sessions/2026-08-19-auth-screen-redesign.md`](sessions/2026-08-19-auth-screen-redesign.md) —
+  rebuilt the three auth screens pet-friendly, and fixed two contrast defects that
+  had been live since those screens were written (gold links at ~2.7:1 on cream;
+  dark status-bar icons over the photo). The keeper is three defects that all
+  analysed clean — `flutter analyze` read the same 21 issues before and after —
+  including a keyboard check that **could never fire** because `Scaffold` strips
+  the bottom view inset from the MediaQuery it hands its body, and a second
+  verification that **failed open** the same way the `strings` check did, this
+  time a `uiautomator` grep that never looked at the attribute holding the
+  answer. The third was found by the client, not the tooling: the paw backdrop
+  deformed under the keyboard, and every screenshot of it had been taken with the
+  keyboard down. Also records why the gold CTA in the client's mockup stayed
+  navy, and that all three "different" hero photos are the same dog.
 - [`sessions/2026-08-19-play-release-1-5-0.md`](sessions/2026-08-19-play-release-1-5-0.md) —
   built, verified and uploaded 1.5.0+10 to the **internal testing** track: monthly
   instalments, pet records, light-only theme and navy chrome, all 26 mobile
