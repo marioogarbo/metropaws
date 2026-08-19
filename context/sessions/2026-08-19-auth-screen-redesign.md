@@ -141,7 +141,16 @@ Physical SM S947B (`R5GL217V63Z`), 1440×3120 @ density 600 → 832dp tall.
   `pet-care-register.jpg` and `pet-care-no-text.jpg` are the **same** golden
   retriever photograph, so the three screens are near-indistinguishable and a
   cat never appears anywhere in the flow — even though the brand mark itself has
-  a dog *and* a cat inside the paw. Also: `pet-care-dog.png` is **not** a usable
-  cutout (the background is only partly erased, leaving a hard rectangular
-  edge), so the decorative corner cutout that `mobile/PRODUCT.md` specifies for
-  the forgot-password page cannot be built from the current assets.
+  a dog *and* a cat inside the paw. The three are not merely similar — they are
+  **byte-identical**, same md5 `00772c03a365785b8c2ade1d47e7f542`, one file
+  copied three times.
+
+  **Corrected 2026-08-19, same day:** an earlier version of this note claimed
+  `pet-care-dog.png` was not a usable cutout, with a hard rectangular edge. That
+  was asserted without opening the file and it is **wrong**. It is a proper
+  transparent cutout — RGBA 1440x1152, all four corners at alpha 0, 74.1% fully
+  transparent, 23.2% fully opaque with an antialiased edge between. So the
+  decorative corner cutout `mobile/PRODUCT.md` specifies for forgot-password
+  **can** be built from assets already in the repo; no dog artwork is needed.
+  The outstanding graphics ask is a **cat** (photo and cutout) and a second hero
+  photograph, not a dog cutout.
