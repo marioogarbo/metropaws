@@ -8,9 +8,14 @@ version in [`android-distribution.md`](./android-distribution.md).
 | --- | --- |
 | Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
 | Internal testing track | **1.5.0 (versionCode 10)**, uploaded 2026-08-19 11:55 |
-| Built and verified, NOT uploaded | **1.5.1 (versionCode 11)**, built 2026-08-20 — the first bundle containing §5 |
-| `pubspec.yaml` | `1.5.1+11` (bumped in `759ec71`) |
-| Branches holding this work | all merged into `main`. The auth redesign (§5) fast-forwarded in on 2026-08-20 as `759ec71` and was pushed; `origin/main` is level, having been 3 commits behind before that |
+| Built and verified, NOT uploaded | **1.5.1 (versionCode 11)**, built 2026-08-20 — the first bundle containing §5 · **1.6.0 (versionCode 12)**, built 2026-08-21 — first bundle containing §6, and it supersedes 11 |
+| `pubspec.yaml` | `1.6.0+12` (bumped in `1f96675`) |
+| Branches holding this work | all merged into `main`. §6 fast-forwarded in on 2026-08-21 as `f6cda00` and was pushed with the release commit; `origin/main` is level |
+
+**Three builds now separate production from `main`.** Play production is still on
+**1.4.1+9**; 10 sits on internal testing; 11 was built and never uploaded; 12 now
+supersedes 11. Promoting anything ships §1–§6 together, so the release notes and
+the QA surface are the whole list below, not one section.
 
 **Status 2026-08-19: sections 1–4 are built, verified, and sitting on the
 internal testing track. They are not on production**, so this file stays full.
@@ -177,6 +182,48 @@ being trusted.
 whose layout and animation timing changed. Reaching it needs a completed
 registration against the local backend, so it is in `main` and in the 1.5.1+11
 bundle without ever having been seen.
+
+### 6. The Home pet card, and a rebuilt tier colour system — NOT in 10 or 11
+
+Added 2026-08-21 (`f6cda00`), shipped in **1.6.0+12**. Session record:
+[`../sessions/2026-08-21-pet-card-tier-redesign.md`](../sessions/2026-08-21-pet-card-tier-redesign.md).
+
+**Three defects, not a restyle:**
+
+- **The two top tiers were the same card.** De Luxe and Premium shared one
+  surface (`0xFF111219`) and differed only in ink hue — **1.00:1** apart, so they
+  were indistinguishable while swiping the Home carousel.
+- **The prestige order was inverted.** Premium (₱9,999, the top tier per
+  `scripts/seed.py`) wore cool silver while De Luxe (₱5,999) got the brand gold.
+- **The Standard card had no shadow at all** against the cream scaffold — 1.07:1
+  of separation, i.e. none.
+
+`TierStyle` is now the single source for every colour a tier surface paints,
+across a three-material ramp (linen → brushed navy → obsidian). Tier-to-tier
+separation is **1.71:1**; every pair is measured against both gradient ends.
+Gold went from seven elements on one card to the Premium skin alone.
+
+The wallet meter gained a hierarchy — the plan's main pool takes a 20sp
+ExtraBold balance, the other a compact row — and the two pools are ranked by
+size and layout only. **Opacity is not available for ranking:** a dimmed
+secondary fill measured 2.03:1 against its own track, under the 3:1 UI floor, so
+a full Emergency bar read as spent. That was caught on a real device.
+
+**Two corrections to long-standing repo claims:**
+
+- `gold` on `navy` is **4.60:1, not 2.9:1** — `CLAUDE.md` carried the wrong
+  figure for months. The real failures are gold on white (2.72:1) and on
+  `surface` (2.54:1).
+- The bundled Montserrat subsets carry 232 codepoints and **none of them is `₱`
+  (U+20B1)**, so every peso figure in the app renders that glyph through the
+  platform fallback. It has shipped that way for months; it is merely more
+  visible now the balance is 20sp. Fixing it means re-subsetting font binaries —
+  **not done, deliberately.**
+
+**Verified by golden render only** — three tiers at 320dp and 393dp, and each
+meter state per tier. **Not verified on hardware.** The last two rounds of
+feedback on the card's corner emboss came from a real device precisely because
+renders missed them, so treat device QA on Home as outstanding.
 
 ---
 
