@@ -109,32 +109,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 }
 
-// ─── Shared: state badge ──────────────────────────────────────────────────────
-
-/// Marks which of the two states the screen is in. Tinted ink, not gold — gold
-/// is the 10% and is spent on money and actions, and a state marker is neither.
-class _StateBadge extends StatelessWidget {
-  final IconData icon;
-  final Color background;
-  final Color foreground;
-
-  const _StateBadge({
-    required this.icon,
-    required this.background,
-    required this.foreground,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
-      child: Icon(icon, color: foreground, size: 30),
-    );
-  }
-}
-
 // ─── Request State ────────────────────────────────────────────────────────────
 
 class _RequestView extends StatelessWidget {
@@ -165,12 +139,6 @@ class _RequestView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _StateBadge(
-                icon: Icons.lock_reset_rounded,
-                background: AppColors.navyLight,
-                foreground: AppColors.navy,
-              ),
-              const SizedBox(height: 20),
               Text(
                 "Let's get you back in.",
                 style: theme.textTheme.displaySmall?.copyWith(
@@ -275,12 +243,6 @@ class _SuccessView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _StateBadge(
-          icon: Icons.mark_email_read_outlined,
-          background: AppColors.successLight,
-          foreground: AppColors.success,
-        ),
-        const SizedBox(height: 20),
         Text(
           'Check your inbox',
           style: theme.textTheme.displaySmall?.copyWith(

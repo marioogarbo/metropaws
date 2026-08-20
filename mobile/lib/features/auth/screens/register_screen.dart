@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' show cos, sin;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1430,8 +1429,6 @@ class _SuccessState extends StatefulWidget {
 class _SuccessStateState extends State<_SuccessState>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  late final Animation<double> _iconScale;
-  late final Animation<double> _burstProgress;
   late final Animation<double> _contentFade;
   late final Animation<Offset> _petNameSlide;
 
@@ -1440,21 +1437,15 @@ class _SuccessStateState extends State<_SuccessState>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 700),
     );
-    _iconScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
-      ),
-    );
-    _burstProgress = CurvedAnimation(
-      parent: _ctrl,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    );
+    // The copy used to be held back until the emblem above it had finished
+    // landing. With the emblem gone there is nothing to wait for, and a screen
+    // that waits on nothing reads as one that is slow to load — so the reveal
+    // now starts on the first frame.
     _contentFade = CurvedAnimation(
       parent: _ctrl,
-      curve: const Interval(0.35, 0.8, curve: Curves.easeIn),
+      curve: const Interval(0.0, 0.7, curve: Curves.easeIn),
     );
     _petNameSlide = Tween<Offset>(
       begin: const Offset(0, 0.4),
@@ -1462,7 +1453,7 @@ class _SuccessStateState extends State<_SuccessState>
     ).animate(
       CurvedAnimation(
         parent: _ctrl,
-        curve: const Interval(0.4, 0.9, curve: Curves.easeOutCubic),
+        curve: const Interval(0.1, 1.0, curve: Curves.easeOutCubic),
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1489,39 +1480,6 @@ class _SuccessStateState extends State<_SuccessState>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 160,
-            height: 160,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                AnimatedBuilder(
-                  animation: _burstProgress,
-                  builder: (_, _) => CustomPaint(
-                    size: const Size(160, 160),
-                    painter: _GoldBurstPainter(_burstProgress.value),
-                  ),
-                ),
-                ScaleTransition(
-                  scale: _iconScale,
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: AppColors.goldLight,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.shield_rounded,
-                      color: AppColors.gold,
-                      size: 40,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
           FadeTransition(
             opacity: _contentFade,
             child: Text(
@@ -1597,41 +1555,6 @@ class _SuccessStateState extends State<_SuccessState>
       ),
     );
   }
-}
-
-class _GoldBurstPainter extends CustomPainter {
-  final double progress;
-  _GoldBurstPainter(this.progress);
-
-  static const _angles = [
-    0.0, 0.628, 1.257, 1.885, 2.513, 3.142, 3.770, 4.398, 5.027, 5.655,
-  ];
-  static const _dists = [
-    0.70, 0.85, 0.65, 0.90, 0.75, 0.80, 0.70, 0.85, 0.60, 0.75,
-  ];
-  static const _sizes = [
-    5.0, 4.0, 6.0, 3.5, 5.5, 4.5, 5.0, 3.0, 6.0, 4.0,
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (progress <= 0.01) return;
-    final paint = Paint()
-      ..color = AppColors.gold.withValues(alpha: (1.0 - progress) * 0.85);
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final maxR = size.width * 0.48;
-
-    for (var i = 0; i < _angles.length; i++) {
-      final r = maxR * _dists[i] * progress;
-      final x = cx + r * cos(_angles[i]);
-      final y = cy + r * sin(_angles[i]);
-      canvas.drawCircle(Offset(x, y), _sizes[i], paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_GoldBurstPainter old) => old.progress != progress;
 }
 
 /// Strips the leading zero Philippine users commonly type ("09xxx" → "9xxx"),
