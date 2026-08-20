@@ -859,9 +859,7 @@ class _DashboardState extends State<_Dashboard>
             width: double.infinity,
             decoration: const BoxDecoration(
               color: AppColors.navy,
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(28),
-              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
             ),
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
             child: Column(
@@ -872,9 +870,7 @@ class _DashboardState extends State<_Dashboard>
                 // where gold is supposed to be the rarest thing.
                 Text(
                   '${_timeGreeting()},',
-                  style: tt.labelLarge?.copyWith(
-                    color: AppColors.onNavyMuted,
-                  ),
+                  style: tt.labelLarge?.copyWith(color: AppColors.onNavyMuted),
                 ),
                 const SizedBox(height: 2),
                 // Plan tier deliberately does NOT appear here. It was the
@@ -1282,19 +1278,15 @@ class _DigitalIdCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final planType = pet?.planType ?? 'Standard';
     final tier = tierStyleFor(planType, isDark: isDark);
-    final isLightStandard = !isDark && !isDarkCardTier(planType);
 
-    final onCard = isLightStandard ? AppColors.navy : tier.primaryText;
-    final onCardMuted = isLightStandard
-        ? AppColors.greyText
-        : AppColors.white.withValues(alpha: 0.55);
-    final dividerColor = isLightStandard
-        ? AppColors.greyLight
-        : AppColors.white.withValues(alpha: 0.1);
-    // Gold text is 2.7:1 on the white Standard card and only reads on the
-    // near-black tier cards, so the surface picks the shade. Reserved for the
-    // wallet balance and the claim link — the two "this is yours" moments.
-    final cardAccent = isLightStandard ? AppColors.goldDark : AppColors.gold;
+    // Every colour this card paints with comes off `tier` now — no inline
+    // `isLightStandard ? … : …` ternaries left. That tangle was duplicated
+    // verbatim inside _DigitalPawprintSheet, which is exactly how the sheet and
+    // the card drifted apart, and it derived muted ink as `white @ 0.55`, whose
+    // real contrast depends on whatever pixel it lands on.
+    final onCard = tier.primaryText;
+    final onCardMuted = tier.mutedText;
+    final dividerColor = tier.dividerColor;
 
     // A healthy annual plan shows the tier and NOTHING else (client decision,
     // 2026-08-18): the expiry date is not what the member opens Home to find
@@ -1322,8 +1314,7 @@ class _DigitalIdCard extends StatelessWidget {
     final wClaim = walletPet;
     final canFileClaimNow =
         wClaim != null &&
-        (wClaim.remainingCentavos > 0 ||
-            wClaim.emergencyRemainingCentavos > 0);
+        (wClaim.remainingCentavos > 0 || wClaim.emergencyRemainingCentavos > 0);
 
     final isVerified = pet?.vaxCardUrl != null;
     final petServices = pet?.petServices ?? [];
@@ -1335,359 +1326,564 @@ class _DigitalIdCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: tier.cardSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: tier.borderColor,
-          width: isLightStandard ? 1 : 1.5,
-        ),
-        boxShadow: tier.glowColor != null
-            ? [
-                BoxShadow(
-                  color: tier.glowColor!,
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-              ]
-            : null,
+        // Gradient, not a flat fill. It is the whole difference between a
+        // coloured rectangle and a card catching light, and it costs nothing:
+        // the two ends are tier tokens.
+        gradient: tier.surfaceGradient,
+        borderRadius: BorderRadius.circular(_cardRadius),
+        border: Border.all(color: tier.borderColor, width: 1.5),
+        boxShadow: tier.shadow,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Pet identity row ────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-            child: Row(
+      // Clipped so the watermark can bleed off the corner instead of stopping
+      // short of it, which would read as a misplaced icon rather than as
+      // something embossed into the card.
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(_cardRadius),
+        child: Stack(
+          children: [
+            _CardWatermark(ink: onCard),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tapping the pet's avatar/name opens their full profile — the
-                // learned "tap a pet to view them" gesture. The ⋮ menu offers
-                // the same via "View profile" for discoverability.
-                Expanded(
-                  child: Semantics(
-                    button: onOpenProfile != null,
-                    label: onOpenProfile != null && pet != null
-                        ? "View ${_capFirst(pet!.name)}'s profile"
-                        : null,
-                    child: GestureDetector(
-                      onTap: onOpenProfile,
-                      behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        children: [
-                          // 60, not 52. "Pet as Hero" is the first UX
-                          // principle in PRODUCT.md, and the photo is the
-                          // fastest way to tell one carousel card from the
-                          // next.
-                          PetAvatar(
-                            photoUrl: pet?.photoUrl,
-                            size: 60,
-                            petName: pet?.name,
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                // ── Pet identity row ────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                  child: Row(
+                    children: [
+                      // Tapping the pet's avatar/name opens their full profile — the
+                      // learned "tap a pet to view them" gesture. The ⋮ menu offers
+                      // the same via "View profile" for discoverability.
+                      Expanded(
+                        child: Semantics(
+                          button: onOpenProfile != null,
+                          label: onOpenProfile != null && pet != null
+                              ? "View ${_capFirst(pet!.name)}'s profile"
+                              : null,
+                          child: GestureDetector(
+                            onTap: onOpenProfile,
+                            behavior: HitTestBehavior.opaque,
+                            child: Row(
                               children: [
-                                Text(
-                                  pet != null
-                                      ? _capFirst(pet!.name)
-                                      : 'Your Pet',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .displaySmall
-                                      ?.copyWith(
-                                        color: onCard,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                // 60, not 52. "Pet as Hero" is the first UX
+                                // principle in PRODUCT.md, and the photo is the
+                                // fastest way to tell one carousel card from the
+                                // next.
+                                PetAvatar(
+                                  photoUrl: pet?.photoUrl,
+                                  size: 60,
+                                  petName: pet?.name,
                                 ),
-                                if (pet?.breed != null ||
-                                    pet?.species != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    // Species is stored lowercase for older
-                                    // pets ("dog"); pet_form_screen only
-                                    // started offering "Dog"/"Cat" later, so
-                                    // the data is mixed and the display has to
-                                    // normalise it. clinic_scanner does the
-                                    // same thing inline.
-                                    [
-                                      if (pet?.species != null)
-                                        _capFirst(pet!.species!),
-                                      if (pet?.breed != null)
-                                        _capFirst(pet!.breed!),
-                                    ].join(' · '),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(color: onCardMuted),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        pet != null
+                                            ? _capFirst(pet!.name)
+                                            : 'Your Pet',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .displaySmall
+                                            ?.copyWith(
+                                              color: onCard,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (pet?.breed != null ||
+                                          pet?.species != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          // Species is stored lowercase for older
+                                          // pets ("dog"); pet_form_screen only
+                                          // started offering "Dog"/"Cat" later, so
+                                          // the data is mixed and the display has to
+                                          // normalise it. clinic_scanner does the
+                                          // same thing inline.
+                                          [
+                                            if (pet?.species != null)
+                                              _capFirst(pet!.species!),
+                                            if (pet?.breed != null)
+                                              _capFirst(pet!.breed!),
+                                          ].join(' · '),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(color: onCardMuted),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                      // The badge alone is short enough to live in
+                                      // the name column, which buys back the whole
+                                      // row the full-width plan block cost. Any
+                                      // status WORDING stays full-width below --
+                                      // "Fully Service-Eligible" would not fit here.
+                                      if (hasPlan && pet?.planType != null) ...[
+                                        const SizedBox(height: 8),
+                                        TierBadge(
+                                          planType: pet!.planType!,
+                                          small: true,
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                ],
-                                // The badge alone is short enough to live in
-                                // the name column, which buys back the whole
-                                // row the full-width plan block cost. Any
-                                // status WORDING stays full-width below --
-                                // "Fully Service-Eligible" would not fit here.
-                                if (hasPlan && pet?.planType != null) ...[
-                                  const SizedBox(height: 8),
-                                  TierBadge(
-                                    planType: pet!.planType!,
-                                    small: true,
-                                  ),
-                                ],
+                                ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (isVerified || onOptions != null)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isVerified)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Icon(
-                            Icons.verified_rounded,
-                            size: 16,
-                            color: AppColors.gold,
-                          ),
                         ),
-                      if (onOptions != null)
-                        Semantics(
-                          label: 'Pet options',
-                          button: true,
-                          child: GestureDetector(
-                            onTap: onOptions,
-                            behavior: HitTestBehavior.opaque,
-                            child: SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: Icon(
-                                Icons.more_vert,
-                                size: 18,
-                                color: onCardMuted,
+                      ),
+                      if (isVerified || onOptions != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          // Top-aligned, not centred: against a three-line name
+                          // column these two float mid-block and read as content.
+                          // They are card chrome and belong on the top edge.
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Ink, not gold. A 16px gold tick is 2.7:1 on the
+                            // Standard card — below even the 3:1 UI floor — and it
+                            // was one of seven gold marks competing on one card. A
+                            // vaccination tick is a trust mark, not a highlight.
+                            if (isVerified)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  right: 4,
+                                  top: 12,
+                                ),
+                                child: Icon(
+                                  Icons.verified_rounded,
+                                  size: 16,
+                                  color: onCard,
+                                ),
                               ),
-                            ),
-                          ),
+                            if (onOptions != null)
+                              Semantics(
+                                label: 'Pet options',
+                                button: true,
+                                child: GestureDetector(
+                                  onTap: onOptions,
+                                  behavior: HitTestBehavior.opaque,
+                                  child: SizedBox(
+                                    width: 44,
+                                    height: 44,
+                                    child: Icon(
+                                      Icons.more_vert,
+                                      size: 18,
+                                      color: onCardMuted,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                     ],
                   ),
-              ],
-            ),
-          ),
-
-          // Plan status: only renders when there is something to warn
-          // about (expired, or a monthly member still vesting). A healthy
-          // annual plan says its piece with the tier badge above and spends no
-          // vertical space here.
-          if (planStatusLine != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-              child: Text(
-                planStatusLine,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: planStatusUrgent ? AppColors.error : onCardMuted,
-                  fontWeight: FontWeight.w700,
                 ),
-              ),
-            ),
 
-          // ── Benefit Wallet — the pet's membership value now that booking/
-          //    sessions are on standby. Legacy session rows still render below
-          //    when booking_enabled flips back on (they're standby, not dead).
-          Builder(
-            builder: (context) {
-              // A pet with no active plan has no wallet yet — prompt to
-              // subscribe (the pet's identity + QR still show above/below).
-              if (!(pet?.hasActivePlan ?? false)) {
-                return _NoPlanBlock(
-                  petName: pet?.name ?? 'your pet',
-                  onCard: onCard,
-                  onCardMuted: onCardMuted,
-                  dividerColor: dividerColor,
-                  onSubscribe: onSubscribe,
-                );
-              }
-
-              final w = walletPet;
-              final showSessions = bookingEnabled && petServices.isNotEmpty;
-
-              // A pool with a 0 total isn't offered on this plan — skip it.
-              final walletRows = <Widget>[];
-              if (w != null) {
-                if (w.walletCentavos > 0) {
-                  walletRows.add(
-                    _WalletSummaryRow(
-                      available: w.preventiveAvailable,
-                      label: 'Preventive Wellness',
-                      totalCentavos: w.walletCentavos,
-                      remainingCentavos: w.remainingCentavos,
-                      onCard: onCard,
-                      onCardMuted: onCardMuted,
-                      accent: cardAccent,
-                      onTap: onViewClaims,
-                    ),
-                  );
-                }
-                if (w.emergencyWalletCentavos > 0) {
-                  walletRows.add(
-                    _WalletSummaryRow(
-                      available: w.emergencyAvailable,
-                      label: 'Emergency',
-                      totalCentavos: w.emergencyWalletCentavos,
-                      remainingCentavos: w.emergencyRemainingCentavos,
-                      onCard: onCard,
-                      onCardMuted: onCardMuted,
-                      accent: cardAccent,
-                      onTap: onViewClaims,
-                    ),
-                  );
-                }
-              }
-              final hasWallet = walletRows.isNotEmpty;
-              final canFileClaim =
-                  w != null &&
-                  (w.remainingCentavos > 0 || w.emergencyRemainingCentavos > 0);
-
-              // Nothing to show yet (wallet loading / fetch failed, booking off)
-              // → render header + QR only, no spinner or placeholder.
-              if (!hasWallet && !showSessions) return const SizedBox.shrink();
-
-              // Muted, not gold. A gold section label 40px above a gold CTA
-              // meant neither was the thing to look at, and a 10sp gold label
-              // on white is 2.7:1 regardless.
-              final labelStyle = Theme.of(context).textTheme.labelSmall
-                  ?.copyWith(
-                    color: onCardMuted,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    fontSize: 10,
-                  );
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Divider(height: 1, color: dividerColor),
+                // Plan status: only renders when there is something to warn
+                // about (expired, or a monthly member still vesting). A healthy
+                // annual plan says its piece with the tier badge above and spends no
+                // vertical space here.
+                if (planStatusLine != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
-                    child: Column(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                    child: Text(
+                      planStatusLine,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        // tier.warning, not AppColors.error: #DC2626 measures 2.6:1
+                        // on the De Luxe navy card, so "Expired" — the one line on
+                        // this card that stops claims working — was the least
+                        // readable thing on it for exactly the members who need it.
+                        color: planStatusUrgent ? tier.warning : onCardMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+
+                // ── Benefit Wallet — the pet's membership value now that booking/
+                //    sessions are on standby. Legacy session rows still render below
+                //    when booking_enabled flips back on (they're standby, not dead).
+                Builder(
+                  builder: (context) {
+                    // A pet with no active plan has no wallet yet — prompt to
+                    // subscribe (the pet's identity + QR still show above/below).
+                    if (!(pet?.hasActivePlan ?? false)) {
+                      return _NoPlanBlock(
+                        petName: pet?.name ?? 'your pet',
+                        tier: tier,
+                        onSubscribe: onSubscribe,
+                      );
+                    }
+
+                    final w = walletPet;
+                    final showSessions =
+                        bookingEnabled && petServices.isNotEmpty;
+
+                    // A pool with a 0 total isn't offered on this plan — skip it.
+                    //
+                    // The FIRST pool rendered takes the display-size figure. That is
+                    // Preventive Wellness wherever a plan funds it (₱2,000–₱7,000 vs
+                    // Emergency's ₱300–₱1,500, per scripts/seed.py), and Emergency
+                    // only on the hypothetical plan that funds emergency alone —
+                    // rather than hardcoding "preventive is the big one" and leaving
+                    // such a card with no primary figure at all.
+                    final walletRows = <Widget>[];
+                    if (w != null) {
+                      if (w.walletCentavos > 0) {
+                        walletRows.add(
+                          _WalletMeter(
+                            available: w.preventiveAvailable,
+                            label: 'Preventive Wellness',
+                            totalCentavos: w.walletCentavos,
+                            remainingCentavos: w.remainingCentavos,
+                            tier: tier,
+                            primary: true,
+                            onTap: onViewClaims,
+                          ),
+                        );
+                      }
+                      if (w.emergencyWalletCentavos > 0) {
+                        walletRows.add(
+                          _WalletMeter(
+                            available: w.emergencyAvailable,
+                            label: 'Emergency',
+                            totalCentavos: w.emergencyWalletCentavos,
+                            remainingCentavos: w.emergencyRemainingCentavos,
+                            tier: tier,
+                            primary: walletRows.isEmpty,
+                            onTap: onViewClaims,
+                          ),
+                        );
+                      }
+                    }
+                    final hasWallet = walletRows.isNotEmpty;
+
+                    // Nothing to show yet (wallet loading / fetch failed, booking off)
+                    // → render header + QR only, no spinner or placeholder.
+                    if (!hasWallet && !showSessions) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final labelStyle = Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(
+                          color: onCardMuted,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                          fontSize: 10,
+                        );
+
+                    // The "BENEFIT WALLET" heading is gone while the wallet is the
+                    // only block. A peso figure under the words "Preventive Wellness"
+                    // does not need a title telling you it is a wallet, and the ~24px
+                    // it cost is what pays for the balance being readable at arm's
+                    // length. The headings come back the moment there are TWO blocks
+                    // to tell apart — which is the only job they were doing.
+                    final needsHeadings = hasWallet && showSessions;
+
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (hasWallet) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Text('BENEFIT WALLET', style: labelStyle),
+                        Divider(height: 1, color: dividerColor),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (hasWallet) ...[
+                                if (needsHeadings)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Text(
+                                      'BENEFIT WALLET',
+                                      style: labelStyle,
+                                    ),
+                                  ),
+                                ...walletRows,
+                              ],
+                              if (showSessions) ...[
+                                if (hasWallet) const SizedBox(height: 6),
+                                if (needsHeadings)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Text(
+                                      'SESSIONS AVAILABLE',
+                                      style: labelStyle,
+                                    ),
+                                  ),
+                                ...petServices.map(
+                                  (s) => _SessionProgressRow(
+                                    service: s,
+                                    tier: tier,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                          ...walletRows,
-                        ],
-                        if (showSessions) ...[
-                          if (hasWallet) const SizedBox(height: 6),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Text(
-                              'SESSIONS AVAILABLE',
-                              style: labelStyle,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                // ── Show Digital Pawprint CTA — active plans only ────────────
+                if (hasPlan) ...[
+                  // Spacing, not a third divider. Three horizontal rules turned this
+                  // card into a small document; air separates the CTA instead.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                    child: _ScaleButton(
+                      onTap: onShowQr,
+                      child: Container(
+                        // minHeight, not height: the 48px box clipped the label at
+                        // large font scales. This keeps the 44px touch floor and
+                        // lets the button grow to two lines instead of truncating
+                        // the one action the card exists for.
+                        constraints: const BoxConstraints(minHeight: 48),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          // The CTA is a tier signal now: navy on Standard, brushed
+                          // metal on De Luxe, gold foil on Premium. One identical
+                          // gold button on all three tiers was the third element
+                          // making the cards interchangeable, and it left De Luxe
+                          // with a gold button under a gold balance figure while
+                          // handing the top tier nothing of its own.
+                          //
+                          // Shape, size, radius, icon and label are unchanged across
+                          // tiers — this is the card's skin, not a second button
+                          // vocabulary.
+                          color: tier.ctaFill,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.qr_code_rounded,
+                              size: 18,
+                              color: tier.ctaLabel,
                             ),
-                          ),
-                          ...petServices.map(
-                            (s) => _SessionProgressRow(
-                              service: s,
-                              onCard: onCard,
-                              onCardMuted: onCardMuted,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Show Digital Pawprint',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      color: tier.ctaLabel,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Both secondary actions share one row instead of stacking into
+                  // two 44px strips. Wrap, not Row: "Plan ends soon -- Renew now"
+                  // beside "File a claim" does not fit at 329dp, and Wrap drops to a
+                  // second line only when it must rather than always.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 2, 18, 6),
+                    child: Wrap(
+                      spacing: 18,
+                      children: [
+                        if (canFileClaimNow && onFileClaim != null)
+                          _FileClaimLink(ink: onCard, onTap: onFileClaim!),
+                        // The only path to plan selection for a pet that already has
+                        // a plan. Copy is status-aware from the local activation date
+                        // (display only; the server enforces eligibility).
+                        if (onSubscribe != null)
+                          _PlanActionLink(
+                            activatedAt: pet?.planActivatedAt,
+                            onCardMuted: onCardMuted,
+                            warning: tier.warning,
+                            onTap: onSubscribe!,
                           ),
-                        ],
                       ],
                     ),
                   ),
                 ],
-              );
-            },
-          ),
-
-          // ── Show Digital Pawprint CTA — active plans only ────────────
-          if (hasPlan) ...[
-            // Spacing, not a third divider. Three horizontal rules turned this
-            // card into a small document; air separates the CTA instead.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-              child: _ScaleButton(
-                onTap: onShowQr,
-                child: Container(
-                  // minHeight, not height: the 48px box clipped the label at
-                  // large font scales. This keeps the 44px touch floor and
-                  // lets the button grow to two lines instead of truncating
-                  // the one action the card exists for.
-                  constraints: const BoxConstraints(minHeight: 48),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.qr_code_rounded,
-                        size: 18,
-                        color: AppColors.text,
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          'Show Digital Pawprint',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: AppColors.text,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Both secondary actions share one row instead of stacking into
-            // two 44px strips. Wrap, not Row: "Plan ends soon -- Renew now"
-            // beside "File a claim" does not fit at 329dp, and Wrap drops to a
-            // second line only when it must rather than always.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 2, 18, 6),
-              child: Wrap(
-                spacing: 18,
-                children: [
-                  if (canFileClaimNow && onFileClaim != null)
-                    _FileClaimLink(accent: cardAccent, onTap: onFileClaim!),
-                  // The only path to plan selection for a pet that already has
-                  // a plan. Copy is status-aware from the local activation date
-                  // (display only; the server enforces eligibility).
-                  if (onSubscribe != null)
-                    _PlanActionLink(
-                      activatedAt: pet?.planActivatedAt,
-                      onCardMuted: onCardMuted,
-                      onTap: onSubscribe!,
-                    ),
-                ],
-              ),
+              ],
             ),
           ],
-        ],
+        ),
       ),
     );
   }
+}
+
+/// Corner radius shared by the pet card and its clip, so the border and the
+/// clipped watermark can't round differently. 18, not 16: the card grew a real
+/// shadow and a gradient, and a slightly softer corner is what stops the two
+/// from reading as a hard plastic tile.
+const double _cardRadius = 18;
+
+/// The emboss on the pet card: one paw print, tilted right and set flush into
+/// the top-right corner.
+///
+/// GENERAL — one paw for every pet (client decision, 2026-08-20). It keeps the
+/// full paw drawing (heart-shaped metacarpal pad, four splayed toes) and simply
+/// omits the NAILS; a clawless print is the neutral form, and the earlier plain
+/// oval-pad version threw away the pad shape along with the claws, which is not
+/// what "general" meant. It is a brand texture, not a species read-out — the
+/// breed line two rows away already says "Dog" or "Cat" in words.
+///
+/// Hand-painted rather than `Icons.pets` because the paw is TILTED and has to
+/// sit flush in the corner: the painter measures the rotated print and fits it
+/// to its box exactly, so "flush" costs no toes. A rotated icon would push its
+/// own diagonal past the box and the corner would cut the print instead.
+///
+/// INK, never gold — the same rule the paw trail follows: gold marks money and
+/// actions, and spending it on decoration costs the signal. 6% is a CEILING,
+/// not a starting point: at 7% the tightest pair on the card (De Luxe muted ink
+/// over the stamp) drops to 4.59:1, so raising the alpha breaks AA before it
+/// looks better.
+class _CardWatermark extends StatelessWidget {
+  final Color ink;
+
+  const _CardWatermark({required this.ink});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: _pawInset,
+      right: _pawInset,
+      // Excluded from the semantics tree and from hit testing: it is a surface,
+      // not content, and a screen reader announcing "paw print" over a
+      // membership card is noise.
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: CustomPaint(
+            size: const Size(_pawSize, _pawSize),
+            painter: _PawEmbossPainter(color: ink.withValues(alpha: 0.06)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const double _pawSize = 132;
+
+/// How far the print runs off the card's top and right edges. Negative, so the
+/// paw rides the edge rather than sitting inside it — the emboss carries on
+/// past the corner the way a stamp on a physical card does.
+///
+/// The two numbers move TOGETHER. The inset is a fixed pixel bite out of a
+/// print whose size sets how much of it that is: -14 of 132px trims the outer
+/// tips and keeps the pad plus the whole toe arc; the same -14 on a 90px print
+/// would eat a toe. Measured geometries that stopped reading as a paw: 220px at
+/// -46 (pad + two toe fragments) and 140px at -58 (bare pad — a lopsided
+/// teardrop, which shipped briefly before being caught on a real device).
+const double _pawInset = -14;
+
+/// Clockwise, so the print leans to the right.
+const double _pawTilt = 0.34;
+
+/// One paw print — heart-shaped pad plus four toes, no nails — rotated by
+/// [_pawTilt] and scaled so its rotated bounds fill the painter's box.
+///
+/// Fitting to the ROTATED bounds is the whole trick. Sizing to the upright paw
+/// and rotating afterwards throws the diagonal outside the box, and every
+/// attempt that did so lost toes to the card edge: 140px at -58/-46 left only
+/// the bare pad (a lopsided teardrop that reads as a smudge, which shipped
+/// briefly before being caught on a real device), and 172px at -16/-22 cut the
+/// right-hand toe.
+class _PawEmbossPainter extends CustomPainter {
+  final Color color;
+
+  const _PawEmbossPainter({required this.color});
+
+  /// `(centre, width, height, tilt)` in unit space — four toes arched over the
+  /// pad, the outer pair set lower and splayed, as a real gait leaves them.
+  static const _toes = [
+    (Offset(-0.375, -0.04), 0.26, 0.36, -0.44),
+    (Offset(-0.135, -0.30), 0.28, 0.39, -0.15),
+    (Offset(0.135, -0.30), 0.28, 0.39, 0.15),
+    (Offset(0.375, -0.04), 0.26, 0.36, 0.44),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+
+    final paw = _pawPath();
+    final bounds = paw.getBounds();
+    if (bounds.isEmpty) return;
+
+    final sx = size.width / bounds.width;
+    final sy = size.height / bounds.height;
+    final scale = sx < sy ? sx : sy;
+
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.scale(scale, scale);
+    canvas.translate(-bounds.center.dx, -bounds.center.dy);
+    canvas.drawPath(paw, Paint()..color = color);
+    canvas.restore();
+  }
+
+  /// The whole print as ONE path so it can be measured and rotated as a unit.
+  Path _pawPath() {
+    final paw = Path()..addPath(_padPath(), Offset.zero);
+    for (final (at, w, h, tilt) in _toes) {
+      paw.addPath(_tiltedOval(w, h, tilt), at);
+    }
+    return paw.transform((Matrix4.identity()..rotateZ(_pawTilt)).storage);
+  }
+
+  /// The metacarpal pad: an oval notched at the top and split into two lobes at
+  /// the bottom — the heart shape that makes a print read as a paw pad rather
+  /// than as a fifth toe.
+  Path _padPath() {
+    const at = Offset(0, 0.30);
+    const w = 0.76, h = 0.58;
+    final l = at.dx - w / 2, r = at.dx + w / 2;
+    final t = at.dy - h / 2, b = at.dy + h / 2;
+    return Path()
+      ..moveTo(at.dx, t + h * 0.12)
+      ..cubicTo(at.dx - w * 0.14, t - h * 0.06, l, t + h * 0.16, l, at.dy)
+      ..cubicTo(l, b - h * 0.10, l + w * 0.20, b, at.dx - w * 0.16, b)
+      ..cubicTo(at.dx - w * 0.05, b - h * 0.14, at.dx, b - h * 0.14, at.dx, b)
+      ..cubicTo(
+        at.dx + w * 0.05,
+        b - h * 0.14,
+        at.dx + w * 0.16,
+        b,
+        r - w * 0.20,
+        b,
+      )
+      ..cubicTo(r, b, r, b - h * 0.10, r, at.dy)
+      ..cubicTo(
+        r,
+        t + h * 0.16,
+        at.dx + w * 0.14,
+        t - h * 0.06,
+        at.dx,
+        t + h * 0.12,
+      )
+      ..close();
+  }
+
+  Path _tiltedOval(double w, double h, double tilt) {
+    final oval = Path()
+      ..addOval(Rect.fromCenter(center: Offset.zero, width: w, height: h));
+    return oval.transform((Matrix4.identity()..rotateZ(tilt)).storage);
+  }
+
+  @override
+  bool shouldRepaint(_PawEmbossPainter old) => old.color != color;
 }
 
 // ── Upgrade / renew link (pet card, active plans) ─────────────────────────
@@ -1699,11 +1895,18 @@ class _DigitalIdCard extends StatelessWidget {
 class _PlanActionLink extends StatelessWidget {
   final DateTime? activatedAt;
   final Color onCardMuted;
+
+  /// The card's contrast-safe alarm ink. Was `AppColors.gold`, which is 2.7:1
+  /// on the Standard card and 4.6:1 on navy — so "Plan expired — Renew", the
+  /// most urgent line the card can show, was rendered in the one colour that
+  /// could not carry it.
+  final Color warning;
   final VoidCallback onTap;
 
   const _PlanActionLink({
     required this.activatedAt,
     required this.onCardMuted,
+    required this.warning,
     required this.onTap,
   });
 
@@ -1737,7 +1940,7 @@ class _PlanActionLink extends StatelessWidget {
               Icon(
                 urgent ? Icons.autorenew_rounded : Icons.trending_up_rounded,
                 size: 15,
-                color: urgent ? AppColors.gold : onCardMuted,
+                color: urgent ? warning : onCardMuted,
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -1746,7 +1949,7 @@ class _PlanActionLink extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: urgent ? AppColors.gold : onCardMuted,
+                    color: urgent ? warning : onCardMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1857,12 +2060,12 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
     final planType =
         widget.pet?.planType ?? widget.member.planType ?? 'Standard';
     final tier = tierStyleFor(planType, isDark: isDark);
-    final isLightStandard = !isDark && !isDarkCardTier(planType);
 
-    final onCard = isLightStandard ? AppColors.navy : tier.primaryText;
-    final onCardMuted = isLightStandard
-        ? AppColors.greyText
-        : AppColors.white.withValues(alpha: 0.55);
+    // Read from `tier`, like the card does. These four lines used to be
+    // copy-pasted from _DigitalIdCard, so the sheet kept the old derivation
+    // whenever the card's changed — and it is the same membership card, opened.
+    final onCard = tier.primaryText;
+    final onCardMuted = tier.mutedText;
 
     final qrSize = (MediaQuery.of(context).size.width * 0.55).clamp(0.0, 220.0);
 
@@ -1870,28 +2073,22 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
 
     return Container(
       decoration: BoxDecoration(
-        color: tier.cardSurface,
+        // Same gradient and edge as the Home card it was opened from, so the
+        // sheet reads as that card enlarged rather than as a different object.
+        gradient: tier.surfaceGradient,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(
-          color: tier.borderColor,
-          width: isLightStandard ? 1 : 1.5,
-        ),
-        boxShadow: tier.glowColor != null
-            ? [
-                BoxShadow(
-                  color: tier.glowColor!,
-                  blurRadius: 30,
-                  spreadRadius: 4,
-                  offset: const Offset(0, -4),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  offset: const Offset(0, -4),
-                ),
-              ],
+        border: Border.all(color: tier.borderColor, width: 1.5),
+        // Cast UPWARD — the sheet rises from the bottom edge, so its shadow
+        // has to fall on the content above it, which is the opposite of the
+        // card's. Only the offsets differ from `tier.shadow`.
+        boxShadow: [
+          for (final s in tier.shadow)
+            BoxShadow(
+              color: s.color,
+              blurRadius: s.blurRadius,
+              offset: Offset(0, -s.offset.dy),
+            ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1902,9 +2099,7 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: isLightStandard
-                    ? AppColors.greyLight
-                    : AppColors.white.withValues(alpha: 0.2),
+                color: tier.meterTrack,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1927,11 +2122,13 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.shield_rounded,
-                        size: 13,
-                        color: AppColors.gold,
-                      ),
+                      // tier.accent, not raw gold: this lockup was painted gold
+                      // on every tier, and gold on the white Standard sheet is
+                      // 2.5:1 — the brand's own name was the least legible text
+                      // on the screen for the tier most members are on. The
+                      // sheet carries no balance figure, so the accent is free
+                      // here and the lockup is the right thing to spend it on.
+                      Icon(Icons.shield_rounded, size: 13, color: tier.accent),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -1946,7 +2143,7 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
-                                color: AppColors.gold,
+                                color: tier.accent,
                                 letterSpacing: 1.5,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -2042,27 +2239,94 @@ class _DigitalPawprintSheetState extends State<_DigitalPawprintSheet>
   }
 }
 
+/// A slim progress track, shared by the wallet meters and the standby session
+/// rows so the two can never drift apart again.
+///
+/// The fill is the card's own INK, not the accent: the bar is structure (how
+/// much is left), and the FIGURE above it is the money. Both in the accent made
+/// the meter the loudest thing on a card whose CTA is also accented.
+class _MeterBar extends StatelessWidget {
+  final double progress;
+  final TierStyle tier;
+  final double height;
+
+  /// True once the pool is spent. An empty track and a still-loading track look
+  /// identical, so a spent pool tints its track instead of just going blank.
+  final bool depleted;
+
+  const _MeterBar({
+    required this.progress,
+    required this.tier,
+    this.height = 6,
+    this.depleted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // 0.35, not 0.22: a spent pool's track separates from a normal one almost
+    // entirely by HUE (their luminance is 1.14:1 apart), and at 0.22 the tint
+    // was too faint for that hue to register as a state at all.
+    final track = depleted
+        ? tier.warning.withValues(alpha: 0.35)
+        : tier.meterTrack;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: progress),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, _) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final trackW = constraints.maxWidth;
+            return ClipRRect(
+              // Fully rounded, not radius 4. At 6-7px tall a 4px corner reads
+              // as a clipped rectangle; a pill reads as a gauge.
+              borderRadius: BorderRadius.circular(height),
+              child: SizedBox(
+                height: height,
+                width: trackW,
+                child: Stack(
+                  children: [
+                    Container(height: height, width: trackW, color: track),
+                    if (value > 0)
+                      Container(
+                        height: height,
+                        width: trackW * value,
+                        decoration: BoxDecoration(
+                          // Always full-strength ink. A dimmed fill was 2.03:1
+                          // against its own track on the De Luxe card — below
+                          // the 3:1 UI floor — so a FULL bar was nearly
+                          // indistinguishable from an empty one, and a pool
+                          // with every peso still in it read as spent.
+                          color: tier.primaryText,
+                          borderRadius: BorderRadius.circular(height),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Legacy prepaid-session row. Standby, not dead — it renders only while
+/// `booking_enabled` is on (see CLAUDE.md), and shares [_MeterBar] with the
+/// live wallet meters so the two visuals stay identical when booking returns.
 class _SessionProgressRow extends StatelessWidget {
   final PetService service;
-  final Color onCard;
-  final Color onCardMuted;
+  final TierStyle tier;
 
-  const _SessionProgressRow({
-    required this.service,
-    required this.onCard,
-    required this.onCardMuted,
-  });
+  const _SessionProgressRow({required this.service, required this.tier});
 
   @override
   Widget build(BuildContext context) {
     final total = service.totalSessions.clamp(1, 999);
     final remaining = service.remainingSessions.clamp(0, total);
     final isDepleted = remaining == 0;
-    final progress = remaining / total;
-
-    final countColor = isDepleted
-        ? onCardMuted.withValues(alpha: 0.55)
-        : AppColors.gold;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -2078,7 +2342,7 @@ class _SessionProgressRow extends StatelessWidget {
                 child: Text(
                   service.serviceType.name,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: onCard,
+                    color: tier.mutedText,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -2088,53 +2352,22 @@ class _SessionProgressRow extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 '$remaining/$total',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: countColor,
-                  fontWeight: FontWeight.w700,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  // Sessions are not money, so they take ink rather than the
+                  // accent — which the old row spent on a raw `AppColors.gold`
+                  // count that measured 2.7:1 on the Standard card anyway.
+                  color: isDepleted ? tier.mutedText : tier.primaryText,
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 7),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: progress),
-            duration: const Duration(milliseconds: 700),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, _) {
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final trackW = constraints.maxWidth;
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: SizedBox(
-                      height: 6,
-                      width: trackW,
-                      child: Stack(
-                        children: [
-                          Container(
-                            height: 6,
-                            width: trackW,
-                            color: onCardMuted.withValues(alpha: 0.15),
-                          ),
-                          if (value > 0)
-                            Container(
-                              height: 6,
-                              width: trackW * value,
-                              // Matches _WalletSummaryRow's bar. This row is
-                              // standby (booking off) and must not drift gold
-                              // while the live meter beside it is ink.
-                              decoration: BoxDecoration(
-                                color: onCard,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+          _MeterBar(
+            progress: remaining / total,
+            tier: tier,
+            depleted: isDepleted,
           ),
         ],
       ),
@@ -2144,170 +2377,227 @@ class _SessionProgressRow extends StatelessWidget {
 
 // ── Benefit Wallet meter (Home pet card) ─────────────────────────────────
 
-/// Peso-denominated Benefit Wallet meter for the Home pet card — the wallet-era
-/// counterpart to [_SessionProgressRow], sharing its bar visual. Pool-agnostic:
-/// caller passes the label ("Preventive Wellness" / "Emergency") and the pool's
-/// totals. Money stays in centavos until [pesoFromCentavos] at the display edge.
-class _WalletSummaryRow extends StatelessWidget {
+/// One peso-denominated wallet pool on the Home pet card.
+///
+/// Two sizes, set by [primary]. The plan's main pool gets a display-size
+/// balance (the card's second-loudest element after the pet's name); the
+/// smaller pool gets a single compact row. Before this both pools were rendered
+/// at 12sp, which left the card with no hierarchy at all between its heading
+/// and its content — every line the same size, which is what made a membership
+/// card read as a form.
+///
+/// Pool-agnostic: the caller passes the label and the pool's totals. Money
+/// stays in centavos until [pesoFromCentavos] at the display edge.
+class _WalletMeter extends StatelessWidget {
   final String label;
   final int totalCentavos;
   final int remainingCentavos;
-  final Color onCard;
-  final Color onCardMuted;
+  final TierStyle tier;
 
-  /// Contrast-safe gold for THIS card's surface: `gold` on the near-black tier
-  /// cards, `goldDark` on the white Standard one where plain gold is 2.7:1.
-  /// The Benefits hub already picked per surface; the Home card did not.
-  final Color accent;
+  /// True for the pool that carries the card's headline figure.
+  final bool primary;
   final VoidCallback? onTap;
 
-  /// False while a monthly subscriber has not vested this pool. The Home
-  /// card is the first thing a member sees, so showing the balance in gold
+  /// False while a monthly subscriber has not vested this pool. The Home card
+  /// is the first thing a member sees, so showing the balance in the accent
   /// here is the loudest possible claim that the money is theirs to spend.
   final bool available;
 
-  const _WalletSummaryRow({
+  const _WalletMeter({
     this.available = true,
     required this.label,
     required this.totalCentavos,
     required this.remainingCentavos,
-    required this.onCard,
-    required this.onCardMuted,
-    required this.accent,
+    required this.tier,
+    required this.primary,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
     final safeRemaining = remainingCentavos < 0 ? 0 : remainingCentavos;
     final isDepleted = safeRemaining == 0;
     final progress = totalCentavos <= 0
         ? 0.0
         : (safeRemaining / totalCentavos).clamp(0.0, 1.0);
-    final valueColor = (isDepleted || !available)
-        ? onCardMuted.withValues(alpha: 0.55)
-        : accent;
+    final spendable = available && !isDepleted;
 
     final labelText = Text(
       label,
-      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-        color: onCard,
+      style: tt.labelSmall?.copyWith(
+        color: tier.mutedText,
         fontWeight: FontWeight.w600,
       ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
 
-    // "₱2,000.00 left", not "₱2,000.00 left of ₱2,000.00". The old string was
-    // 27 characters and could not share a line with the pool name at any width
-    // this app runs at, which forced the label and the figure onto separate
-    // rows and made each meter three lines tall. Two meters plus a heading was
-    // then most of the card.
-    //
-    // Dropping the ceiling is not a real loss: the BAR is the ceiling, drawn
-    // to scale right underneath, and the Benefits hub carries the exact
-    // used / pending / total breakdown one tap away. "left" stays because
-    // a bare peso figure beside a full bar is ambiguous about which it is.
-    final amountText = Text.rich(
-      TextSpan(
-        children: [
-          if (available) ...[
-            TextSpan(
-              text: pesoFromCentavos(safeRemaining),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: valueColor,
+    final ceilingStyle = tt.labelSmall?.copyWith(color: tier.mutedText);
+    final ceiling = 'left of ${pesoFromCentavos(totalCentavos)}';
+
+    // ── The unvested case: no figure at all ──────────────────────────────
+    // A monthly member three payments in has a real balance they cannot spend.
+    // Printing it at display size and then captioning it "Not available yet"
+    // says both things at once and lets the bigger one win, so the wording
+    // carries it and the number waits until it is theirs.
+    if (!available) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: primary ? 16 : 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            labelText,
+            const SizedBox(height: 2),
+            Text(
+              'Not available yet · ${pesoFromCentavos(totalCentavos)} vesting',
+              style: tt.labelSmall?.copyWith(
+                color: tier.warning,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            TextSpan(
-              text: ' left',
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: onCardMuted),
-            ),
-          ] else
-            TextSpan(
-              text: 'Not available yet',
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: onCardMuted),
-            ),
-        ],
-      ),
-    );
+            const SizedBox(height: 8),
+            _MeterBar(progress: 0, tier: tier, height: primary ? 7 : 4),
+          ],
+        ),
+      );
+    }
 
-    // One line now that the figure is short: pool name left, balance right,
-    // bar beneath. The label flexes and the figure does not, because the money
-    // is the content and "Preventive Wellness" survives an ellipsis better
-    // than a peso amount does.
-    final meterHeader = Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(child: labelText),
-        const SizedBox(width: 10),
-        amountText,
-      ],
-    );
+    // The accent is the HEADLINE figure's alone. Painting the secondary pool
+    // in it too gave the Premium card three gold elements — headline, Emergency
+    // figure, CTA — and three things claiming to be the one worth looking at is
+    // the same as none.
+    final amountColor = !spendable
+        ? tier.mutedText
+        : (primary ? tier.accent : tier.primaryText);
 
-    final row = Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          meterHeader,
-          const SizedBox(height: 7),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: progress),
-            duration: const Duration(milliseconds: 700),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, _) {
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final trackW = constraints.maxWidth;
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: SizedBox(
-                      height: 6,
-                      width: trackW,
-                      child: Stack(
-                        children: [
-                          Container(
-                            height: 6,
-                            width: trackW,
-                            color: onCardMuted.withValues(alpha: 0.15),
-                          ),
-                          if (value > 0)
-                            Container(
-                              height: 6,
-                              width: trackW * value,
-                              decoration: BoxDecoration(
-                                // The bar is structure — how much is left —
-                                // so it takes the card's own ink. The AMOUNT
-                                // above it keeps the gold: that's the member's
-                                // money and the one thing worth the accent.
-                                // Both in gold made the meter the loudest
-                                // element on a card whose CTA is also gold.
-                                color: onCard,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+    // ── Primary pool — the balance is the headline ───────────────────────
+    if (primary) {
+      final figure = Text(
+        pesoFromCentavos(safeRemaining),
+        style: tt.headlineSmall?.copyWith(
+          color: amountColor,
+          fontWeight: FontWeight.w800,
+          // Tabular digits so the figure doesn't shuffle sideways as it
+          // animates down after a claim is approved.
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      );
+
+      // The ceiling drops to its own line when the row is squeezed — by a
+      // narrow screen OR by scaled-up text. A 20sp figure plus an 18-character
+      // tail does not share one line at 320dp, and shrinking the figure to make
+      // it fit would undo the whole point of it.
+      final headline = context.isTight
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                figure,
+                Text(ceiling, style: ceilingStyle),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                figure,
+                const SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    ceiling,
+                    style: ceilingStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            );
+
+      return _wrapTap(
+        context,
+        safeRemaining,
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              labelText,
+              const SizedBox(height: 2),
+              headline,
+              const SizedBox(height: 9),
+              _MeterBar(
+                progress: progress,
+                tier: tier,
+                height: 7,
+                depleted: isDepleted,
+              ),
+            ],
           ),
-        ],
+        ),
+      );
+    }
+
+    // ── Secondary pool — one compact row ─────────────────────────────────
+    return _wrapTap(
+      context,
+      safeRemaining,
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(child: labelText),
+                const SizedBox(width: 10),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: pesoFromCentavos(safeRemaining),
+                        style: tt.labelMedium?.copyWith(
+                          color: amountColor,
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      TextSpan(text: ' left', style: ceilingStyle),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            // 5px against the primary's 7px. Height and the block's layout are
+            // the ONLY things that rank the two pools now. Opacity is not
+            // available for ranking: muted already means "not spendable" on
+            // this card (a depleted or unvested pool), so dimming a healthy
+            // pool to say "less important" said "you cannot spend this"
+            // instead — the same visual carrying two meanings.
+            _MeterBar(
+              progress: progress,
+              tier: tier,
+              height: 5,
+              depleted: isDepleted,
+            ),
+          ],
+        ),
       ),
     );
+  }
 
+  /// Announces the pool in full — including the ceiling the compact row
+  /// abbreviates — and makes the block tappable when the caller gave it a
+  /// destination.
+  Widget _wrapTap(BuildContext context, int safeRemaining, Widget child) {
     final semantic = Semantics(
       label:
-          '$label wallet, ${pesoFromCentavos(safeRemaining)} of ${pesoFromCentavos(totalCentavos)} remaining',
+          '$label wallet, ${pesoFromCentavos(safeRemaining)} of '
+          '${pesoFromCentavos(totalCentavos)} remaining',
       button: onTap != null,
-      child: row,
+      child: child,
     );
     if (onTap == null) return semantic;
     return _ScaleButton(onTap: onTap!, child: semantic);
@@ -2315,14 +2605,15 @@ class _WalletSummaryRow extends StatelessWidget {
 }
 
 /// Quiet text link on the pet card that opens the reimbursement Submit flow.
-/// Deliberately unfilled so it doesn't compete with the gold "Show Digital
-/// Pawprint" CTA lower on the card.
+/// Deliberately unfilled so it doesn't compete with the "Show Digital
+/// Pawprint" CTA above it.
 class _FileClaimLink extends StatelessWidget {
-  /// The card's contrast-safe gold — plain `gold` was 2.7:1 here on the white
-  /// Standard card.
-  final Color accent;
+  /// The card's ink — not its accent. The accent belongs to the balance figure
+  /// this link sits under; giving both the same colour made two elements claim
+  /// to be the one thing worth looking at. Weight carries the link instead.
+  final Color ink;
   final VoidCallback onTap;
-  const _FileClaimLink({required this.accent, required this.onTap});
+  const _FileClaimLink({required this.ink, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2339,12 +2630,12 @@ class _FileClaimLink extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add_circle_outline, size: 16, color: accent),
+              Icon(Icons.add_circle_outline, size: 16, color: ink),
               const SizedBox(width: 6),
               Text(
                 'File a claim',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: accent,
+                  color: ink,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -2363,16 +2654,12 @@ class _FileClaimLink extends StatelessWidget {
 /// colors so it reads as part of the card, matching the wallet/session blocks.
 class _NoPlanBlock extends StatelessWidget {
   final String petName;
-  final Color onCard;
-  final Color onCardMuted;
-  final Color dividerColor;
+  final TierStyle tier;
   final VoidCallback? onSubscribe;
 
   const _NoPlanBlock({
     required this.petName,
-    required this.onCard,
-    required this.onCardMuted,
-    required this.dividerColor,
+    required this.tier,
     this.onSubscribe,
   });
 
@@ -2382,21 +2669,24 @@ class _NoPlanBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Divider(height: 1, color: dividerColor),
+        Divider(height: 1, color: tier.dividerColor),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
           child: Column(
             children: [
-              const Icon(
+              // A plan-less pet always renders the Standard skin (there is no
+              // tier to read yet), so this is the matte gold — raw `gold` was
+              // 2.7:1 on the white card it actually appears on.
+              Icon(
                 Icons.workspace_premium_outlined,
                 size: 30,
-                color: AppColors.gold,
+                color: tier.accent,
               ),
               const SizedBox(height: 10),
               Text(
                 'No active plan',
                 style: tt.titleMedium?.copyWith(
-                  color: onCard,
+                  color: tier.primaryText,
                   fontWeight: FontWeight.w700,
                 ),
                 textAlign: TextAlign.center,
@@ -2405,7 +2695,7 @@ class _NoPlanBlock extends StatelessWidget {
               Text(
                 "Subscribe to unlock ${_capFirst(petName)}'s Benefit Wallet "
                 'and claim back clinic costs.',
-                style: tt.bodyMedium?.copyWith(color: onCardMuted),
+                style: tt.bodyMedium?.copyWith(color: tier.mutedText),
                 textAlign: TextAlign.center,
               ),
               if (onSubscribe != null) ...[
@@ -2413,29 +2703,39 @@ class _NoPlanBlock extends StatelessWidget {
                 _ScaleButton(
                   onTap: onSubscribe!,
                   child: Container(
-                    height: 48,
+                    // minHeight, not height — same reason as the QR CTA: a
+                    // fixed 48px box clips the label once text is scaled up.
+                    constraints: const BoxConstraints(minHeight: 48),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.gold,
+                      // Matches the QR CTA on the same card, so a pet with a
+                      // plan and a pet without one share one button vocabulary.
+                      color: tier.ctaFill,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.workspace_premium,
                           size: 18,
-                          color: AppColors.text,
+                          color: tier.ctaLabel,
                         ),
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
                             'Choose a plan',
-                            maxLines: 1,
+                            maxLines: 2,
+                            textAlign: TextAlign.center,
                             overflow: TextOverflow.ellipsis,
                             style: tt.labelLarge?.copyWith(
-                              color: AppColors.text,
-                              fontWeight: FontWeight.w600,
+                              color: tier.ctaLabel,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -4651,9 +4951,7 @@ class _DashboardSkeletonState extends State<_DashboardSkeleton>
             width: double.infinity,
             decoration: const BoxDecoration(
               color: AppColors.navy,
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(28),
-              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
             ),
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
             child: Column(
