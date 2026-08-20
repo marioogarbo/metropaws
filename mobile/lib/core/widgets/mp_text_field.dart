@@ -63,6 +63,12 @@ class MpTextField extends StatelessWidget {
       maxLength: maxLength,
       maxLines: obscure ? 1 : (maxLines ?? 1),
       style: style,
+      // Android and iOS deliberately KEEP focus when a touch lands outside the
+      // field, so without this the caret and the keyboard stay put wherever the
+      // member taps and the field reads as stuck open. Every text field shares
+      // one TapRegion group, so moving between fields — or reaching for the eye
+      // in the suffix — is not "outside" and does not fire this.
+      onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

@@ -25,7 +25,7 @@ class MpBrandPhotoStrip extends StatelessWidget {
   /// Height at rest. [compact] overrides it downward.
   final double height;
 
-  /// Give the room back. See [keyboardIsUp] for who decides.
+  /// Give the room back. See [keyboardInset] for who decides.
   final bool compact;
 
   const MpBrandPhotoStrip({
@@ -50,15 +50,18 @@ class MpBrandPhotoStrip extends StatelessWidget {
   static double heightFor(BuildContext context) =>
       (MediaQuery.sizeOf(context).height * 0.28).clamp(168.0, 250.0);
 
-  /// Whether the keyboard is up, and so whether [compact] should be set.
+  /// How much of the screen the on-screen keyboard is covering — 0 when it is
+  /// down, so `> 0` is what [compact] should be set from. MpPawBackdrop needs
+  /// the number itself rather than the yes/no, to hold its trail still.
   ///
   /// MUST be called from the build method that RETURNS the Scaffold, never from
   /// inside its body: with `resizeToAvoidBottomInset` on, `Scaffold` strips the
   /// bottom view inset from the MediaQuery it hands its body, so the identical
-  /// check one level down reads 0 forever and silently never fires. That is why
-  /// the screens compute this and pass it in rather than the strip reading it.
-  static bool keyboardIsUp(BuildContext context) =>
-      MediaQuery.viewInsetsOf(context).bottom > 0;
+  /// read one level down reports 0 forever and silently never fires. That is
+  /// why the screens compute this and pass it in rather than the widgets
+  /// reading it.
+  static double keyboardInset(BuildContext context) =>
+      MediaQuery.viewInsetsOf(context).bottom;
 
   @override
   Widget build(BuildContext context) {

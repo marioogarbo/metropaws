@@ -147,8 +147,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardIsUp.
-    final compact = MpBrandPhotoStrip.keyboardIsUp(context);
+    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardInset.
+    final keyboardInset = MpBrandPhotoStrip.keyboardInset(context);
 
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
@@ -165,10 +165,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               imagePath: 'assets/images/pet-care-register.jpg',
               tagline: 'Two minutes to join.',
               height: MpBrandPhotoStrip.heightFor(context),
-              compact: compact,
+              compact: keyboardInset > 0,
             ),
             Expanded(
               child: MpPawBackdrop(
+                keyboardInset: keyboardInset,
                 child: !_emailVerified
                     ? _EmailGate(
                         formKey: _emailPreKey,

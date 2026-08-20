@@ -65,8 +65,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     // form field with the paw trail behind it. The form area inherits the
     // scaffold theme — an earlier version forced a light surface, which left
     // dark-theme text faint on white.
-    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardIsUp.
-    final compact = MpBrandPhotoStrip.keyboardIsUp(context);
+    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardInset.
+    final keyboardInset = MpBrandPhotoStrip.keyboardInset(context);
 
     return Scaffold(
       body: Column(
@@ -75,10 +75,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             imagePath: 'assets/images/pet-care-login.jpg',
             tagline: 'It happens to the best of us.',
             height: MpBrandPhotoStrip.heightFor(context),
-            compact: compact,
+            compact: keyboardInset > 0,
           ),
           Expanded(
             child: MpPawBackdrop(
+              keyboardInset: keyboardInset,
               child: MpCentredScroll(
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
                 child: _sent

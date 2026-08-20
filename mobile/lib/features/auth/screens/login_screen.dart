@@ -45,8 +45,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardIsUp.
-    final compact = MpBrandPhotoStrip.keyboardIsUp(context);
+    // Read here, above the Scaffold — see MpBrandPhotoStrip.keyboardInset.
+    final keyboardInset = MpBrandPhotoStrip.keyboardInset(context);
 
     return Scaffold(
       body: Column(
@@ -55,10 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
             imagePath: 'assets/images/pet-care-login.jpg',
             tagline: 'Membership in your pocket.',
             height: MpBrandPhotoStrip.heightFor(context),
-            compact: compact,
+            compact: keyboardInset > 0,
           ),
           Expanded(
             child: MpPawBackdrop(
+              keyboardInset: keyboardInset,
               child: MpCentredScroll(
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
                 child: AutofillGroup(

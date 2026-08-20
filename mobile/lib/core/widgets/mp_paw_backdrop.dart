@@ -17,12 +17,23 @@ import '../../theme.dart';
 /// Ink, never gold: gold marks money and actions, and spending it on
 /// decoration costs the signal (see CLAUDE.md).
 ///
+/// Fixed to the screen rather than to its own box: the header above collapses
+/// when the keyboard opens, and a trail that travelled with it would read as
+/// the wallpaper stepping aside to make room. See [keyboardInset].
+///
 /// Also applies the bottom safe-area inset to [child], since every auth screen
 /// that wants the trail wants that too.
 class MpPawBackdrop extends StatefulWidget {
   final Widget child;
 
-  const MpPawBackdrop({super.key, required this.child});
+  /// How much of the screen the keyboard is covering, from
+  /// [MpBrandPhotoStrip.keyboardInset] — which has to be read above the
+  /// Scaffold, so the screens pass it down. Without it the trail cannot tell
+  /// the two things that shorten its box apart, and rides the collapsing
+  /// header up the screen.
+  final double keyboardInset;
+
+  const MpPawBackdrop({super.key, required this.child, this.keyboardInset = 0});
 
   @override
   State<MpPawBackdrop> createState() => _MpPawBackdropState();
@@ -35,27 +46,43 @@ class _MpPawBackdropState extends State<MpPawBackdrop>
 
   /// The box the trail was laid out against, kept across keyboard changes.
   double? _laidOutAtWidth;
-  double _trailHeight = 0;
+  double _restingHeight = 0;
 
   /// The trail is positioned in fractions of the box it paints into, so
   /// painting it into the LIVE box means the whole gait compresses the moment
   /// the keyboard shortens the form area — stride and print size shrink
   /// together, which reads as the background deforming rather than as texture
-  /// sitting behind the page. So the box is remembered: the tallest one seen at
-  /// the current width, which is the keyboard-down state. The keyboard then
-  /// crops the trail instead of squeezing it.
+  /// sitting behind the page. So the box is remembered at its keyboard-down
+  /// size, and the keyboard crops the trail instead of squeezing it.
+  ///
+  /// Adding the keyboard's own height back on cancels out the shortening, which
+  /// leaves the collapsing header as the only thing still moving the number —
+  /// so the SMALLEST reading is the one taken with the header at full height,
+  /// which is the resting box. (Taking the largest, as an earlier version did,
+  /// picks the keyboard-up frame instead, where the header is a band.)
   void _rememberTrailBox(BoxConstraints box) {
-    if (!box.hasBoundedHeight) return;
+    if (!box.hasBoundedHeight || box.maxHeight <= 0) return;
+    final atRest = box.maxHeight + widget.keyboardInset;
     // A width change is a genuinely different layout — rotation, or a fold
     // opening — not a keyboard, so start over rather than keep a trail sized
     // for the old orientation.
     if (_laidOutAtWidth != box.maxWidth) {
       _laidOutAtWidth = box.maxWidth;
-      _trailHeight = box.maxHeight;
-    } else if (box.maxHeight > _trailHeight) {
-      _trailHeight = box.maxHeight;
+      _restingHeight = atRest;
+    } else if (atRest < _restingHeight) {
+      _restingHeight = atRest;
     }
   }
+
+  /// How far the top of the box has risen from where it sits at rest.
+  ///
+  /// The header above collapses to hand the form room when the keyboard opens,
+  /// so a trail anchored to the top of this box walks up the screen with it —
+  /// exactly the "background making way for the keyboard" it is meant not to
+  /// do. Pushing it back down by the same amount pins it to the glass, and the
+  /// clip takes the bottom off instead.
+  double _topRise(BoxConstraints box) =>
+      math.max(0.0, widget.keyboardInset + box.maxHeight - _restingHeight);
 
   @override
   void initState() {
@@ -101,14 +128,17 @@ class _MpPawBackdropState extends State<MpPawBackdrop>
               child: LayoutBuilder(
                 builder: (context, box) {
                   _rememberTrailBox(box);
-                  return OverflowBox(
-                    alignment: Alignment.topCenter,
-                    minHeight: _trailHeight,
-                    maxHeight: _trailHeight,
-                    child: AnimatedBuilder(
-                      animation: _walk,
-                      builder: (context, _) => CustomPaint(
-                        painter: _PawTrailPainter(progress: _walk.value),
+                  return Transform.translate(
+                    offset: Offset(0, _topRise(box)),
+                    child: OverflowBox(
+                      alignment: Alignment.topCenter,
+                      minHeight: _restingHeight,
+                      maxHeight: _restingHeight,
+                      child: AnimatedBuilder(
+                        animation: _walk,
+                        builder: (context, _) => CustomPaint(
+                          painter: _PawTrailPainter(progress: _walk.value),
+                        ),
                       ),
                     ),
                   );
