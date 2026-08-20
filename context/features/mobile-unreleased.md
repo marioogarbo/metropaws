@@ -8,13 +8,15 @@ version in [`android-distribution.md`](./android-distribution.md).
 | --- | --- |
 | Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
 | Internal testing track | **1.5.0 (versionCode 10)**, uploaded 2026-08-19 11:55 |
-| `pubspec.yaml` | `1.5.0+10` (bumped in `c69d5f2`) |
-| Branches holding this work | all merged into `main` — verified 2026-08-19 with `git branch --merged main` — **except** the auth redesign (§5), on `feature/auth-pet-friendly-redesign`, unmerged as of 2026-08-19 |
+| Built and verified, NOT uploaded | **1.5.1 (versionCode 11)**, built 2026-08-20 — the first bundle containing §5 |
+| `pubspec.yaml` | `1.5.1+11` (bumped in `759ec71`) |
+| Branches holding this work | all merged into `main`. The auth redesign (§5) fast-forwarded in on 2026-08-20 as `759ec71` and was pushed; `origin/main` is level, having been 3 commits behind before that |
 
 **Status 2026-08-19: sections 1–4 are built, verified, and sitting on the
 internal testing track. They are not on production**, so this file stays full.
 Empty sections 1–4 when 10 is promoted, not before — **but not §5**, which
-landed after 10 was uploaded and is in no build at all (see below). The one thing gating promotion is the
+landed after 10 was uploaded and is in **1.5.1+11, built and verified on
+2026-08-20 but never uploaded** (see below). The one thing gating promotion is the
 monthly pricing question at the foot of this file — the prices are already live
 in the prod database, and this build is the first that lets a member reach them.
 
@@ -111,8 +113,12 @@ deploy, so this half can ship whenever a build goes out.
 
 **This section is in no uploaded build.** It landed after 1.5.0+10 went to
 internal testing at 11:55 on 2026-08-19, so promoting 10 does not ship it, and
-this section must survive the emptying of the four above. Session record:
-[`2026-08-19-auth-screen-redesign.md`](../sessions/2026-08-19-auth-screen-redesign.md).
+this section must survive the emptying of the four above. It *is* in the
+**1.5.1+11** bundle built and verified on 2026-08-20, which has not been
+uploaded. Session records:
+[`2026-08-19-auth-screen-redesign.md`](../sessions/2026-08-19-auth-screen-redesign.md)
+and
+[`2026-08-20-paw-trail-pinned-focus-and-1-5-1.md`](../sessions/2026-08-20-paw-trail-pinned-focus-and-1-5-1.md).
 
 Login, register (email gate + step 1) and forgot-password rebuilt as one
 surface: photo header with a rounded foot, brand lockup and a screen-specific
@@ -140,9 +146,37 @@ forgot-password success state and register step 1 were not verified as rendered
 (step 1 needs the local backend). `flutter analyze` is unchanged at 21
 pre-existing issues.
 
-**One decision outstanding:** whether the paw trail should stay pinned to the
-screen or keep travelling with the page when the header collapses. It no longer
-deforms either way.
+**Decided 2026-08-20 — pinned to the screen**, on the client's report that the
+background "adjusted aswell to make way for the keyboard". The cause was not the
+keyboard inset but the **header collapsing above the trail** (233dp → 108dp on
+the test device), which moves the top of the box the trail is anchored to — a
+125dp slide. `MpPawBackdrop` now takes a `keyboardInset` and pushes the trail
+back down by however far its box top rose. Measured at **0.1px** of movement on
+device while the header moved 125dp.
+
+**Two further changes on 2026-08-20:**
+
+- **A tap outside a field now drops focus.** Android and iOS deliberately keep
+  focus when the outside tap is a *touch* — framework policy in
+  `_EditableTextTapOutsideAction`, not a defect here — so the keyboard sat over
+  the form until the member submitted or pressed Back. One `onTapOutside` in the
+  shared `mp_text_field.dart` covers all 33 call sites; text fields share one
+  `TapRegion` group, so field-to-field taps and the password eye are not
+  "outside".
+- **The circular badges are gone** from forgot-password (both states) and from
+  the registration success screen (the gold shield and its particle burst), by
+  client request. The success copy's fade had been gated behind the emblem
+  landing, so removing it left ~385ms of blank cream; the reveal now starts on
+  the first frame.
+
+`mobile/test/auth_keyboard_test.dart` is the **first test file in this project**
+and guards both fixes. Each was confirmed to fail on the unfixed code before
+being trusted.
+
+**Unverified as rendered:** the **registration success** screen — the one screen
+whose layout and animation timing changed. Reaching it needs a completed
+registration against the local backend, so it is in `main` and in the 1.5.1+11
+bundle without ever having been seen.
 
 ---
 

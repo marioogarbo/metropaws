@@ -203,3 +203,17 @@ says. If a fact is derivable by reading a file, link to that file instead.
   listed as a separate branch), and the direct-APK route retired since
   2026-08-03 with its incompatibility now pointing the other way. Promotion to
   production is gated on the unconfirmed ₱300/₱600/₱900 monthly prices.
+- [`sessions/2026-08-20-paw-trail-pinned-focus-and-1-5-1.md`](sessions/2026-08-20-paw-trail-pinned-focus-and-1-5-1.md) —
+  answered the open question the auth redesign ended on — the paw trail is
+  **pinned to the screen** — and found the previous fix had protected the
+  trail's *size* but not its *position*: the collapsing header, not the keyboard
+  inset, was sliding it 125dp. Records the inverted min/max that the new formula
+  requires, and that Android **deliberately** keeps a text field focused on an
+  outside touch, so the stuck keyboard was framework policy rather than a defect
+  here. Verified by decoding the screenshots — paw ink is separable from field
+  chrome by *neutrality*, not brightness — giving 0.1px of trail movement
+  against 125dp of header. Added the first tests in the project, each checked
+  against the bug it guards. Then removed the auth badges and built 1.5.1+11.
+  Two process failures: `dart format` run on a directory again despite the
+  standing warning, and the AAB reported ready **before** the pre-build
+  checklist was run.
