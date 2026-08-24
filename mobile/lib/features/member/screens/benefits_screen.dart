@@ -180,11 +180,13 @@ class _BenefitsTabState extends State<BenefitsTab> {
         } else if (state is CheckoutReady) {
           _launchInstalment(state.checkoutUrl, state.paymentId);
         } else if (state is CheckoutFailed) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(state.message),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
         } else if (state is PaymentVerified) {
           _stopPolling();
           _load();
@@ -192,13 +194,15 @@ class _BenefitsTabState extends State<BenefitsTab> {
           // Without this the poll would keep firing until the tab is
           // disposed, and the member would be told nothing.
           _stopPolling();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: const Text(
-              "That payment didn't go through. You can try again.",
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                "That payment didn't go through. You can try again.",
+              ),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ));
+          );
         }
       },
       child: RefreshIndicator(
@@ -212,13 +216,14 @@ class _BenefitsTabState extends State<BenefitsTab> {
             children: [
               Semantics(
                 header: true,
-                child: Text('Wallet', style: theme.textTheme.displaySmall),
+                child: Text('Benefits', style: theme.textTheme.displaySmall),
               ),
               const SizedBox(height: 6),
               Text(
                 'Your points, balances and claims',
-                style: theme.textTheme.labelLarge
-                    ?.copyWith(color: cs.onSurfaceVariant),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
               ),
               if (_walletLoaded && _wallet.isNotEmpty) ...[
                 const SizedBox(height: 20),
@@ -230,20 +235,25 @@ class _BenefitsTabState extends State<BenefitsTab> {
               PawPointsStrip(balance: _balance, onTap: _openPawPoints),
               const SizedBox(height: 24),
 
-              // ── Benefit Wallet ─────────────────────────────────────────
+              // ── Benefit balances ───────────────────────────────────────
               Semantics(
                 header: true,
                 child: Text(
-                  'Benefit Wallet',
+                  // Not "Benefits" -- the page heading is already that, and a
+                  // section repeating its own page title names nothing.
+                  'Benefit balances',
                   style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800, color: cs.onSurface),
+                    fontWeight: FontWeight.w800,
+                    color: cs.onSurface,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Reimbursable balances from your plan',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: cs.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 12),
               if (!_walletLoaded)
@@ -251,22 +261,24 @@ class _BenefitsTabState extends State<BenefitsTab> {
               else if (_wallet.isEmpty)
                 _WalletEmpty()
               else
-                ..._wallet.asMap().entries.map((entry) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: StaggeredReveal(
-                        index: entry.key,
-                        child: WalletPetCard(
-                          wallet: entry.value,
-                          showStats: true,
-                          planType: _planTypeFor(entry.value.petId),
-                          onPayInstalment: entry.value.isMonthly
-                              ? () => context
-                                  .read<MemberBloc>()
-                                  .add(InstallmentRequested(entry.value.petId))
-                              : null,
-                        ),
+                ..._wallet.asMap().entries.map(
+                  (entry) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: StaggeredReveal(
+                      index: entry.key,
+                      child: WalletPetCard(
+                        wallet: entry.value,
+                        showStats: true,
+                        planType: _planTypeFor(entry.value.petId),
+                        onPayInstalment: entry.value.isMonthly
+                            ? () => context.read<MemberBloc>().add(
+                                InstallmentRequested(entry.value.petId),
+                              )
+                            : null,
                       ),
-                    )),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 16),
 
               // ── Actions ────────────────────────────────────────────────
@@ -314,12 +326,17 @@ class _AvailableToClaimHero extends StatelessWidget {
 
     // Both pools count toward what the member can still claim back.
     final totalRemaining = wallet.fold<int>(
-        0, (sum, c) => sum + c.remainingCentavos + c.emergencyRemainingCentavos);
+      0,
+      (sum, c) => sum + c.remainingCentavos + c.emergencyRemainingCentavos,
+    );
     final totalPending = wallet.fold<int>(
-        0, (sum, c) => sum + c.pendingCentavos + c.emergencyPendingCentavos);
+      0,
+      (sum, c) => sum + c.pendingCentavos + c.emergencyPendingCentavos,
+    );
 
     return Semantics(
-      label: 'Available to claim across all pets: '
+      label:
+          'Available to claim across all pets: '
           '${pesoFromCentavos(totalRemaining)}.'
           '${totalPending > 0 ? ' ${pesoFromCentavos(totalPending)} pending review.' : ''}',
       child: Column(
@@ -345,8 +362,10 @@ class _AvailableToClaimHero extends StatelessWidget {
             child: Text(
               pesoFromCentavos(totalRemaining),
               maxLines: 1,
-              style: theme.textTheme.displayMedium
-                  ?.copyWith(color: heroGold, fontWeight: FontWeight.w800),
+              style: theme.textTheme.displayMedium?.copyWith(
+                color: heroGold,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -354,15 +373,17 @@ class _AvailableToClaimHero extends StatelessWidget {
           // it isn't read as a withdrawable balance.
           Text(
             'Claim this back with receipts, across all your pets',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: cs.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
           ),
           if (totalPending > 0) ...[
             const SizedBox(height: 2),
             Text(
               '${pesoFromCentavos(totalPending)} pending review',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: cs.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ],
         ],
@@ -414,50 +435,44 @@ class _WalletSkeletonState extends State<_WalletSkeleton>
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
     Widget row() => Container(
-          height: 92,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: cs.outline),
-          ),
-          child: AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, child) => Opacity(
-              opacity: reduceMotion ? 0.6 : 0.45 + _pulse.value * 0.35,
-              child: child,
+      height: 92,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outline),
+      ),
+      child: AnimatedBuilder(
+        animation: _pulse,
+        builder: (_, child) => Opacity(
+          opacity: reduceMotion ? 0.6 : 0.45 + _pulse.value * 0.35,
+          child: child,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 140,
+              height: 14,
+              decoration: BoxDecoration(
+                color: blockColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 140,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: blockColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: blockColor,
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                ),
-              ],
+            const Spacer(),
+            Container(
+              height: 6,
+              decoration: BoxDecoration(
+                color: blockColor,
+                borderRadius: BorderRadius.circular(100),
+              ),
             ),
-          ),
-        );
-
-    return Column(
-      children: [
-        row(),
-        const SizedBox(height: 10),
-        row(),
-      ],
+          ],
+        ),
+      ),
     );
+
+    return Column(children: [row(), const SizedBox(height: 10), row()]);
   }
 }
 
@@ -489,14 +504,19 @@ class _PayoutSetupCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.account_balance_wallet_outlined,
-                  size: 20, color: iconGold),
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 20,
+                color: iconGold,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Set up your payout method first',
                   style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800, color: cs.onSurface),
+                    fontWeight: FontWeight.w800,
+                    color: cs.onSurface,
+                  ),
                 ),
               ),
             ],
@@ -505,11 +525,17 @@ class _PayoutSetupCard extends StatelessWidget {
           Text(
             'Tell us where to send approved reimbursements: GCash, bank, '
             'or cash pickup. Takes a minute, one time only.',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: cs.onSurfaceVariant, height: 1.45),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+              height: 1.45,
+            ),
           ),
           const SizedBox(height: 14),
-          MpButton(label: 'Set up payout method', gold: true, onPressed: onSetup),
+          MpButton(
+            label: 'Set up payout method',
+            gold: true,
+            onPressed: onSetup,
+          ),
         ],
       ),
     );
@@ -540,8 +566,10 @@ class _WalletEmpty extends StatelessWidget {
             child: Text(
               'No reimbursable benefits yet. Activate a plan that includes '
               'reimbursement, or ask clinic staff for details.',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: cs.onSurfaceVariant, height: 1.4),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
           ),
         ],

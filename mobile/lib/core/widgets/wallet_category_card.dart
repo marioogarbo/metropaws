@@ -37,7 +37,8 @@ class WalletPetCard extends StatelessWidget {
     final hasEmergency = c.emergencyWalletCentavos > 0;
 
     return Semantics(
-      label: 'Benefit Wallet for ${c.petName}. '
+      label:
+          'Benefits for ${c.petName}. '
           'Preventive Wellness: ${pesoFromCentavos(c.remainingCentavos)} remaining '
           'of ${pesoFromCentavos(c.walletCentavos)}.'
           '${hasEmergency ? ' Emergency: ${pesoFromCentavos(c.emergencyRemainingCentavos)} remaining of ${pesoFromCentavos(c.emergencyWalletCentavos)}.' : ''}',
@@ -71,7 +72,9 @@ class WalletPetCard extends StatelessWidget {
                   // wallet balances shown below are dormant — flag it here.
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: cs.errorContainer.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(20),
@@ -142,13 +145,25 @@ class _MonthlyFooter extends StatelessWidget {
 
   String _dueLabel(DateTime due) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final today = DateTime.now();
-    final days = DateTime(due.year, due.month, due.day)
-        .difference(DateTime(today.year, today.month, today.day))
-        .inDays;
+    final days = DateTime(
+      due.year,
+      due.month,
+      due.day,
+    ).difference(DateTime(today.year, today.month, today.day)).inDays;
     final date = '${months[due.month - 1]} ${due.day}';
     if (days < 0) return 'Overdue since $date';
     if (days == 0) return 'Due today';
@@ -176,9 +191,7 @@ class _MonthlyFooter extends StatelessWidget {
               child: Text(
                 // The contract's own wording, sent by the server so the app
                 // never carries a phrase only the document may change.
-                withheld
-                    ? wallet.membershipStatusLabel
-                    : 'Monthly membership',
+                withheld ? wallet.membershipStatusLabel : 'Monthly membership',
                 style: tt.labelLarge?.copyWith(
                   color: withheld ? cs.error : cs.onSurface,
                   fontWeight: FontWeight.w700,
@@ -196,7 +209,7 @@ class _MonthlyFooter extends StatelessWidget {
           Text(
             wallet.membershipStatus == 'suspended'
                 ? 'Settle the outstanding payment to use benefits again. '
-                    'Paying late restarts the qualifying period.'
+                      'Paying late restarts the qualifying period.'
                 : 'Keep paying each month and your benefits open up.',
             style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
@@ -279,8 +292,9 @@ class _WalletPoolMeter extends StatelessWidget {
       children: [
         Text(
           label,
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: cs.onSurfaceVariant),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -302,8 +316,9 @@ class _WalletPoolMeter extends StatelessWidget {
     // two consistent is the point of them sharing a visual.
     final tight = context.isTight;
     final amountBlock = Column(
-      crossAxisAlignment:
-          tight ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      crossAxisAlignment: tight
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
       children: [
         Text(
           pesoFromCentavos(remainingCentavos),
@@ -314,8 +329,9 @@ class _WalletPoolMeter extends StatelessWidget {
         ),
         Text(
           'left of ${pesoFromCentavos(totalCentavos)}',
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: cs.onSurfaceVariant),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -402,13 +418,20 @@ class _WalletStat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: cs.onSurfaceVariant)),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(value,
-            style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700, color: cs.onSurface)),
+        Text(
+          value,
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: cs.onSurface,
+          ),
+        ),
       ],
     );
   }

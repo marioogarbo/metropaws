@@ -1577,9 +1577,9 @@ class _DigitalIdCard extends StatelessWidget {
                           fontSize: 10,
                         );
 
-                    // The "BENEFIT WALLET" heading is gone while the wallet is the
-                    // only block. A peso figure under the words "Preventive Wellness"
-                    // does not need a title telling you it is a wallet, and the ~24px
+                    // The "BENEFITS" heading is gone while the benefit block is
+                    // the only one. A peso figure under the words "Preventive
+                    // Wellness" does not need a title naming it, and the ~24px
                     // it cost is what pays for the balance being readable at arm's
                     // length. The headings come back the moment there are TWO blocks
                     // to tell apart — which is the only job they were doing.
@@ -1598,10 +1598,7 @@ class _DigitalIdCard extends StatelessWidget {
                                 if (needsHeadings)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 12),
-                                    child: Text(
-                                      'BENEFIT WALLET',
-                                      style: labelStyle,
-                                    ),
+                                    child: Text('BENEFITS', style: labelStyle),
                                   ),
                                 ...walletRows,
                               ],
@@ -2594,7 +2591,7 @@ class _WalletMeter extends StatelessWidget {
   Widget _wrapTap(BuildContext context, int safeRemaining, Widget child) {
     final semantic = Semantics(
       label:
-          '$label wallet, ${pesoFromCentavos(safeRemaining)} of '
+          '$label benefit, ${pesoFromCentavos(safeRemaining)} of '
           '${pesoFromCentavos(totalCentavos)} remaining',
       button: onTap != null,
       child: child,
@@ -2693,7 +2690,7 @@ class _NoPlanBlock extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                "Subscribe to unlock ${_capFirst(petName)}'s Benefit Wallet "
+                "Subscribe to unlock ${_capFirst(petName)}'s benefits "
                 'and claim back clinic costs.',
                 style: tt.bodyMedium?.copyWith(color: tier.mutedText),
                 textAlign: TextAlign.center,
@@ -5157,10 +5154,15 @@ class _MpNavBar extends StatelessWidget {
             selectedIcon: Icons.celebration,
             label: 'Events',
           ),
+    // "Benefit", not "Wallet" (client, 2026-08-21) -- and the icon had to
+    // move with the word: `account_balance_wallet` is a literal picture of a
+    // wallet, which is the thing the rename exists to stop showing.
+    // health_and_safety is what the backend already uses for the Preventive
+    // Wellness category (scripts/seed.py).
     const _NavItem(
-      icon: Icons.account_balance_wallet_outlined,
-      selectedIcon: Icons.account_balance_wallet,
-      label: 'Wallet',
+      icon: Icons.health_and_safety_outlined,
+      selectedIcon: Icons.health_and_safety,
+      label: 'Benefit',
     ),
     const _NavItem(
       icon: Icons.person_outline,

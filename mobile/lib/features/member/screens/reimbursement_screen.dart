@@ -24,8 +24,18 @@ import 'payout_details_screen.dart';
 
 String _formatDate(DateTime dt) {
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
 }
@@ -291,7 +301,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     } catch (_) {
       if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open that file. Please try another.')),
+        const SnackBar(
+          content: Text('Could not open that file. Please try another.'),
+        ),
       );
       return null;
     }
@@ -302,8 +314,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) =>
-          _HowClaimsWorkSheet(directPayAvailable: _directProviderPaymentEnabled),
+      builder: (_) => _HowClaimsWorkSheet(
+        directPayAvailable: _directProviderPaymentEnabled,
+      ),
     );
   }
 
@@ -334,26 +347,26 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
 
     setState(() => _submitting = true);
     context.read<MemberBloc>().add(
-          ReimbursementSubmitted(
-            petId: _selectedPetId!,
-            serviceTypeId: _selectedServiceTypeId!,
-            providerName: isProviderTarget
-                ? (_selectedProviderName ?? '')
-                : _providerCtrl.text.trim(),
-            serviceDate: _serviceDate,
-            claimedAmountCentavos: centavos,
-            receiptReference: _referenceCtrl.text.trim().isEmpty
-                ? null
-                : _referenceCtrl.text.trim(),
-            memberNotes: _notesCtrl.text.trim().isEmpty
-                ? null
-                : _notesCtrl.text.trim(),
-            receiptBytes: _receiptBytes!,
-            receiptExt: _receiptExt!,
-            payoutTarget: _payoutTarget,
-            providerId: isProviderTarget ? _selectedProviderId : null,
-          ),
-        );
+      ReimbursementSubmitted(
+        petId: _selectedPetId!,
+        serviceTypeId: _selectedServiceTypeId!,
+        providerName: isProviderTarget
+            ? (_selectedProviderName ?? '')
+            : _providerCtrl.text.trim(),
+        serviceDate: _serviceDate,
+        claimedAmountCentavos: centavos,
+        receiptReference: _referenceCtrl.text.trim().isEmpty
+            ? null
+            : _referenceCtrl.text.trim(),
+        memberNotes: _notesCtrl.text.trim().isEmpty
+            ? null
+            : _notesCtrl.text.trim(),
+        receiptBytes: _receiptBytes!,
+        receiptExt: _receiptExt!,
+        payoutTarget: _payoutTarget,
+        providerId: isProviderTarget ? _selectedProviderId : null,
+      ),
+    );
   }
 
   Future<void> _resubmit(Reimbursement claim) async {
@@ -364,21 +377,22 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ResubmitSheet(claim: claim, pickReceipt: _pickReceiptData),
+      builder: (_) =>
+          _ResubmitSheet(claim: claim, pickReceipt: _pickReceiptData),
     );
     if (result == null || !mounted) return;
     setState(() => _submitting = true);
     context.read<MemberBloc>().add(
-          ReimbursementResubmitted(
-            id: claim.id,
-            claimedAmountCentavos: result.amountCentavos,
-            providerName: result.providerName,
-            serviceDate: result.serviceDate,
-            memberNotes: result.memberNotes,
-            receiptBytes: result.receiptBytes,
-            receiptExt: result.receiptExt,
-          ),
-        );
+      ReimbursementResubmitted(
+        id: claim.id,
+        claimedAmountCentavos: result.amountCentavos,
+        providerName: result.providerName,
+        serviceDate: result.serviceDate,
+        memberNotes: result.memberNotes,
+        receiptBytes: result.receiptBytes,
+        receiptExt: result.receiptExt,
+      ),
+    );
   }
 
   @override
@@ -411,9 +425,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
           alignment: Alignment.centerLeft,
           child: Text(
             'Reimbursements',
-            style: theme.textTheme.displaySmall!.copyWith(
-              color: Colors.white,
-            ),
+            style: theme.textTheme.displaySmall!.copyWith(color: Colors.white),
           ),
         ),
         actions: [
@@ -456,8 +468,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
             // Applies both the on-open refresh and any config load that lands
             // while the form is open (e.g. the shell's fetch was still in
             // flight when this screen mounted).
-            if (state.directProviderPaymentEnabled !=
-                _globalDirectPayEnabled) {
+            if (state.directProviderPaymentEnabled != _globalDirectPayEnabled) {
               setState(() {
                 _globalDirectPayEnabled = state.directProviderPaymentEnabled;
                 // Only takes effect when the wallet hasn't supplied a
@@ -561,7 +572,10 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
 
   // ── Submit tab ──────────────────────────────────────────────────────────
   Widget _buildSubmitTab(
-      Wallet wallet, List<ReimbursementProvider> providers, bool loading) {
+    Wallet wallet,
+    List<ReimbursementProvider> providers,
+    bool loading,
+  ) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
@@ -577,7 +591,8 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
       return MpEmptyState(
         icon: Icons.account_balance_wallet_outlined,
         title: 'Set up your payout method first',
-        message: 'Tell us where to send approved reimbursements: GCash, '
+        message:
+            'Tell us where to send approved reimbursements: GCash, '
             'bank, or cash pickup. Do this before submitting a claim.',
         action: SizedBox(
           width: 240,
@@ -597,7 +612,8 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
       return const MpEmptyState(
         icon: Icons.receipt_long_outlined,
         title: 'No reimbursable benefits yet',
-        message: "Your active plan doesn't include reimbursement, or no plan "
+        message:
+            "Your active plan doesn't include reimbursement, or no plan "
             'is active. Ask clinic staff for details.',
       );
     }
@@ -621,13 +637,14 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     }
     final isEmergencyCategory =
         (selectedServiceName ?? '').trim().toLowerCase() == 'emergency';
-    final poolLabel =
-        isEmergencyCategory ? 'Emergency Wallet' : 'Preventive Wellness Wallet';
+    final poolLabel = isEmergencyCategory
+        ? 'Emergency Benefit'
+        : 'Preventive Wellness Benefit';
     final remaining = selectedWallet == null
         ? 0
         : (isEmergencyCategory
-            ? selectedWallet.emergencyRemainingCentavos
-            : selectedWallet.remainingCentavos);
+              ? selectedWallet.emergencyRemainingCentavos
+              : selectedWallet.remainingCentavos);
     final walletExhausted = selectedWallet != null && remaining <= 0;
     // Expired plan: the server 400s new claims; gate here too so the member
     // sees why instead of a failed round-trip.
@@ -636,7 +653,8 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     // follows the category the member picked rather than the pet as a whole.
     // Gated here for the same reason as expiry — the server refuses anyway,
     // and being told after filling in the form is the worst way to find out.
-    final benefitLocked = selectedWallet != null &&
+    final benefitLocked =
+        selectedWallet != null &&
         !planExpired &&
         !(isEmergencyCategory
             ? selectedWallet.emergencyAvailable
@@ -646,13 +664,13 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
 
     // Direct-to-provider is only offered once a category is chosen and it's
     // not Emergency — emergency claims always stay on pay-then-reimburse.
-    final showTargetChooser = _directProviderPaymentEnabled &&
+    final showTargetChooser =
+        _directProviderPaymentEnabled &&
         _selectedServiceTypeId != null &&
         !isEmergencyCategory;
     final isProviderTarget = showTargetChooser && _payoutTarget == 'provider';
-    final memberNeedsPayoutMethod = !isProviderTarget &&
-        _member != null &&
-        !_member!.hasPayoutMethod;
+    final memberNeedsPayoutMethod =
+        !isProviderTarget && _member != null && !_member!.hasPayoutMethod;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
@@ -668,8 +686,12 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               value: _selectedPetId,
               label: 'Pet',
               items: wallet.pets
-                  .map((p) => DropdownMenuItem(
-                      value: p.petId, child: Text(p.petName)))
+                  .map(
+                    (p) => DropdownMenuItem(
+                      value: p.petId,
+                      child: Text(p.petName),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _selectedPetId = v),
               validator: (v) => v == null ? 'Choose a pet' : null,
@@ -686,8 +708,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                 children: [
                   Text(
                     poolLabel,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                   Text(
                     '${pesoFromCentavos(remaining)} left',
@@ -707,8 +730,10 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: cs.errorContainer.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(12),
@@ -723,8 +748,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                       child: Text(
                         "${selectedWallet!.petName}'s plan year has ended — "
                         'renew the plan from the Home tab to keep claiming.',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: cs.onSurface),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurface,
+                        ),
                       ),
                     ),
                   ],
@@ -735,14 +761,18 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   // Gold, not red. Nothing has gone wrong — the member is
                   // partway through earning this, and the tone should say so.
                   color: AppColors.gold.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -766,8 +796,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                             'for ${selectedWallet.petName} opens as the monthly '
                             'payments continue. '
                             '${selectedWallet.subscriptionPaymentsMade} paid so far.',
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: cs.onSurface),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurface,
+                            ),
                           ),
                         ],
                       ),
@@ -781,10 +812,12 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               value: _selectedServiceTypeId,
               label: 'Service category',
               items: wallet.serviceTypes
-                  .map((st) => DropdownMenuItem(
-                        value: st.id,
-                        child: Text(st.name, overflow: TextOverflow.ellipsis),
-                      ))
+                  .map(
+                    (st) => DropdownMenuItem(
+                      value: st.id,
+                      child: Text(st.name, overflow: TextOverflow.ellipsis),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() {
                 _selectedServiceTypeId = v;
@@ -841,16 +874,18 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               controller: _amountCtrl,
               label: 'Amount paid',
               prefixText: '₱ ',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               // Digits, one decimal point, and thousands separators only.
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
               // Tabular figures — digits hold a fixed width so the amount
               // doesn't visually jiggle as the member types.
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
               validator: (v) {
                 // Tolerates "1,500.00" — commas stripped before parsing.
                 final value = _parseAmount(v);
@@ -881,19 +916,24 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                       child: Text(
                         'No verified providers are available yet. Choose '
                         '"Reimburse me" above instead, or check back later.',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: cs.onSurfaceVariant),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     )
                   : MpDropdownField<String>(
                       value: _selectedProviderId,
                       label: 'Provider / clinic',
                       items: providers
-                          .map((p) => DropdownMenuItem(
-                                value: p.id,
-                                child: Text(p.name,
-                                    overflow: TextOverflow.ellipsis),
-                              ))
+                          .map(
+                            (p) => DropdownMenuItem(
+                              value: p.id,
+                              child: Text(
+                                p.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
                           .toList(),
                       onChanged: (v) => setState(() {
                         _selectedProviderId = v;
@@ -912,9 +952,8 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                 controller: _providerCtrl,
                 label: 'Provider / clinic name',
                 maxLength: 60,
-                validator: (v) => (v ?? '').trim().isEmpty
-                    ? 'Enter the provider name'
-                    : null,
+                validator: (v) =>
+                    (v ?? '').trim().isEmpty ? 'Enter the provider name' : null,
               ),
             const SizedBox(height: 16),
             _DateField(
@@ -922,15 +961,17 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               label: isProviderTarget ? 'Appointment date' : 'Service date',
               onTap: () async {
                 final now = DateTime.now();
-                final firstDate =
-                    isProviderTarget ? now : DateTime(now.year - 2);
+                final firstDate = isProviderTarget
+                    ? now
+                    : DateTime(now.year - 2);
                 final lastDate = isProviderTarget
                     ? now.add(const Duration(days: 60))
                     : now;
                 final initial =
-                    _serviceDate.isBefore(firstDate) || _serviceDate.isAfter(lastDate)
-                        ? now
-                        : _serviceDate;
+                    _serviceDate.isBefore(firstDate) ||
+                        _serviceDate.isAfter(lastDate)
+                    ? now
+                    : _serviceDate;
                 final picked = await showDatePicker(
                   context: context,
                   initialDate: initial,
@@ -949,7 +990,9 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               hasFile: _receiptBytes != null,
               ext: _receiptExt,
               onTap: _pickReceipt,
-              attachedLabel: isProviderTarget ? 'File attached' : 'Receipt attached',
+              attachedLabel: isProviderTarget
+                  ? 'File attached'
+                  : 'Receipt attached',
               emptyLabel: isProviderTarget
                   ? 'Attach a quote, estimate, or booking confirmation (photo or PDF)'
                   : 'Attach receipt (photo or PDF)',
@@ -962,8 +1005,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                   isProviderTarget
                       ? 'Attach a quote, estimate, or booking confirmation'
                       : 'Attach the official receipt',
-                  style: theme.textTheme.bodySmall!
-                      .copyWith(color: cs.error),
+                  style: theme.textTheme.bodySmall!.copyWith(color: cs.error),
                 ),
               ),
             ],
@@ -994,8 +1036,10 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
                 child: Text(
                   '${selectedWallet.petName}\'s $poolLabel is used up for '
                   'this plan year, so a new claim can\'t be submitted.',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: cs.onErrorContainer, height: 1.4),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onErrorContainer,
+                    height: 1.4,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1040,7 +1084,8 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
               label: 'Submit claim',
               gold: true,
               loading: _submitting,
-              onPressed: (_submitting ||
+              onPressed:
+                  (_submitting ||
                       loading ||
                       walletExhausted ||
                       planExpired ||
@@ -1053,8 +1098,10 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
             Text(
               'MetroPaws will review your claim against your plan benefits. '
               'You\'ll be notified in the app and by email when the status changes.',
-              style: theme.textTheme.bodySmall!
-                  .copyWith(color: cs.onSurfaceVariant, height: 1.5),
+              style: theme.textTheme.bodySmall!.copyWith(
+                color: cs.onSurfaceVariant,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -1097,14 +1144,12 @@ class _ClaimsTab extends StatelessWidget {
       return MpEmptyState(
         icon: Icons.receipt_long_outlined,
         title: 'No claims yet',
-        message: 'Use your benefit by filing a claim from the Submit tab. '
+        message:
+            'Use your benefit by filing a claim from the Submit tab. '
             'Not sure how it works?',
         action: SizedBox(
           width: 240,
-          child: MpButton(
-            label: 'How claims work',
-            onPressed: onHowItWorks,
-          ),
+          child: MpButton(label: 'How claims work', onPressed: onHowItWorks),
         ),
       );
     }
@@ -1145,8 +1190,10 @@ class _ClaimsTab extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: colors.$1,
                       borderRadius: BorderRadius.circular(100),
@@ -1163,7 +1210,10 @@ class _ClaimsTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               _ClaimLine(label: 'Provider', value: c.providerName),
-              _ClaimLine(label: 'Service date', value: _formatDate(c.serviceDate)),
+              _ClaimLine(
+                label: 'Service date',
+                value: _formatDate(c.serviceDate),
+              ),
               _ClaimLine(
                 label: 'Claimed',
                 value: pesoFromCentavos(c.claimedAmountCentavos),
@@ -1188,8 +1238,10 @@ class _ClaimsTab extends StatelessWidget {
                   ),
                   child: Text(
                     'Note: ${c.adminNotes!}',
-                    style: theme.textTheme.bodySmall!
-                        .copyWith(color: cs.onSurface, height: 1.4),
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: cs.onSurface,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],
@@ -1214,9 +1266,14 @@ class _ClaimsTab extends StatelessWidget {
 }
 
 class _ClaimLine extends StatelessWidget {
-  const _ClaimLine({required this.label, required this.value, this.numeric = false});
+  const _ClaimLine({
+    required this.label,
+    required this.value,
+    this.numeric = false,
+  });
   final String label;
   final String value;
+
   /// True for peso amounts — applies tabular figures so digits hold a fixed
   /// width, keeping the "Claimed"/"Approved" columns visually aligned across
   /// claim cards while scanning the list.
@@ -1230,9 +1287,12 @@ class _ClaimLine extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: [
-          Text('$label  ',
-              style: theme.textTheme.bodySmall!
-                  .copyWith(color: cs.onSurfaceVariant)),
+          Text(
+            '$label  ',
+            style: theme.textTheme.bodySmall!.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
+          ),
           Expanded(
             child: Text(
               value,
@@ -1240,10 +1300,12 @@ class _ClaimLine extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall!.copyWith(
-                  color: cs.onSurface,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures:
-                      numeric ? const [FontFeature.tabularFigures()] : null),
+                color: cs.onSurface,
+                fontWeight: FontWeight.w600,
+                fontFeatures: numeric
+                    ? const [FontFeature.tabularFigures()]
+                    : null,
+              ),
             ),
           ),
         ],
@@ -1309,8 +1371,11 @@ class _DateField extends StatelessWidget {
               _formatDate(date),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            Icon(Icons.calendar_today_outlined,
-                size: 18, color: cs.onSurfaceVariant),
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: cs.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -1362,14 +1427,14 @@ class _ReceiptAttachment extends StatelessWidget {
               child: Icon(
                 hasFile
                     ? (ext == 'pdf'
-                        ? Icons.picture_as_pdf_outlined
-                        : Icons.image_outlined)
+                          ? Icons.picture_as_pdf_outlined
+                          : Icons.image_outlined)
                     : Icons.upload_file_outlined,
                 key: ValueKey('${hasFile}_$ext'),
                 color: hasFile
                     ? (theme.brightness == Brightness.dark
-                        ? AppColors.gold
-                        : AppColors.goldDark)
+                          ? AppColors.gold
+                          : AppColors.goldDark)
                     : cs.onSurfaceVariant,
               ),
             ),
@@ -1457,9 +1522,9 @@ class _HowClaimsWorkSheet extends StatelessWidget {
                   Text(
                     directPayAvailable
                         ? 'There are two ways to use your benefit. Pick the one '
-                            'that matches what already happened.'
+                              'that matches what already happened.'
                         : 'Use your benefit by paying the clinic first, then '
-                            'claiming it back.',
+                              'claiming it back.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -1480,7 +1545,8 @@ class _HowClaimsWorkSheet extends StatelessWidget {
                       'Once approved, MetroPaws sends the money to your saved '
                           'payout method.',
                     ],
-                    note: 'Set up your payout method before you file — we need '
+                    note:
+                        'Set up your payout method before you file — we need '
                         'somewhere to send it. The visit date can’t be in the '
                         'future. There’s no deadline: you can claim a visit '
                         'from a few days or a few weeks ago, as long as your '
@@ -1506,7 +1572,8 @@ class _HowClaimsWorkSheet extends StatelessWidget {
                             'pays the provider directly — don’t pay the covered '
                             'amount yourself.',
                       ],
-                      note: 'The appointment must still be ahead of you, and no '
+                      note:
+                          'The appointment must still be ahead of you, and no '
                           'more than about $_providerMaxFutureDays days away. '
                           'If the visit already happened, or the option isn’t '
                           'shown for the category you picked, use “Reimburse '
@@ -1543,8 +1610,7 @@ class _HowClaimsWorkSheet extends StatelessWidget {
                   ),
                   const _HowStatusRow(
                     label: 'Rejected',
-                    meaning:
-                        'Not eligible. The reason is shown on the claim.',
+                    meaning: 'Not eligible. The reason is shown on the claim.',
                     last: true,
                   ),
                   const SizedBox(height: 12),
@@ -1557,7 +1623,10 @@ class _HowClaimsWorkSheet extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 28),
-                  Text('What holds a claim up', style: theme.textTheme.titleMedium),
+                  Text(
+                    'What holds a claim up',
+                    style: theme.textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 12),
                   const _HowBullet(
                     'A blurry or partial receipt. Make sure the provider, date '
@@ -1576,9 +1645,7 @@ class _HowClaimsWorkSheet extends StatelessWidget {
                     'Grooming filed too often — it can be claimed roughly once '
                     'every $_groomingCooldownDays days per pet.',
                   ),
-                  const _HowBullet(
-                    'An expired plan. Renew first, then file.',
-                  ),
+                  const _HowBullet('An expired plan. Renew first, then file.'),
 
                   const SizedBox(height: 24),
                   Center(
@@ -1608,6 +1675,7 @@ class _HowPathCard extends StatelessWidget {
   });
 
   final Color accent;
+
   /// Numbered only when both paths are shown — a lone "1" implies a missing 2.
   final String? badge;
   final String title;
@@ -1657,8 +1725,9 @@ class _HowPathCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: cs.onSurfaceVariant),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -1676,7 +1745,9 @@ class _HowPathCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       '${i + 1}.',
-                      style: theme.textTheme.labelLarge?.copyWith(color: accent),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: accent,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1698,9 +1769,7 @@ class _HowPathCard extends StatelessWidget {
               children: [
                 Icon(Icons.info_outline_rounded, size: 16, color: accent),
                 const SizedBox(width: 10),
-                Expanded(
-                  child: Text(note, style: theme.textTheme.bodyMedium),
-                ),
+                Expanded(child: Text(note, style: theme.textTheme.bodyMedium)),
               ],
             ),
           ),
@@ -1737,8 +1806,9 @@ class _HowStatusRow extends StatelessWidget {
           Expanded(
             child: Text(
               meaning,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: cs.onSurfaceVariant),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -1775,8 +1845,9 @@ class _HowBullet extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: cs.onSurfaceVariant),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -1860,8 +1931,10 @@ class _ReceiptLink extends StatelessWidget {
 
   Future<void> _open(BuildContext context) async {
     if (_isPdf) {
-      final ok = await launchUrl(Uri.parse(url),
-          mode: LaunchMode.externalApplication);
+      final ok = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
       if (!ok && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open the receipt.')),
@@ -1887,12 +1960,15 @@ class _ReceiptLink extends StatelessWidget {
                       : const Padding(
                           padding: EdgeInsets.all(48),
                           child: CircularProgressIndicator(
-                              color: AppColors.gold),
+                            color: AppColors.gold,
+                          ),
                         ),
                   errorBuilder: (c, _, _) => const Padding(
                     padding: EdgeInsets.all(48),
-                    child: Text('Could not load the receipt.',
-                        style: TextStyle(color: Colors.white)),
+                    child: Text(
+                      'Could not load the receipt.',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               ),
@@ -1930,16 +2006,22 @@ class _ReceiptLink extends StatelessWidget {
               child: _isPdf
                   ? ColoredBox(
                       color: cs.surfaceContainerHighest,
-                      child: Icon(Icons.picture_as_pdf_outlined,
-                          size: 20, color: cs.onSurfaceVariant),
+                      child: Icon(
+                        Icons.picture_as_pdf_outlined,
+                        size: 20,
+                        color: cs.onSurfaceVariant,
+                      ),
                     )
                   : Image.network(
                       url,
                       fit: BoxFit.cover,
                       errorBuilder: (c, _, _) => ColoredBox(
                         color: cs.surfaceContainerHighest,
-                        child: Icon(Icons.image_outlined,
-                            size: 20, color: cs.onSurfaceVariant),
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 20,
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ),
             ),
@@ -1953,7 +2035,11 @@ class _ReceiptLink extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 2),
-          Icon(Icons.chevron_right_rounded, size: 16, color: cs.onSurfaceVariant),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 16,
+            color: cs.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -2002,7 +2088,8 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
     super.initState();
     final c = widget.claim;
     _amountCtrl = TextEditingController(
-        text: (c.claimedAmountCentavos / 100).toStringAsFixed(2));
+      text: (c.claimedAmountCentavos / 100).toStringAsFixed(2),
+    );
     _providerCtrl = TextEditingController(text: c.providerName);
     _notesCtrl = TextEditingController(text: c.memberNotes ?? '');
     _date = c.serviceDate;
@@ -2034,8 +2121,9 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
         amountCentavos: (pesos * 100).round(),
         providerName: _providerCtrl.text.trim(),
         serviceDate: _date,
-        memberNotes:
-            _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        memberNotes: _notesCtrl.text.trim().isEmpty
+            ? null
+            : _notesCtrl.text.trim(),
         receiptBytes: _newBytes,
         receiptExt: _newExt,
       ),
@@ -2059,8 +2147,9 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
       child: SafeArea(
         child: Padding(
           // Keeps the sheet's fields above the keyboard.
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
             child: Form(
@@ -2080,13 +2169,13 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text('Resubmit claim',
-                      style: theme.textTheme.headlineSmall),
+                  Text('Resubmit claim', style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 4),
                   Text(
                     'Correct anything that was wrong, then resubmit for review.',
-                    style: theme.textTheme.bodySmall!
-                        .copyWith(color: cs.onSurfaceVariant),
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                   if ((widget.claim.adminNotes ?? '').isNotEmpty) ...[
                     const SizedBox(height: 12),
@@ -2099,8 +2188,10 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
                       ),
                       child: Text(
                         'MetroPaws: ${widget.claim.adminNotes!}',
-                        style: theme.textTheme.bodySmall!
-                            .copyWith(color: cs.onSurface, height: 1.4),
+                        style: theme.textTheme.bodySmall!.copyWith(
+                          color: cs.onSurface,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   ],
@@ -2109,13 +2200,15 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
                     controller: _amountCtrl,
                     label: 'Amount paid',
                     prefixText: '₱ ',
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
                     style: theme.textTheme.titleMedium?.copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()]),
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                     validator: (v) {
                       final value = _parseAmount(v);
                       if (value == null || value <= 0) {
@@ -2160,7 +2253,9 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         color: hasNewReceipt
                             ? cs.secondaryContainer
@@ -2178,8 +2273,8 @@ class _ResubmitSheetState extends State<_ResubmitSheet> {
                           Icon(
                             hasNewReceipt
                                 ? (_newExt == 'pdf'
-                                    ? Icons.picture_as_pdf_outlined
-                                    : Icons.image_outlined)
+                                      ? Icons.picture_as_pdf_outlined
+                                      : Icons.image_outlined)
                                 : Icons.autorenew_rounded,
                             color: hasNewReceipt
                                 ? iconGold
@@ -2252,8 +2347,10 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium!
-                  .copyWith(color: cs.onSurfaceVariant, height: 1.5),
+              style: theme.textTheme.bodyMedium!.copyWith(
+                color: cs.onSurfaceVariant,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 24),
             OutlinedButton(
@@ -2264,8 +2361,10 @@ class _ErrorState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text('Try again',
-                  style: TextStyle(color: navy, fontWeight: FontWeight.w700)),
+              child: Text(
+                'Try again',
+                style: TextStyle(color: navy, fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),
@@ -2273,4 +2372,3 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
-
