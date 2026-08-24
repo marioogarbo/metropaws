@@ -7,15 +7,22 @@ version in [`android-distribution.md`](./android-distribution.md).
 | | |
 | --- | --- |
 | Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
-| Internal testing track | **1.5.0 (versionCode 10)**, uploaded 2026-08-19 11:55 |
-| Built and verified, NOT uploaded | **1.5.1 (versionCode 11)**, built 2026-08-20 — the first bundle containing §5 · **1.6.0 (versionCode 12)**, REBUILT 2026-08-21 to include §7, and it supersedes 11. Rebuilt at the same versionCode deliberately: 12 was never uploaded, and Play only rejects duplicates of *uploaded* codes |
-| `pubspec.yaml` | `1.6.0+12` (bumped in `1f96675`) |
+| Internal testing track | **1.6.0 (versionCode 12)**, uploaded 2026-08-20 23:58, released to testers 2026-08-21 10:01. (1.5.0+10 went up 2026-08-19 11:55 and is now Inactive.) **This build carries §1–§6 but NOT §7** — the rename landed after it was built |
+| Built and verified, NOT uploaded | **1.6.1 (versionCode 13)**, built 2026-08-21 — the first bundle containing §7. Supersedes 11 and 12 |
+| `pubspec.yaml` | `1.6.1+13` (bumped in `c189138`) |
 | Branches holding this work | all merged into `main`. §6 fast-forwarded in on 2026-08-21 as `f6cda00` and was pushed with the release commit; `origin/main` is level |
 
-**Three builds now separate production from `main`.** Play production is still on
-**1.4.1+9**; 10 sits on internal testing; 11 was built and never uploaded; 12 now
-supersedes 11. Promoting anything ships §1–§6 together, so the release notes and
-the QA surface are the whole list below, not one section.
+**Production is still on 1.4.1+9.** Internal testing has **12 (1.6.0)**, which is
+§1–§6. **13 (1.6.1)** is built and adds §7. Promoting to production ships §1–§7
+together, so the release notes and the QA surface are the whole list below, not
+one section.
+
+> **Read the Play Console, not this table, before assuming a version code is
+> free.** On 2026-08-21 a rebuild was made at versionCode 12 on the strength of
+> this file saying 12 was "built, NOT uploaded". It had been uploaded the night
+> before, and Play rejected the bundle: "Version code 12 has already been used."
+> This file lags whatever is done in the console by hand, so the console is the
+> only authority on which codes are consumed.
 
 **Status 2026-08-19: sections 1–4 are built, verified, and sitting on the
 internal testing track. They are not on production**, so this file stays full.
@@ -185,7 +192,7 @@ bundle without ever having been seen.
 
 ### 6. The Home pet card, and a rebuilt tier colour system — NOT in 10 or 11
 
-Added 2026-08-21 (`f6cda00`), shipped in **1.6.0+12**. Session record:
+Added 2026-08-21 (`f6cda00`), shipped in **1.6.0+12** (and in 13). Session record:
 [`../sessions/2026-08-21-pet-card-tier-redesign.md`](../sessions/2026-08-21-pet-card-tier-redesign.md).
 
 **Three defects, not a restyle:**
@@ -227,6 +234,7 @@ renders missed them, so treat device QA on Home as outstanding.
 
 ### 7. "Wallet" became "Benefit" throughout the app
 
+First shipped in **1.6.1+13** — NOT in the 12 that testers currently have.
 Added 2026-08-21 (`30882b4`, plus `49e8d2f` on the backend) at the client's
 request: rename the bottom **Wallet** tab to **Benefit**, and drop the word
 "wallet" from the app.
@@ -251,9 +259,15 @@ rather than inventing a third term: **"Preventive Wellness Benefit"** and
 `400` details verbatim, so the first over-claim would have said "Insufficient
 wallet balance — ₱X left in Ye-jin's Preventive Wellness Wallet" and undone the
 rename. `49e8d2f` fixes `wallet_name` on the submit and resubmit paths, the
-"Insufficient benefit balance" wording, and the launch email. **It needs
-`.\deploy.ps1` (image rebuild, not an env push) — until that runs, prod still
-sends the old wording to the new build.**
+"Insufficient benefit balance" wording, and the launch email. **DEPLOYED to
+prod 2026-08-21** as `dep-da61nogjo6nc73e31ts0` (confirmed `live`, the two prior
+deploys now `deactivated`). The changed strings live only in 400 details, so they
+are unverified end to end: seeing them needs a deliberate over-claim on a test
+account.
+
+Note the ordering this created — prod now answers "Insufficient benefit balance"
+while Play production still serves 1.4.1+9, whose own UI says "Wallet". Harmless,
+and it resolves when 13 ships.
 
 **DB-backed copy was already correct** — verified by reading prod `GET /plans`:
 no plan feature says "wallet", so plan cards were already showing "Preventive
