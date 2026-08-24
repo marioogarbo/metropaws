@@ -8,7 +8,7 @@ version in [`android-distribution.md`](./android-distribution.md).
 | --- | --- |
 | Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
 | Internal testing track | **1.5.0 (versionCode 10)**, uploaded 2026-08-19 11:55 |
-| Built and verified, NOT uploaded | **1.5.1 (versionCode 11)**, built 2026-08-20 — the first bundle containing §5 · **1.6.0 (versionCode 12)**, built 2026-08-21 — first bundle containing §6, and it supersedes 11 |
+| Built and verified, NOT uploaded | **1.5.1 (versionCode 11)**, built 2026-08-20 — the first bundle containing §5 · **1.6.0 (versionCode 12)**, REBUILT 2026-08-21 to include §7, and it supersedes 11. Rebuilt at the same versionCode deliberately: 12 was never uploaded, and Play only rejects duplicates of *uploaded* codes |
 | `pubspec.yaml` | `1.6.0+12` (bumped in `1f96675`) |
 | Branches holding this work | all merged into `main`. §6 fast-forwarded in on 2026-08-21 as `f6cda00` and was pushed with the release commit; `origin/main` is level |
 
@@ -224,6 +224,46 @@ a full Emergency bar read as spent. That was caught on a real device.
 meter state per tier. **Not verified on hardware.** The last two rounds of
 feedback on the card's corner emboss came from a real device precisely because
 renders missed them, so treat device QA on Home as outstanding.
+
+### 7. "Wallet" became "Benefit" throughout the app
+
+Added 2026-08-21 (`30882b4`, plus `49e8d2f` on the backend) at the client's
+request: rename the bottom **Wallet** tab to **Benefit**, and drop the word
+"wallet" from the app.
+
+**This closes the gap recorded on 2026-08-07**, when the website renamed the two
+annual pools to "benefit" and the app did not follow — so site and app disagreed
+on the very word the rename existed to settle. Wording matches the site exactly
+rather than inventing a third term: **"Preventive Wellness Benefit"** and
+**"Emergency Benefit"**.
+
+- Bottom nav: **Wallet → Benefit**, and the icon moved with the word.
+  `account_balance_wallet` is a literal picture of a wallet, which is the thing
+  the rename exists to stop showing; it is now `health_and_safety`, matching the
+  category icon the backend already uses.
+- Benefits hub: page heading → **Benefits**; the per-pet section → **Benefit
+  balances**.
+- Home pet card: the `BENEFIT WALLET` eyebrow → `BENEFITS`, plus the meter's
+  semantics label and the no-plan copy.
+- Claim form pool labels, and the hub card's semantics label.
+
+**The backend had to change too, and it is not deployed.** The app renders
+`400` details verbatim, so the first over-claim would have said "Insufficient
+wallet balance — ₱X left in Ye-jin's Preventive Wellness Wallet" and undone the
+rename. `49e8d2f` fixes `wallet_name` on the submit and resubmit paths, the
+"Insufficient benefit balance" wording, and the launch email. **It needs
+`.\deploy.ps1` (image rebuild, not an env push) — until that runs, prod still
+sends the old wording to the new build.**
+
+**DB-backed copy was already correct** — verified by reading prod `GET /plans`:
+no plan feature says "wallet", so plan cards were already showing "Preventive
+Wellness Benefit". That was the trap the 2026-08-07 session warned about, and it
+happened not to bite here.
+
+Left with the word deliberately: code identifiers, file names, API paths
+(`/members/me/wallet`), JSON fields (`wallet_centavos`), and the admin-facing
+`wallet_name` in `admin/reimbursements.py` — matching the precedent the site set
+when it kept its own admin internals.
 
 ---
 
