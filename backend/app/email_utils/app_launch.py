@@ -95,7 +95,7 @@ _LAUNCH_FEATURES = (
     ),
     (
         "Benefits you can actually see",
-        "What your plan covers, what's left in your Benefit Wallet, and the Paw Points you've earned.",
+        "What your plan covers, what's left in your benefits, and the Paw Points you've earned.",
     ),
     (
         "Reimbursement claims from your phone",

@@ -258,9 +258,14 @@ def submit_reimbursement(
         )
 
     # The claim draws from one of two pools, decided by its service category:
-    # "Emergency" → Emergency Wallet, anything else → Preventive Wellness Wallet.
+    # "Emergency" → Emergency Benefit, anything else → Preventive Wellness Benefit.
+    #
+    # These names are MEMBER-FACING: they are interpolated into the 400 details
+    # below, which the app surfaces verbatim. The word "wallet" was retired from
+    # member copy (client, 2026-08-07 on the site, 2026-08-21 in the app), so it
+    # cannot come back through a server error. Internal identifiers keep it.
     emergency = rutils.is_emergency_category(service_type.name)
-    wallet_name = "Emergency Wallet" if emergency else "Preventive Wellness Wallet"
+    wallet_name = "Emergency Benefit" if emergency else "Preventive Wellness Benefit"
     wallet = (
         rutils.plan_emergency_wallet_centavos(db, pet.plan_id)
         if emergency
@@ -302,7 +307,7 @@ def submit_reimbursement(
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Insufficient wallet balance — ₱{max(0, remaining) / 100:,.2f} "
+                f"Insufficient benefit balance — ₱{max(0, remaining) / 100:,.2f} "
                 f"left in {pet.name}'s {wallet_name}."
             ),
         )
@@ -487,7 +492,7 @@ def resubmit_reimbursement(
             emergency = rutils.is_emergency_category(
                 claim.service_type.name if claim.service_type else None
             )
-            wallet_name = "Emergency Wallet" if emergency else "Preventive Wellness Wallet"
+            wallet_name = "Emergency Benefit" if emergency else "Preventive Wellness Benefit"
             wallet = (
                 rutils.plan_emergency_wallet_centavos(db, pet.plan_id)
                 if emergency
@@ -504,7 +509,7 @@ def resubmit_reimbursement(
                 raise HTTPException(
                     status_code=400,
                     detail=(
-                        f"Insufficient wallet balance — ₱{max(0, remaining) / 100:,.2f} "
+                        f"Insufficient benefit balance — ₱{max(0, remaining) / 100:,.2f} "
                         f"left in {pet.name}'s {wallet_name}."
                     ),
                 )
