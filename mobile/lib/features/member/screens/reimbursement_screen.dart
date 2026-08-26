@@ -12,6 +12,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/widgets/mp_button.dart';
 import '../../../core/widgets/mp_dropdown_field.dart';
 import '../../../core/widgets/mp_empty_state.dart';
+import '../../../core/widgets/mp_help_sheet.dart';
 import '../../../core/widgets/mp_skeleton.dart';
 import '../../../core/widgets/mp_text_field.dart';
 import '../../../core/widgets/staggered_reveal.dart';
@@ -1491,175 +1492,125 @@ class _HowClaimsWorkSheet extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final gold = isDark ? AppColors.gold : AppColors.goldDark;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (ctx, scrollController) => Container(
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                children: [
-                  Text('How claims work', style: theme.textTheme.displaySmall),
-                  const SizedBox(height: 8),
-                  Text(
-                    directPayAvailable
-                        ? 'There are two ways to use your benefit. Pick the one '
-                              'that matches what already happened.'
-                        : 'Use your benefit by paying the clinic first, then '
-                              'claiming it back.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  _HowPathCard(
-                    accent: gold,
-                    badge: directPayAvailable ? '1' : null,
-                    title: 'Reimburse me',
-                    subtitle: 'You already paid the clinic or groomer',
-                    steps: const [
-                      'Pay the provider yourself and keep the official receipt.',
-                      'Open Submit, choose your pet and the service category.',
-                      'Choose “Reimburse me”, then enter the amount you paid, '
-                          'the provider’s name and the date of the visit.',
-                      'Attach a photo or PDF of the receipt, then submit.',
-                      'Once approved, MetroPaws sends the money to your saved '
-                          'payout method.',
-                    ],
-                    note:
-                        'Set up your payout method before you file — we need '
-                        'somewhere to send it. The visit date can’t be in the '
-                        'future. There’s no deadline: you can claim a visit '
-                        'from a few days or a few weeks ago, as long as your '
-                        'plan year is still running.',
-                  ),
-
-                  if (directPayAvailable) ...[
-                    const SizedBox(height: 16),
-                    _HowPathCard(
-                      accent: gold,
-                      badge: '2',
-                      title: 'Pay the provider directly',
-                      subtitle: 'Arrange it before the visit',
-                      steps: [
-                        'Ask before the appointment — not after.',
-                        'Open Submit, choose your pet and the service category.',
-                        'Choose “Pay the provider directly”, pick the provider '
-                            'from the list, then set the appointment date and '
-                            'the expected amount.',
-                        'Attach a quote, estimate or booking confirmation, '
-                            'then submit.',
-                        'Wait for approval before the appointment. MetroPaws '
-                            'pays the provider directly — don’t pay the covered '
-                            'amount yourself.',
-                      ],
-                      note:
-                          'The appointment must still be ahead of you, and no '
-                          'more than about $_providerMaxFutureDays days away. '
-                          'If the visit already happened, or the option isn’t '
-                          'shown for the category you picked, use “Reimburse '
-                          'me” instead.',
-                    ),
-                  ],
-
-                  const SizedBox(height: 28),
-                  Text('After you submit', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  const _HowStatusRow(
-                    label: 'Pending',
-                    meaning: 'We’ve received it and it’s queued for review.',
-                  ),
-                  const _HowStatusRow(
-                    label: 'Under review',
-                    meaning: 'Someone is checking the details and the receipt.',
-                  ),
-                  const _HowStatusRow(
-                    label: 'Needs info',
-                    meaning:
-                        'Something was unclear — open the claim and resubmit '
-                        'with a clearer file or corrected details.',
-                  ),
-                  const _HowStatusRow(
-                    label: 'Approved',
-                    meaning:
-                        'Accepted, and the amount is deducted from your pet’s '
-                        'remaining benefit.',
-                  ),
-                  const _HowStatusRow(
-                    label: 'Paid',
-                    meaning: 'The money has been released.',
-                  ),
-                  const _HowStatusRow(
-                    label: 'Rejected',
-                    meaning: 'Not eligible. The reason is shown on the claim.',
-                    last: true,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'You’ll be notified in the app and by email whenever the '
-                    'status changes.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-                  Text(
-                    'What holds a claim up',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  const _HowBullet(
-                    'A blurry or partial receipt. Make sure the provider, date '
-                    'and amount are all readable.',
-                  ),
-                  const _HowBullet(
-                    'Claiming more than your pet has left. Each pet has its own '
-                    'benefit for the plan year, and claims still waiting for '
-                    'review are already counted against it.',
-                  ),
-                  const _HowBullet(
-                    'The same visit filed twice. One claim per provider, date '
-                    'and amount.',
-                  ),
-                  _HowBullet(
-                    'Grooming filed too often — it can be claimed roughly once '
-                    'every $_groomingCooldownDays days per pet.',
-                  ),
-                  const _HowBullet('An expired plan. Renew first, then file.'),
-
-                  const SizedBox(height: 24),
-                  Center(
-                    child: Text(
-                      'Questions? csr@metropaws.ph',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: gold),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return MpHelpSheet(
+      title: 'How claims work',
+      intro: directPayAvailable
+          ? 'There are two ways to use your benefit. Pick the one that matches '
+                'what already happened.'
+          : 'Use your benefit by paying the clinic first, then claiming it '
+                'back.',
+      children: [
+        _HowPathCard(
+          accent: gold,
+          badge: directPayAvailable ? '1' : null,
+          title: 'Reimburse me',
+          subtitle: 'You already paid the clinic or groomer',
+          steps: const [
+            'Pay the provider yourself and keep the official receipt.',
+            'Open Submit, choose your pet and the service category.',
+            'Choose “Reimburse me”, then enter the amount you paid, '
+                'the provider’s name and the date of the visit.',
+            'Attach a photo or PDF of the receipt, then submit.',
+            'Once approved, MetroPaws sends the money to your saved '
+                'payout method.',
           ],
+          note:
+              'Set up your payout method before you file — we need '
+              'somewhere to send it. The visit date can’t be in the '
+              'future. There’s no deadline: you can claim a visit '
+              'from a few days or a few weeks ago, as long as your '
+              'plan year is still running.',
         ),
-      ),
+
+        if (directPayAvailable) ...[
+          const SizedBox(height: 16),
+          _HowPathCard(
+            accent: gold,
+            badge: '2',
+            title: 'Pay the provider directly',
+            subtitle: 'Arrange it before the visit',
+            steps: [
+              'Ask before the appointment — not after.',
+              'Open Submit, choose your pet and the service category.',
+              'Choose “Pay the provider directly”, pick the provider '
+                  'from the list, then set the appointment date and '
+                  'the expected amount.',
+              'Attach a quote, estimate or booking confirmation, '
+                  'then submit.',
+              'Wait for approval before the appointment. MetroPaws '
+                  'pays the provider directly — don’t pay the covered '
+                  'amount yourself.',
+            ],
+            note:
+                'The appointment must still be ahead of you, and no '
+                'more than about $_providerMaxFutureDays days away. '
+                'If the visit already happened, or the option isn’t '
+                'shown for the category you picked, use “Reimburse '
+                'me” instead.',
+          ),
+        ],
+
+        const SizedBox(height: 28),
+        const MpHelpHeading('After you submit'),
+        const _HowStatusRow(
+          label: 'Pending',
+          meaning: 'We’ve received it and it’s queued for review.',
+        ),
+        const _HowStatusRow(
+          label: 'Under review',
+          meaning: 'Someone is checking the details and the receipt.',
+        ),
+        const _HowStatusRow(
+          label: 'Needs info',
+          meaning:
+              'Something was unclear — open the claim and resubmit '
+              'with a clearer file or corrected details.',
+        ),
+        const _HowStatusRow(
+          label: 'Approved',
+          meaning:
+              'Accepted, and the amount is deducted from your pet’s '
+              'remaining benefit.',
+        ),
+        const _HowStatusRow(
+          label: 'Paid',
+          meaning: 'The money has been released.',
+        ),
+        const _HowStatusRow(
+          label: 'Rejected',
+          meaning: 'Not eligible. The reason is shown on the claim.',
+          last: true,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'You’ll be notified in the app and by email whenever the '
+          'status changes.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
+        ),
+
+        const SizedBox(height: 28),
+        const MpHelpHeading('What holds a claim up'),
+        const MpHelpBullet(
+          'A blurry or partial receipt. Make sure the provider, date '
+          'and amount are all readable.',
+        ),
+        const MpHelpBullet(
+          'Claiming more than your pet has left. Each pet has its own '
+          'benefit for the plan year, and claims still waiting for '
+          'review are already counted against it.',
+        ),
+        const MpHelpBullet(
+          'The same visit filed twice. One claim per provider, date '
+          'and amount.',
+        ),
+        MpHelpBullet(
+          'Grooming filed too often — it can be claimed roughly once '
+          'every $_groomingCooldownDays days per pet.',
+        ),
+        const MpHelpBullet('An expired plan. Renew first, then file.'),
+      ],
     );
   }
 }
@@ -1806,45 +1757,6 @@ class _HowStatusRow extends StatelessWidget {
           Expanded(
             child: Text(
               meaning,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HowBullet extends StatelessWidget {
-  const _HowBullet(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 7),
-            child: Container(
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.onSurfaceVariant,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
