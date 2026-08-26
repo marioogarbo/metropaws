@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/models/paw_points.dart';
 import '../../../core/widgets/mp_empty_state.dart';
+import '../../../core/widgets/mp_help_sheet.dart';
 import '../../../core/widgets/paw_coin.dart';
 import '../../../theme.dart';
 import '../bloc/member_bloc.dart';
@@ -41,7 +42,11 @@ IconData _activityIcon(String activityType) {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class PawPointsScreen extends StatefulWidget {
-  const PawPointsScreen({super.key});
+  const PawPointsScreen({super.key, this.planType});
+
+  /// The member's plan name, used to show their own earning rate instead of a
+  /// span. Null when they have no plan yet.
+  final String? planType;
 
   @override
   State<PawPointsScreen> createState() => _PawPointsScreenState();
@@ -54,7 +59,7 @@ class _PawPointsScreenState extends State<PawPointsScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 2, vsync: this);
     context.read<MemberBloc>().add(PawPointsLoadRequested());
   }
 
@@ -62,6 +67,15 @@ class _PawPointsScreenState extends State<PawPointsScreen>
   void dispose() {
     _tabs.dispose();
     super.dispose();
+  }
+
+  void _showHowPawPointsWork() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _PawPointsHelpSheet(tier: _tierFor(widget.planType)),
+    );
   }
 
   @override
@@ -97,6 +111,13 @@ class _PawPointsScreenState extends State<PawPointsScreen>
             ],
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: 'How PawPoints work',
+            onPressed: _showHowPawPointsWork,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           indicatorColor: gold,
@@ -109,9 +130,8 @@ class _PawPointsScreenState extends State<PawPointsScreen>
             letterSpacing: 0.2,
           ),
           tabs: const [
-            Tab(text: 'History'),
             Tab(text: 'Rewards'),
-            Tab(text: 'How to Earn'),
+            Tab(text: 'History'),
           ],
         ),
       ),
@@ -129,12 +149,11 @@ class _PawPointsScreenState extends State<PawPointsScreen>
                   child: TabBarView(
                     controller: _tabs,
                     children: [
-                      _HistoryTab(history: state.history),
                       _RewardsTab(
                         rewards: state.rewards,
                         balance: state.balance.currentBalance,
                       ),
-                      const _HowToEarnTab(),
+                      _HistoryTab(history: state.history),
                     ],
                   ),
                 ),
@@ -745,214 +764,372 @@ class _RewardsTab extends StatelessWidget {
   }
 }
 
-// ── How to Earn tab ───────────────────────────────────────────────────────────
+// ── Earning activities ────────────────────────────────────────────────────────
 
-class _EarnActivity {
-  final IconData icon;
+/// The three earning rates. Mirrors `_normalize_tier` in
+/// `backend/app/domain/paw_points_utils.py`: anything that isn't premium or
+/// deluxe earns the standard rate.
+enum _PlanTier {
+  standard('Standard'),
+  deluxe('Deluxe'),
+  premium('Premium');
+
+  const _PlanTier(this.label);
+
   final String label;
-  final String description;
-  final int minPoints;
-  final int maxPoints;
-  final bool isHighValue;
-
-  const _EarnActivity({
-    required this.icon,
-    required this.label,
-    required this.description,
-    required this.minPoints,
-    required this.maxPoints,
-    this.isHighValue = false,
-  });
 }
 
+/// Null when the member has no plan yet — the backend would treat that as
+/// standard, but on screen "we can't tell you your rate" is the honest answer.
+/// Activation points follow the plan being bought, not a rate they hold today.
+_PlanTier? _tierFor(String? planType) {
+  final name = planType?.toLowerCase().trim();
+  if (name == null || name.isEmpty) return null;
+  if (name.contains('premium')) return _PlanTier.premium;
+  if (name.contains('deluxe')) return _PlanTier.deluxe;
+  return _PlanTier.standard;
+}
+
+/// One row of the backend's POINTS_BY_TIER table. Kept per-tier rather than as a
+/// min–max range: a member on Deluxe is owed their own number, not a span they
+/// have to decode.
+class _EarnActivity {
+  final String label;
+
+  /// The qualifier that a bare number can't carry — how often it's awarded.
+  final String rule;
+
+  final int standard;
+  final int deluxe;
+  final int premium;
+
+  const _EarnActivity({
+    required this.label,
+    required this.rule,
+    required this.standard,
+    required this.deluxe,
+    required this.premium,
+  });
+
+  int pointsFor(_PlanTier tier) => switch (tier) {
+    _PlanTier.standard => standard,
+    _PlanTier.deluxe => deluxe,
+    _PlanTier.premium => premium,
+  };
+}
+
+// Mirrors POINTS_BY_TIER in backend/app/domain/paw_points_utils.py. A change
+// there has to land here too — the member reads these numbers before earning
+// them, so a drift shows up as a broken promise.
 const _earnActivities = [
   _EarnActivity(
-    icon: Icons.workspace_premium_rounded,
     label: 'Activate Membership',
-    description: 'Awarded when you activate or upgrade your plan.',
-    minPoints: 100,
-    maxPoints: 300,
-    isHighValue: true,
+    rule: 'On activation or upgrade',
+    standard: 100,
+    deluxe: 200,
+    premium: 300,
   ),
   _EarnActivity(
-    icon: Icons.pets,
     label: 'Add a Pet Profile',
-    description: 'Earned once per pet when you complete their profile.',
-    minPoints: 50,
-    maxPoints: 100,
+    rule: 'Once per pet',
+    standard: 50,
+    deluxe: 75,
+    premium: 100,
   ),
   _EarnActivity(
-    icon: Icons.vaccines_outlined,
     label: 'Vet Service Used',
-    description: 'Points awarded each time a vet session is deployed.',
-    minPoints: 20,
-    maxPoints: 40,
+    rule: 'Each vet session',
+    standard: 20,
+    deluxe: 30,
+    premium: 40,
   ),
   _EarnActivity(
-    icon: Icons.content_cut_rounded,
     label: 'Grooming Service Used',
-    description: 'Points awarded each time a grooming session is deployed.',
-    minPoints: 15,
-    maxPoints: 35,
+    rule: 'Each grooming session',
+    standard: 15,
+    deluxe: 25,
+    premium: 35,
   ),
   _EarnActivity(
-    icon: Icons.autorenew_rounded,
     label: 'Renew Membership',
-    description: 'Bonus points when you renew your annual plan.',
-    minPoints: 150,
-    maxPoints: 500,
-    isHighValue: true,
+    rule: 'Each annual renewal',
+    standard: 150,
+    deluxe: 300,
+    premium: 500,
   ),
 ];
 
-class _HowToEarnTab extends StatelessWidget {
-  const _HowToEarnTab();
+/// Fixed column widths: they line every row's numbers up without the cost of a
+/// full [Table], and they give the table an intrinsic width to scroll inside.
+/// Sized for the spelled-out plan names — abbreviating the headings to fit a
+/// phone would save a scroll and cost the member the words.
+const double _activityColumnWidth = 180;
+const double _rateColumnWidth = 76;
+
+/// The earning matrix, with the member's own plan carried as a tinted column.
+/// The data is two-dimensional — activity against plan — so it reads as a table
+/// rather than five cards each repeating the same three tier names.
+class _EarnRateTable extends StatelessWidget {
+  const _EarnRateTable({required this.tier});
+
+  final _PlanTier? tier;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final navy = cs.primary;
+    final isDark = theme.brightness == Brightness.dark;
+    final goldInk = isDark ? AppColors.gold : AppColors.goldDark;
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      // +2: intro banner + spacing item
-      itemCount: _earnActivities.length + 2,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cs.secondaryContainer,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: cs.secondary.withValues(alpha: 0.3)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Text(
+            tier == null
+                ? 'What you earn depends on your plan — higher plans earn more.'
+                : 'The gold column is your ${tier!.label} plan. Higher plans '
+                      'earn more.',
+            style: theme.textTheme.bodySmall!.copyWith(
+              color: cs.onSurfaceVariant,
+              height: 1.4,
             ),
-            child: Row(
+          ),
+        ),
+        // Spelled-out plan names put the table past a phone's width, so it
+        // scrolls sideways. The clipped right edge is the affordance — the
+        // rounded border sliding under the screen edge reads as "more here".
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cs.outline),
+            ),
+            child: Column(
               children: [
-                const PawCoin(size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Earn points every step of the way',
-                        style: theme.textTheme.labelLarge!.copyWith(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Higher membership tiers earn more points per activity.',
-                        style: theme.textTheme.bodySmall!.copyWith(
-                          color: cs.onSurfaceVariant,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+                _EarnRateHeader(tier: tier, goldInk: goldInk),
+                for (final activity in _earnActivities)
+                  _EarnRateRow(
+                    activity: activity,
+                    tier: tier,
+                    goldInk: goldInk,
                   ),
-                ),
               ],
             ),
-          );
-        }
-        if (index == 1) return const SizedBox(height: 14);
+          ),
+        ),
+      ],
+    );
+  }
+}
 
-        final a = _earnActivities[index - 2];
+class _EarnRateHeader extends StatelessWidget {
+  const _EarnRateHeader({required this.tier, required this.goldInk});
 
-        // High-value activities: surfaceContainerHighest bg + navy border
-        // Regular activities: surface bg + outline border
-        final cardBg =
-            a.isHighValue ? cs.surfaceContainerHighest : cs.surface;
-        final cardBorderColor =
-            a.isHighValue ? navy.withValues(alpha: 0.2) : cs.outline;
+  final _PlanTier? tier;
+  final Color goldInk;
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: cardBorderColor),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(width: _activityColumnWidth, height: 32),
+          for (final t in _PlanTier.values)
+            Container(
+              width: _rateColumnWidth,
+              color: t == tier ? cs.secondaryContainer : null,
+              alignment: Alignment.center,
+              child: Text(
+                t.label,
+                style: theme.textTheme.labelSmall!.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.4,
+                  color: t == tier ? goldInk : cs.onSurfaceVariant,
+                ),
+              ),
             ),
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  // High-value: navy container (prestige signal) — gold icon
-                  // Regular: secondaryContainer (warm) — goldDark/gold per mode
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: a.isHighValue ? navy : cs.secondaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        a.icon,
-                        size: 22,
-                        color: a.isHighValue
-                            ? AppColors.gold
-                            : (theme.brightness == Brightness.dark
-                                ? AppColors.gold
-                                : AppColors.goldDark),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
+        ],
+      ),
+    );
+  }
+}
+
+class _EarnRateRow extends StatelessWidget {
+  const _EarnRateRow({
+    required this.activity,
+    required this.tier,
+    required this.goldInk,
+  });
+
+  final _EarnActivity activity;
+  final _PlanTier? tier;
+  final Color goldInk;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    // A table is close to unreadable cell-by-cell under TalkBack, so each row
+    // is announced as one sentence instead.
+    final spoken = [
+      '${activity.label}. ${activity.rule}.',
+      for (final t in _PlanTier.values)
+        '${t.label} ${activity.pointsFor(t)} points'
+            '${t == tier ? ', your plan' : ''}',
+    ].join(' ');
+
+    return Semantics(
+      label: spoken,
+      container: true,
+      child: ExcludeSemantics(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: cs.outline)),
+          ),
+          // stretch paints each rate cell over the row's full height, giving
+          // the tinted column an unbroken band. It needs a bounded height, and
+          // the sheet's ListView hands the table an unbounded one.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: _activityColumnWidth,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          a.label,
+                          activity.label,
                           style: theme.textTheme.labelLarge!.copyWith(
                             fontWeight: FontWeight.w700,
                             color: cs.onSurface,
+                            height: 1.25,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         Text(
-                          a.description,
-                          style: theme.textTheme.bodySmall!.copyWith(
+                          activity.rule,
+                          style: theme.textTheme.labelSmall!.copyWith(
                             color: cs.onSurfaceVariant,
-                            height: 1.4,
+                            height: 1.3,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                ),
+                for (final t in _PlanTier.values)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: cs.secondaryContainer,
-                      borderRadius: BorderRadius.circular(100),
-                      border: Border.all(
-                          color: cs.secondary.withValues(alpha: 0.3)),
-                    ),
+                    width: _rateColumnWidth,
+                    color: t == tier ? cs.secondaryContainer : null,
+                    alignment: Alignment.center,
                     child: Text(
-                      '${a.minPoints}–${a.maxPoints}',
-                      style: theme.textTheme.labelSmall!.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.goldDark,
+                      '${activity.pointsFor(t)}',
+                      style: theme.textTheme.labelLarge!.copyWith(
+                        fontSize: 14,
+                        fontWeight: t == tier
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: t == tier ? goldInk : cs.onSurfaceVariant,
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
+// ── Help sheet ───────────────────────────────────────────────────────────────
+
+/// The program rules behind PawPoints, reached from the AppBar help icon — the
+/// fine print that had no home while "How to Earn" owned the third tab.
+///
+/// Deliberately silent on expiry. MMS-DWP-001 §67 only *suggests* a 12-month
+/// life, management has not ratified it, and nothing in the backend expires a
+/// point — publishing a rule the ledger does not enforce is worse than saying
+/// nothing. Add a section here when expiry actually ships.
+class _PawPointsHelpSheet extends StatelessWidget {
+  const _PawPointsHelpSheet({required this.tier});
+
+  final _PlanTier? tier;
+
+  @override
+  Widget build(BuildContext context) {
+    return MpHelpSheet(
+      title: 'How PawPoints work',
+      intro:
+          'PawPoints are a thank-you for looking after your pets through '
+          'MetroPaws. They aren’t cash — you exchange them for rewards from '
+          'the MetroPaws catalogue.',
+      children: [
+        const MpHelpHeading('What earns points'),
+        _EarnRateTable(tier: tier),
+
+        const SizedBox(height: 18),
+        const MpHelpHeading('When points appear'),
+        MpHelpBullet(
+          'They’re added automatically. Nothing to claim, no code to enter.',
+        ),
+        MpHelpBullet(
+          'Activation and renewal points land once your payment is confirmed.',
+        ),
+        MpHelpBullet(
+          'Pet profile points land once that pet’s profile is complete — once '
+          'per pet.',
+        ),
+        MpHelpBullet(
+          'Vet and grooming points land after MetroPaws records the session, '
+          'so allow a little time after the visit.',
+        ),
+
+        SizedBox(height: 18),
+        MpHelpHeading('Redeeming a reward'),
+        MpHelpBullet(
+          'Once your balance reaches a reward’s target, it’s yours to claim.',
+        ),
+        MpHelpBullet(
+          'Message csr@metropaws.ph with the reward you want. MetroPaws '
+          'confirms it and deducts the points from your balance.',
+        ),
+        MpHelpBullet('Your membership has to be active when you redeem.'),
+        MpHelpBullet(
+          'Rewards depend on availability. If one runs out, MetroPaws may '
+          'offer an equivalent.',
+        ),
+        MpHelpBullet(
+          'A redemption is final once processed, unless MetroPaws approves a '
+          'reversal.',
+        ),
+
+        SizedBox(height: 18),
+        MpHelpHeading('When points can be taken back'),
+        MpHelpBullet(
+          'Points from a payment that’s later refunded, cancelled or reversed '
+          'may be removed.',
+        ),
+        MpHelpBullet(
+          'Points on an account under review may be held until the review '
+          'finishes.',
+        ),
+      ],
+    );
+  }
+}

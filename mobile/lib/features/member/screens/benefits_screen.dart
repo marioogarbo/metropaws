@@ -109,8 +109,10 @@ class _BenefitsTabState extends State<BenefitsTab> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            BlocProvider.value(value: bloc, child: const PawPointsScreen()),
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: PawPointsScreen(planType: _member?.planType),
+        ),
       ),
     );
   }

@@ -799,8 +799,10 @@ class _DashboardState extends State<_Dashboard>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            BlocProvider.value(value: bloc, child: const PawPointsScreen()),
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: PawPointsScreen(planType: widget.member.planType),
+        ),
       ),
     );
   }
