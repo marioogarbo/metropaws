@@ -113,10 +113,16 @@ def review_reimbursement(
         used = emg_used if emergency else prev_used
         remaining = wallet - used
         if payload.approved_amount_centavos > remaining:
-            wallet_name = "Emergency Wallet" if emergency else "Preventive Wellness Wallet"
+            # Admin-facing, but renamed with the rest: the word "wallet" was
+            # retired from the product's vocabulary (client, 2026-08-21), and an
+            # admin approving a claim should read the same pool names the member
+            # sees. The member-facing twin is in routers/reimbursements.py.
+            pool_name = (
+                "Emergency Benefit" if emergency else "Preventive Wellness Benefit"
+            )
             raise HTTPException(
                 status_code=400,
-                detail=f"Approved amount exceeds the remaining {wallet_name} (₱{max(0, remaining) // 100:,} left).",
+                detail=f"Approved amount exceeds the remaining {pool_name} (₱{max(0, remaining) // 100:,} left).",
             )
         claim.approved_amount_centavos = payload.approved_amount_centavos
 

@@ -26,13 +26,14 @@ function parseNonNegativeInt(raw: string): number | null {
 const MAX_WALLET_CENTAVOS = 100_000_000; // ₱1,000,000
 
 /**
- * Parse an admin-typed wallet amount (pesos; may contain commas / decimals)
- * into integer centavos. Empty string means ₱0 (no wallet). `label` names the
- * pool in error messages (e.g. "Preventive Wellness Wallet").
+ * Parse an admin-typed benefit amount (pesos; may contain commas / decimals)
+ * into integer centavos. Empty string means ₱0 (no benefit). `label` names the
+ * pool in error messages (e.g. "Preventive Wellness Benefit") and is
+ * interpolated into member-neutral admin copy, so it must not say "wallet".
  */
 function parseWalletCentavos(
   raw: string,
-  label = "Benefit Wallet",
+  label = "benefit",
 ): number | { error: string } {
   const pesoStr = String(raw ?? "").replace(/[,\s]/g, "");
   const pesos = pesoStr === "" ? 0 : Number(pesoStr);
@@ -96,13 +97,13 @@ export async function createPlanAction(
 
   const walletResult = parseWalletCentavos(
     formData.get("reimbursement_wallet") as string,
-    "Preventive Wellness Wallet",
+    "Preventive Wellness Benefit",
   );
   if (typeof walletResult !== "number") return { error: walletResult.error };
 
   const emergencyResult = parseWalletCentavos(
     formData.get("emergency_wallet") as string,
-    "Emergency Wallet",
+    "Emergency Benefit",
   );
   if (typeof emergencyResult !== "number") return { error: emergencyResult.error };
 
@@ -165,13 +166,13 @@ export async function updatePlanAction(
 
   const walletResult = parseWalletCentavos(
     formData.get("reimbursement_wallet") as string,
-    "Preventive Wellness Wallet",
+    "Preventive Wellness Benefit",
   );
   if (typeof walletResult !== "number") return { error: walletResult.error };
 
   const emergencyResult = parseWalletCentavos(
     formData.get("emergency_wallet") as string,
-    "Emergency Wallet",
+    "Emergency Benefit",
   );
   if (typeof emergencyResult !== "number") return { error: emergencyResult.error };
 

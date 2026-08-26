@@ -349,9 +349,9 @@ function DialogShell({
   );
 }
 
-// ── Benefit Wallet input ──────────────────────────────────────────────────────
+// ── Benefit amount input ──────────────────────────────────────────────────────
 
-/** Centavos → the peso string shown in the wallet input (empty when 0/unset). */
+/** Centavos → the peso string shown in the benefit input (empty when 0/unset). */
 function centavosToPesoInput(centavos: number): string {
   if (!centavos || centavos <= 0) return "";
   const pesos = centavos / 100;
@@ -549,8 +549,8 @@ function PlanFormDialog({
             <div className="pt-1 border-t border-[oklch(0.92_0.010_258)] mt-1">
               <div className="pt-3 space-y-4">
                 <WalletInput
-                  label="Preventive Wellness Wallet (per year)"
-                  ariaLabel="Preventive Wellness Wallet in pesos per year"
+                  label="Preventive Wellness Benefit (per year)"
+                  ariaLabel="Preventive Wellness Benefit in pesos per year"
                   hint={
                     <>
                       Funds all non-emergency claims — consult, vaccine, grooming
@@ -565,8 +565,8 @@ function PlanFormDialog({
                   disabled={pending}
                 />
                 <WalletInput
-                  label="Emergency Wallet (per year)"
-                  ariaLabel="Emergency Wallet in pesos per year"
+                  label="Emergency Benefit (per year)"
+                  ariaLabel="Emergency Benefit in pesos per year"
                   hint={
                     <>
                       A separate pool that funds claims filed under the{" "}
