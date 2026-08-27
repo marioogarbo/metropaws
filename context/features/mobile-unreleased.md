@@ -8,7 +8,8 @@ version in [`android-distribution.md`](./android-distribution.md).
 | --- | --- |
 | Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
 | Internal testing track | **1.6.0 (versionCode 12)**, uploaded 2026-08-20 23:58, released to testers 2026-08-21 10:01. (1.5.0+10 went up 2026-08-19 11:55 and is now Inactive.) **This build carries §1–§6 but NOT §7** — the rename landed after it was built |
-| Built and verified, NOT uploaded | **1.6.1 (versionCode 13)**, built 2026-08-21 — the first bundle containing §7. Supersedes 11 and 12 |
+| Built and verified, NOT uploaded | **1.6.1 (versionCode 13)**, built 2026-08-21 — the first bundle containing §7. Supersedes 11 and 12. **It predates §8 and contains none of it**, including the emergency-pool fix |
+| In no build at all | **§8**, landed 2026-08-27 on `main` (`4cf65a0`, `b5c01e1`). Shipping it needs a fresh bundle at the next free versionCode |
 | `pubspec.yaml` | `1.6.1+13` (bumped in `c189138`) |
 | Branches holding this work | all merged into `main`. §6 fast-forwarded in on 2026-08-21 as `f6cda00` and was pushed with the release commit; `origin/main` is level |
 
@@ -16,6 +17,12 @@ version in [`android-distribution.md`](./android-distribution.md).
 §1–§6. **13 (1.6.1)** is built and adds §7. Promoting to production ships §1–§7
 together, so the release notes and the QA surface are the whole list below, not
 one section.
+
+**§8 is in no bundle.** It landed on `main` on 2026-08-27, after 13 was built.
+Publishing 13 today ships §1–§7 and leaves §8 behind — including the
+emergency-pool mismatch, which is a money-path defect that production has
+carried since before 1.4.1. Shipping §8 means a new build and a new
+versionCode; it does not change anything about how Play updates work.
 
 > **Read the Play Console, not this table, before assuming a version code is
 > free.** On 2026-08-21 a rebuild was made at versionCode 12 on the strength of
@@ -281,10 +288,46 @@ when it kept its own admin internals.
 
 ---
 
+### 8. Add a Pet and the claim form rebuilt — in NO build
+
+Landed 2026-08-27 (`4cf65a0`, `b5c01e1`); see
+[`../sessions/2026-08-27-add-pet-and-claim-form-redesign.md`](../sessions/2026-08-27-add-pet-and-claim-form-redesign.md).
+Verified on a real device against the local dev backend.
+
+**The one that matters for release order:** the app decided which benefit pool a
+claim draws from with `== 'emergency'`, while the backend has matched
+`{"emergency", "emergency stabilization"}` since `4ae5db9` on **2026-08-16** and
+the seeded category is "Emergency Stabilization". For eleven days the server
+routed an emergency claim to the Emergency Wallet while the app displayed, and
+validated against, Preventive Wellness — ₱3,301.00 shown where ₱900.00 was
+available, plus a direct-to-provider option the server refuses for emergencies.
+Production (1.4.1+9) still behaves this way. No money was mispaid: no emergency
+claim has ever been filed in either database (audited 2026-08-15). The app's
+list now mirrors the backend's, and **both still match on a name string** — an
+admin renaming that category breaks both again.
+
+- **Add a Pet** is Details → Photos → Plan → Done. Pinned CTA claiming the
+  gesture-bar inset, `PopScope` on the system back gesture, photos as a
+  checklist with camera-or-gallery, per-field validation with scroll-to-error,
+  a three-column wheel for the birth date, and a pay hand-off that names the pet,
+  plan and total before sending the member to PayMongo.
+- **Reimbursement Submit** is sectioned with a pinned submit and the blocking
+  reason beside it; one benefit card replaces four scattered banners; the two
+  claim paths are cards rather than a menu.
+- `errorMaxLines: 3` in both input themes — Material was clipping validation
+  messages to one line **app-wide**, which hid the figure in "Insufficient
+  Emergency Benefit balance — ₱900.00 left".
+- Copy corrections: the registration success screen no longer promises "session
+  credits" (the plan funds the Benefit Wallet), and "Receipt / ref. no.
+  (optional)" is spelled out again.
+
 ## Before building
 
 1. **Bump `pubspec.yaml`.** `1.4.1+9` is the shipped version — Play rejects a
-   duplicate `versionCode`. Monthly is a feature release, so `1.5.0+10`.
+   duplicate `versionCode`. `pubspec.yaml` currently reads `1.6.1+13`, and 13 is
+   built; a bundle carrying §8 needs the next free code. **Check the Play
+   Console for which codes are consumed — this file lags it**, and that is
+   exactly how a rebuild at an already-uploaded 12 got rejected on 2026-08-21.
 2. **Deploy the prod backend first** (see the dependency above).
 3. **Verify the AAB before upload**, per
    [`../sessions/2026-08-14-per-member-direct-pay-and-release.md`](../sessions/2026-08-14-per-member-direct-pay-and-release.md):

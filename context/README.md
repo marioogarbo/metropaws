@@ -88,9 +88,9 @@ says. If a fact is derivable by reading a file, link to that file instead.
   changed since the last release?", plus the pre-build checklist (bump the
   version, deploy the backend first, verify the AAB has no localhost URL —
   including the byte-search command that replaces a `strings` check which
-  fails open). 1.5.0+10 is built and on internal testing; empty sections 1–4
-  when it is promoted to production, not before — but **not** §5, the auth
-  redesign, which landed after 10 was uploaded and is in no build at all.
+  fails open). Production is on 1.4.1+9; internal testing has 1.6.0+12; 1.6.1+13
+  is built and unuploaded. **§8 — the form rebuilds and the emergency-pool fix —
+  is in no bundle at all**, so publishing 13 leaves a money-path defect behind.
 - [`features/monthly-subscriptions.md`](features/monthly-subscriptions.md) —
   monthly instalment memberships and the vesting they gate (Agreement §5.2–§5.10):
   why a subscription is per pet, why an annual member has no row at all, why
@@ -203,6 +203,22 @@ says. If a fact is derivable by reading a file, link to that file instead.
   listed as a separate branch), and the direct-APK route retired since
   2026-08-03 with its incompatibility now pointing the other way. Promotion to
   production is gated on the unconfirmed ₱300/₱600/₱900 monthly prices.
+- [`sessions/2026-08-27-add-pet-and-claim-form-redesign.md`](sessions/2026-08-27-add-pet-and-claim-form-redesign.md) —
+  rebuilt Add a Pet and the Reimbursement Submit form, and found that the
+  2026-08-16 emergency-pool fix was applied to the **backend only**: the app
+  keeps its own copy of the same rule, so for eleven days the server routed an
+  emergency claim to the Emergency Wallet while the app showed and validated
+  against Preventive Wellness. Production still behaves that way; nothing was
+  mispaid because no emergency claim has ever been filed. The keeper is *why* it
+  hid — the register tracked the behaviour, the backend fix made that statement
+  true again, and nothing tracked that the rule exists in two languages. Also:
+  `errorMaxLines` defaults to 1 and was clipping the figure out of a balance
+  error app-wide; a `Form`-level `autovalidateMode` reddens every field on the
+  first change; the Android back gesture bypassed the Add-a-Pet step machine
+  entirely; and the birth-date control went through four designs, with the
+  research-backed typed-numeric version built, verified and then rejected
+  because the finding is about a different control. Static analysis caught none
+  of it, three sessions running.
 - [`sessions/2026-08-20-paw-trail-pinned-focus-and-1-5-1.md`](sessions/2026-08-20-paw-trail-pinned-focus-and-1-5-1.md) —
   answered the open question the auth redesign ended on — the paw trail is
   **pinned to the screen** — and found the previous fix had protected the
