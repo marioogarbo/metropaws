@@ -14,13 +14,13 @@ device can only ever hold one of them.
 
 | Route | Serves | Signed by |
 | --- | --- | --- |
-| Google Play | the reviewed release (v1.4.1, versionCode 9, live 2026-08-14) | Google's app signing key |
+| Google Play | the reviewed release (**v1.7.0, versionCode 14, published 2026-08-28**; previously 1.4.1+9 from 2026-08-14) | Google's app signing key |
 | Direct APK | **retired 2026-08-03.** Last published 1.4.0; still installed on an unknown number of devices | the upload keystore |
 
 **Play is now ahead of the APK, which inverts the original premise.** This file
 was written when local builds ran ahead of the Play listing. Since 2026-08-03 the
 reverse holds: a member still on the 1.4.0 APK cannot take any Play update —
-1.4.1, nor 1.5.0 when promoted — and gets no prompt saying so. They must
+1.4.1, nor 1.7.0 now that it is published — and gets no prompt saying so. They must
 uninstall and reinstall from Play, losing nothing but their session.
 
 **Decision (Mario, 2026-08-19): the APK route is closed and nothing will be done
@@ -108,15 +108,16 @@ Facts that live in Play Console, not in this repo:
 - **Production is published to 1 country / region.** The Play link silently
   returns "item not found" everywhere else. Confirm this matches intent
   before any wider marketing push.
-- **Internal testing track holds versionCode 10 (1.5.0)**, uploaded
-  2026-08-19 11:55, and is still enabled. It previously held 7. An account
-  on the tester list is served the internal build over production, forever,
-  regardless of install state — track priority is
-  `internal > closed > open > production` and is per-Google-account.
-  Testing tracks have no "halt rollout"; the only way to switch one off is
-  to empty its tester list. Harmless while internal and production hold the
-  same build; the trap is when production moves ahead and testers silently
-  stay behind on an older internal one.
+- **Internal testing track holds versionCode 12 (1.6.0) and production now
+  holds 14 — the trap this entry warned about has sprung (2026-08-28).** An
+  account on the tester list is served the internal build over production,
+  forever, regardless of install state — track priority is
+  `internal > closed > open > production` and is per-Google-account. So every
+  tester is pinned to **1.6.0** and will not receive 1.7.0, including the
+  emergency-pool fix, however often they check for updates. Testing tracks have
+  no "halt rollout"; the only way to switch one off is to empty its tester list.
+  **Fix it by uploading 14 to internal testing as well, or by emptying the
+  tester list.** Note the symptom is silent: a tester sees "up to date".
 - **Env is baked in at build time.** `mobile/lib/core/constants/api_constants.dart`
   defaults release builds to `prod`, so a forgotten `--dart-define` is safe.
   To confirm what a shipped build points at: Account tab → bottom version
