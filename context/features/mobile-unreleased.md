@@ -9,7 +9,7 @@ version in [`android-distribution.md`](./android-distribution.md).
 | Live on Play (production) | **1.4.1 (versionCode 9)**, published 2026-08-14 |
 | Internal testing track | **1.6.0 (versionCode 12)**, uploaded 2026-08-20 23:58, released to testers 2026-08-21 10:01. (1.5.0+10 went up 2026-08-19 11:55 and is now Inactive.) **This build carries §1–§6 but NOT §7** — the rename landed after it was built |
 | Built and verified, NOT uploaded | **1.6.1 (versionCode 13)**, built 2026-08-21 — the first bundle containing §7. Supersedes 11 and 12. **It predates §8 and contains none of it**, including the emergency-pool fix |
-| In no build at all | **§8**, landed 2026-08-27 on `main` (`4cf65a0`, `b5c01e1`). Shipping it needs a fresh bundle at the next free versionCode |
+| Built and verified, NOT uploaded | **1.7.0 (versionCode 14)**, built 2026-08-27 — the first bundle containing §8. Supersedes 13. AAB checked: signed `META-INF/UPLOAD.RSA`; prod host 4 / `metropaws.ph` 5 present and dev, `localhost:8000`, `10.0.2.2` all **0** across **all three** ABI slices; `READ_MEDIA_IMAGES`/`READ_MEDIA_VIDEO` absent |
 | `pubspec.yaml` | `1.6.1+13` (bumped in `c189138`) |
 | Branches holding this work | all merged into `main`. §6 fast-forwarded in on 2026-08-21 as `f6cda00` and was pushed with the release commit; `origin/main` is level |
 
@@ -18,11 +18,14 @@ version in [`android-distribution.md`](./android-distribution.md).
 together, so the release notes and the QA surface are the whole list below, not
 one section.
 
-**§8 is in no bundle.** It landed on `main` on 2026-08-27, after 13 was built.
-Publishing 13 today ships §1–§7 and leaves §8 behind — including the
-emergency-pool mismatch, which is a money-path defect that production has
-carried since before 1.4.1. Shipping §8 means a new build and a new
-versionCode; it does not change anything about how Play updates work.
+**§8 is in 1.7.0+14, built 2026-08-27 and not uploaded.** Do not publish 13:
+it predates §8 and would leave the emergency-pool mismatch on production, a
+money-path defect carried since before 1.4.1. 14 supersedes it.
+
+`metropaws.ph` counted **5**, not the 4 this file previously documented — more
+document URLs have been added since. Both present-checks being non-zero is what
+makes the three absent-checks honest; treat a present-check of `0` as broken
+tooling, not a clean build.
 
 > **Read the Play Console, not this table, before assuming a version code is
 > free.** On 2026-08-21 a rebuild was made at versionCode 12 on the strength of
