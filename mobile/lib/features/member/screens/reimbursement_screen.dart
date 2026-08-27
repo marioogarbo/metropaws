@@ -56,15 +56,40 @@ class ReimbursementScreen extends StatefulWidget {
   State<ReimbursementScreen> createState() => _ReimbursementScreenState();
 }
 
+/// Category names that draw from the Emergency Wallet rather than Preventive
+/// Wellness. This MIRRORS `EMERGENCY_CATEGORY_NAMES` in
+/// `backend/app/domain/reimbursement_utils.py` and must be kept in step with it.
+///
+/// The app only decides what the member is SHOWN — the server routes the money
+/// — so a disagreement is silent and expensive. It was disagreeing: the app
+/// matched `== 'emergency'` alone while the seeded category is "Emergency
+/// Stabilization", so an emergency claim displayed the Preventive balance,
+/// validated the amount against the wrong pool, and offered direct-to-provider
+/// pay that the server refuses for emergencies.
+const _kEmergencyCategoryNames = {'emergency', 'emergency stabilization'};
+
+bool _isEmergencyCategoryName(String? name) =>
+    _kEmergencyCategoryNames.contains((name ?? '').trim().toLowerCase());
+
 class _ReimbursementScreenState extends State<ReimbursementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
   final _formKey = GlobalKey<FormState>();
+  final _submitScroll = ScrollController();
   final _amountCtrl = TextEditingController();
   final _providerCtrl = TextEditingController();
   final _referenceCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+
+  // Anchors for "carry the view to the first thing that's wrong". This form
+  // runs past two screens, so an error rendered above the fold is the same as
+  // no error at all.
+  final _petKey = GlobalKey();
+  final _categoryKey = GlobalKey();
+  final _providerKey = GlobalKey();
+  final _amountKey = GlobalKey();
+  final _receiptKey = GlobalKey();
 
   String? _selectedPetId;
   String? _selectedServiceTypeId;
@@ -186,6 +211,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
   @override
   void dispose() {
     _tabs.dispose();
+    _submitScroll.dispose();
     _amountCtrl.dispose();
     _providerCtrl.dispose();
     _referenceCtrl.dispose();
@@ -331,15 +357,46 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     });
   }
 
+  /// The first field standing between the member and a submitted claim, in
+  /// the order they read them. Null when the form is good.
+  GlobalKey? _firstProblemKey() {
+    if (_selectedPetId == null) return _petKey;
+    if (_selectedServiceTypeId == null) return _categoryKey;
+    if (_payoutTarget == 'provider') {
+      if (_selectedProviderId == null) return _providerKey;
+    } else if (_providerCtrl.text.trim().isEmpty) {
+      return _providerKey;
+    }
+    final amount = _parseAmount(_amountCtrl.text);
+    if (amount == null || amount <= 0) return _amountKey;
+    if (_receiptBytes == null || _receiptExt == null) return _receiptKey;
+    return null;
+  }
+
   void _submit() {
     if (_submitting) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     // Validate the form AND the receipt together so the member sees every
     // problem at once — dropdowns and text fields inline via the Form,
     // the receipt via its own inline error under the attach tile.
     final formOk = _formKey.currentState!.validate();
     final receiptOk = _receiptBytes != null && _receiptExt != null;
     if (!receiptOk) setState(() => _receiptMissing = true);
-    if (!formOk || !receiptOk) return;
+    if (!formOk || !receiptOk) {
+      // The form runs past two screens; an error painted above the fold is the
+      // same as no error at all.
+      final problem = _firstProblemKey();
+      final ctx = problem?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+          alignment: 0.1,
+        );
+      }
+      return;
+    }
 
     final pesos = _parseAmount(_amountCtrl.text) ?? 0;
     final centavos = (pesos * 100).round();
@@ -636,8 +693,7 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
         break;
       }
     }
-    final isEmergencyCategory =
-        (selectedServiceName ?? '').trim().toLowerCase() == 'emergency';
+    final isEmergencyCategory = _isEmergencyCategoryName(selectedServiceName);
     final poolLabel = isEmergencyCategory
         ? 'Emergency Benefit'
         : 'Preventive Wellness Benefit';
@@ -660,8 +716,6 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
         !(isEmergencyCategory
             ? selectedWallet.emergencyAvailable
             : selectedWallet.preventiveAvailable);
-    final isDark = theme.brightness == Brightness.dark;
-    final walletGold = isDark ? AppColors.gold : AppColors.goldDark;
 
     // Direct-to-provider is only offered once a category is chosen and it's
     // not Emergency — emergency claims always stay on pay-then-reimburse.
@@ -673,439 +727,782 @@ class _ReimbursementScreenState extends State<ReimbursementScreen>
     final memberNeedsPayoutMethod =
         !isProviderTarget && _member != null && !_member!.hasPayoutMethod;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Section 1: what happened ─────────────────────────────
-            const _SectionHeader('What happened'),
-            const SizedBox(height: 12),
-            MpDropdownField<String>(
-              value: _selectedPetId,
-              label: 'Pet',
-              items: wallet.pets
-                  .map(
-                    (p) => DropdownMenuItem(
-                      value: p.petId,
-                      child: Text(p.petName),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedPetId = v),
-              validator: (v) => v == null ? 'Choose a pet' : null,
-            ),
-            if (selectedWallet != null) ...[
-              const SizedBox(height: 8),
-              // Wrap (not Row) so the label, amount and tier badge flow onto a
-              // second line instead of overflowing when the amount is large or
-              // the font scale is high on a narrow screen.
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
+    // One reason, computed once, so the disabled button and the line above it
+    // can never disagree about why the claim can't go.
+    String? blockedReason;
+    if (planExpired) {
+      blockedReason =
+          "${selectedWallet!.petName}'s plan year has ended. Renew it from "
+          'the Home tab to keep claiming.';
+    } else if (benefitLocked) {
+      blockedReason =
+          '${isEmergencyCategory ? 'Emergency support' : 'Planned services'} '
+          'for ${selectedWallet.petName} opens as the monthly payments '
+          'continue.';
+    } else if (walletExhausted) {
+      blockedReason =
+          "${selectedWallet.petName}'s $poolLabel is used up for this plan "
+          'year.';
+    } else if (memberNeedsPayoutMethod) {
+      blockedReason = 'Add a payout method so we know where to send the money.';
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _submitScroll,
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    poolLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                  Text(
-                    '${pesoFromCentavos(remaining)} left',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: walletExhausted ? cs.error : walletGold,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  if (_planTypeFor(_selectedPetId) case final plan?
-                      when plan.isNotEmpty)
-                    TierBadge(planType: plan, small: true),
-                ],
-              ),
-            ],
-            if (planExpired) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: cs.errorContainer.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: cs.error.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.event_busy_rounded, size: 18, color: cs.error),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "${selectedWallet!.petName}'s plan year has ended — "
-                        'renew the plan from the Home tab to keep claiming.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurface,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            if (benefitLocked) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  // Gold, not red. Nothing has gone wrong — the member is
-                  // partway through earning this, and the tone should say so.
-                  color: AppColors.gold.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.schedule_rounded, size: 18, color: walletGold),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            selectedWallet.membershipStatusLabel,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: walletGold,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${isEmergencyCategory ? 'Emergency support' : 'Planned services'} '
-                            'for ${selectedWallet.petName} opens as the monthly '
-                            'payments continue. '
-                            '${selectedWallet.subscriptionPaymentsMade} paid so far.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: cs.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            MpDropdownField<String>(
-              value: _selectedServiceTypeId,
-              label: 'Service category',
-              items: wallet.serviceTypes
-                  .map(
-                    (st) => DropdownMenuItem(
-                      value: st.id,
-                      child: Text(st.name, overflow: TextOverflow.ellipsis),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() {
-                _selectedServiceTypeId = v;
-                // Emergency claims always stay on the pay-then-reimburse
-                // flow — drop the provider selection if one was made under a
-                // different, eligible category.
-                String? name;
-                for (final st in wallet.serviceTypes) {
-                  if (st.id == v) {
-                    name = st.name;
-                    break;
-                  }
-                }
-                if ((name ?? '').trim().toLowerCase() == 'emergency' &&
-                    _payoutTarget == 'provider') {
-                  _payoutTarget = 'member';
-                  _selectedProviderId = null;
-                  _selectedProviderName = null;
-                  _serviceDate = DateTime.now();
-                }
-              }),
-              validator: (v) => v == null ? 'Choose a service category' : null,
-            ),
-            const SizedBox(height: 16),
-            if (showTargetChooser) ...[
-              MpDropdownField<String>(
-                value: _payoutTarget,
-                label: 'How should this be paid?',
-                items: const [
-                  DropdownMenuItem(
-                    value: 'member',
-                    child: Text('Reimburse me'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'provider',
-                    child: Text('Pay the provider directly'),
-                  ),
-                ],
-                onChanged: (v) => setState(() {
-                  _payoutTarget = v ?? 'member';
-                  _selectedProviderId = null;
-                  _selectedProviderName = null;
-                  // The two paths have opposite date ranges (already-happened
-                  // vs. upcoming), so the current pick likely falls outside
-                  // the new range — reset it rather than risk an out-of-range
-                  // date crashing the picker.
-                  _serviceDate = DateTime.now();
-                }),
-                validator: (v) => null,
-              ),
-              const SizedBox(height: 16),
-            ],
-            MpTextField(
-              controller: _amountCtrl,
-              label: 'Amount paid',
-              prefixText: '₱ ',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              // Digits, one decimal point, and thousands separators only.
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              // Tabular figures — digits hold a fixed width so the amount
-              // doesn't visually jiggle as the member types.
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-              validator: (v) {
-                // Tolerates "1,500.00" — commas stripped before parsing.
-                final value = _parseAmount(v);
-                if (value == null || value <= 0) {
-                  return 'Enter the amount on the receipt';
-                }
-                // A claim can't exceed what's left in the pool its category
-                // draws from (the backend enforces this too).
-                if (selectedWallet != null &&
-                    (value * 100).round() > remaining) {
-                  return 'Insufficient $poolLabel balance — '
-                      '${pesoFromCentavos(remaining)} left';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            if (isProviderTarget)
-              providers.isEmpty
-                  ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: cs.outline),
-                      ),
-                      child: Text(
-                        'No verified providers are available yet. Choose '
-                        '"Reimburse me" above instead, or check back later.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    )
-                  : MpDropdownField<String>(
-                      value: _selectedProviderId,
-                      label: 'Provider / clinic',
-                      items: providers
+                  // ── 1. What happened ───────────────────────────────
+                  const _SectionHeader('What happened'),
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _petKey,
+                    child: MpDropdownField<String>(
+                      value: _selectedPetId,
+                      label: 'Pet',
+                      items: wallet.pets
                           .map(
                             (p) => DropdownMenuItem(
-                              value: p.id,
+                              value: p.petId,
+                              child: Text(p.petName),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedPetId = v),
+                      validator: (v) => v == null ? 'Choose a pet' : null,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  KeyedSubtree(
+                    key: _categoryKey,
+                    child: MpDropdownField<String>(
+                      value: _selectedServiceTypeId,
+                      label: 'Service category',
+                      items: wallet.serviceTypes
+                          .map(
+                            (st) => DropdownMenuItem(
+                              value: st.id,
                               child: Text(
-                                p.name,
+                                st.name,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           )
                           .toList(),
                       onChanged: (v) => setState(() {
-                        _selectedProviderId = v;
-                        _selectedProviderName = null;
-                        for (final p in providers) {
-                          if (p.id == v) {
-                            _selectedProviderName = p.name;
+                        _selectedServiceTypeId = v;
+                        // Emergency claims always stay on the pay-then-
+                        // reimburse flow — drop the provider selection if one
+                        // was made under a different, eligible category.
+                        String? name;
+                        for (final st in wallet.serviceTypes) {
+                          if (st.id == v) {
+                            name = st.name;
                             break;
                           }
                         }
+                        if (_isEmergencyCategoryName(name) &&
+                            _payoutTarget == 'provider') {
+                          _payoutTarget = 'member';
+                          _selectedProviderId = null;
+                          _selectedProviderName = null;
+                          _serviceDate = DateTime.now();
+                        }
                       }),
-                      validator: (v) => v == null ? 'Choose a provider' : null,
-                    )
-            else
-              MpTextField(
-                controller: _providerCtrl,
-                label: 'Provider / clinic name',
-                maxLength: 60,
-                validator: (v) =>
-                    (v ?? '').trim().isEmpty ? 'Enter the provider name' : null,
-              ),
-            const SizedBox(height: 16),
-            _DateField(
-              date: _serviceDate,
-              label: isProviderTarget ? 'Appointment date' : 'Service date',
-              onTap: () async {
-                final now = DateTime.now();
-                final firstDate = isProviderTarget
-                    ? now
-                    : DateTime(now.year - 2);
-                final lastDate = isProviderTarget
-                    ? now.add(const Duration(days: 60))
-                    : now;
-                final initial =
-                    _serviceDate.isBefore(firstDate) ||
-                        _serviceDate.isAfter(lastDate)
-                    ? now
-                    : _serviceDate;
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: initial,
-                  firstDate: firstDate,
-                  lastDate: lastDate,
-                );
-                if (picked != null) setState(() => _serviceDate = picked);
-              },
-            ),
-            const SizedBox(height: 28),
-
-            // ── Section 2: proof ─────────────────────────────────────
-            _SectionHeader(isProviderTarget ? 'Proof of appointment' : 'Proof'),
-            const SizedBox(height: 12),
-            _ReceiptAttachment(
-              hasFile: _receiptBytes != null,
-              ext: _receiptExt,
-              onTap: _pickReceipt,
-              attachedLabel: isProviderTarget
-                  ? 'File attached'
-                  : 'Receipt attached',
-              emptyLabel: isProviderTarget
-                  ? 'Attach a quote, estimate, or booking confirmation (photo or PDF)'
-                  : 'Attach receipt (photo or PDF)',
-            ),
-            if (_receiptMissing && _receiptBytes == null) ...[
-              const SizedBox(height: 6),
-              Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: Text(
-                  isProviderTarget
-                      ? 'Attach a quote, estimate, or booking confirmation'
-                      : 'Attach the official receipt',
-                  style: theme.textTheme.bodySmall!.copyWith(color: cs.error),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            MpTextField(
-              controller: _referenceCtrl,
-              // Abbreviated: the full "Receipt / reference no. (optional)"
-              // clipped to "…(optio…" at 329dp, which hides the one word that
-              // tells a member they can skip the field. "ref." keeps both
-              // meanings and the optional marker inside the field.
-              label: 'Receipt / ref. no. (optional)',
-            ),
-            const SizedBox(height: 16),
-            MpTextField(
-              controller: _notesCtrl,
-              label: 'Notes (optional)',
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-            if (walletExhausted) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cs.errorContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${selectedWallet.petName}\'s $poolLabel is used up for '
-                  'this plan year, so a new claim can\'t be submitted.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onErrorContainer,
-                    height: 1.4,
+                      validator: (v) =>
+                          v == null ? 'Choose a service category' : null,
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (memberNeedsPayoutMethod) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cs.secondaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Set up your payout method to get reimbursed — GCash, '
-                      'bank, or cash pickup.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.brightness == Brightness.dark
-                            ? AppColors.gold
-                            : AppColors.goldDark,
-                        height: 1.4,
+
+                  // The benefit the claim will draw from, stated once, right
+                  // under the two fields that decide it. This used to be a
+                  // small line under the pet field plus three separately
+                  // styled banners further down the form, so the balance and
+                  // the reason it couldn't be spent were never in view
+                  // together.
+                  if (selectedWallet != null) ...[
+                    const SizedBox(height: 16),
+                    _BenefitCard(
+                      poolLabel: poolLabel,
+                      remainingCentavos: remaining,
+                      planType: _planTypeFor(_selectedPetId),
+                      exhausted: walletExhausted,
+                      expired: planExpired,
+                      lockedLabel: benefitLocked
+                          ? selectedWallet.membershipStatusLabel
+                          : null,
+                      note: blockedReason,
+                      paymentsMade: selectedWallet.subscriptionPaymentsMade,
+                      showPayments: benefitLocked,
+                    ),
+                  ],
+
+                  // ── 2. How it gets paid ────────────────────────────
+                  if (showTargetChooser) ...[
+                    const SizedBox(height: 28),
+                    const _SectionHeader('How it gets paid'),
+                    const SizedBox(height: 12),
+                    // Two cards, not a menu. These are not two spellings of
+                    // the same thing: they change who receives the money, what
+                    // counts as proof, and whether the date may be in the
+                    // future. A dropdown showed neither difference.
+                    _PayoutChoice(
+                      title: 'Reimburse me',
+                      subtitle: 'I already paid. Send the money to me.',
+                      icon: Icons.account_balance_wallet_outlined,
+                      selected: !isProviderTarget,
+                      onTap: () => _setPayoutTarget('member'),
+                    ),
+                    const SizedBox(height: 10),
+                    _PayoutChoice(
+                      title: 'Pay the provider directly',
+                      subtitle:
+                          "I haven't paid yet. MetroPaws settles with the "
+                          'clinic.',
+                      icon: Icons.local_hospital_outlined,
+                      selected: isProviderTarget,
+                      onTap: () => _setPayoutTarget('provider'),
+                    ),
+                    // The warning belongs beside the choice that causes it,
+                    // not at the foot of the form where it used to sit.
+                    if (memberNeedsPayoutMethod) ...[
+                      const SizedBox(height: 12),
+                      _NoticeCard(
+                        tone: _NoticeTone.gold,
+                        icon: Icons.account_balance_wallet_outlined,
+                        message:
+                            'Set up your payout method to get reimbursed — '
+                            'GCash, bank, or cash pickup.',
+                        actionLabel: 'Set up payout method',
+                        onAction: _openPayoutSetup,
+                      ),
+                    ],
+                  ] else if (memberNeedsPayoutMethod) ...[
+                    const SizedBox(height: 16),
+                    _NoticeCard(
+                      tone: _NoticeTone.gold,
+                      icon: Icons.account_balance_wallet_outlined,
+                      message:
+                          'Set up your payout method to get reimbursed — '
+                          'GCash, bank, or cash pickup.',
+                      actionLabel: 'Set up payout method',
+                      onAction: _openPayoutSetup,
+                    ),
+                  ],
+
+                  // ── 3. The visit ───────────────────────────────────
+                  const SizedBox(height: 28),
+                  const _SectionHeader('The visit'),
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _providerKey,
+                    child: isProviderTarget
+                        ? (providers.isEmpty
+                              ? _NoticeCard(
+                                  tone: _NoticeTone.neutral,
+                                  icon: Icons.info_outline_rounded,
+                                  message:
+                                      'No verified providers are available '
+                                      'yet. Choose "Reimburse me" above '
+                                      'instead, or check back later.',
+                                )
+                              : MpDropdownField<String>(
+                                  value: _selectedProviderId,
+                                  label: 'Provider or clinic',
+                                  items: providers
+                                      .map(
+                                        (p) => DropdownMenuItem(
+                                          value: p.id,
+                                          child: Text(
+                                            p.name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) => setState(() {
+                                    _selectedProviderId = v;
+                                    _selectedProviderName = null;
+                                    for (final p in providers) {
+                                      if (p.id == v) {
+                                        _selectedProviderName = p.name;
+                                        break;
+                                      }
+                                    }
+                                  }),
+                                  validator: (v) =>
+                                      v == null ? 'Choose a provider' : null,
+                                ))
+                        : MpTextField(
+                            controller: _providerCtrl,
+                            label: 'Provider or clinic name',
+                            maxLength: 60,
+                            textCapitalization: TextCapitalization.words,
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
+                            validator: (v) => (v ?? '').trim().isEmpty
+                                ? 'Enter the provider name'
+                                : null,
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  _DateField(
+                    date: _serviceDate,
+                    label: isProviderTarget ? 'Appointment date' : 'Service date',
+                    hint: isProviderTarget
+                        ? 'When the visit is booked for'
+                        : 'The day of the visit on the receipt',
+                    onTap: () async {
+                      final now = DateTime.now();
+                      final firstDate = isProviderTarget
+                          ? now
+                          : DateTime(now.year - 2);
+                      final lastDate = isProviderTarget
+                          ? now.add(const Duration(days: 60))
+                          : now;
+                      final initial =
+                          _serviceDate.isBefore(firstDate) ||
+                              _serviceDate.isAfter(lastDate)
+                          ? now
+                          : _serviceDate;
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initial,
+                        firstDate: firstDate,
+                        lastDate: lastDate,
+                      );
+                      if (picked != null) setState(() => _serviceDate = picked);
+                    },
+                  ),
+
+                  // ── 4. How much ────────────────────────────────────
+                  const SizedBox(height: 28),
+                  const _SectionHeader('How much'),
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _amountKey,
+                    child: MpTextField(
+                      controller: _amountCtrl,
+                      label: isProviderTarget
+                          ? 'Amount quoted'
+                          : 'Amount paid',
+                      prefixText: '₱ ',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      // Digits, one decimal point, and thousands separators only.
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                      ],
+                      // Tabular figures — digits hold a fixed width so the
+                      // amount doesn't visually jiggle as the member types.
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      onChanged: (_) => setState(() {}),
+                      validator: (v) {
+                        // Tolerates "1,500.00" — commas stripped before parsing.
+                        final value = _parseAmount(v);
+                        if (value == null || value <= 0) {
+                          return 'Enter the amount on the receipt';
+                        }
+                        // A claim can't exceed what's left in the pool its
+                        // category draws from (the backend enforces this too).
+                        if (selectedWallet != null &&
+                            (value * 100).round() > remaining) {
+                          return 'Insufficient $poolLabel balance — '
+                              '${pesoFromCentavos(remaining)} left';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  // Echoes the parsed figure and what it leaves behind. "1500"
+                  // and "1,500" and "1500.00" all mean the same thing here, and
+                  // this is the only place that says so before submitting.
+                  if (_amountImpact(selectedWallet, remaining) case final line?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, left: 4),
+                      child: Text(
+                        line,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: _openPayoutSetup,
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(44, 44),
-                        alignment: Alignment.centerLeft,
+
+                  // ── 5. Proof ───────────────────────────────────────
+                  const SizedBox(height: 28),
+                  _SectionHeader(
+                    isProviderTarget ? 'Proof of appointment' : 'Proof',
+                  ),
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _receiptKey,
+                    child: _ReceiptAttachment(
+                      hasFile: _receiptBytes != null,
+                      ext: _receiptExt,
+                      hasError: _receiptMissing && _receiptBytes == null,
+                      onTap: _pickReceipt,
+                      attachedLabel: isProviderTarget
+                          ? 'File attached'
+                          : 'Receipt attached',
+                      emptyLabel: isProviderTarget
+                          ? 'Attach a quote, estimate, or booking confirmation'
+                          : 'Attach the receipt',
+                    ),
+                  ),
+                  if (_receiptMissing && _receiptBytes == null) ...[
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        isProviderTarget
+                            ? 'Attach a quote, estimate, or booking confirmation'
+                            : 'Attach the official receipt',
+                        style: theme.textTheme.bodySmall!.copyWith(
+                          color: cs.error,
+                        ),
                       ),
-                      child: const Text('Set up payout method'),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  MpTextField(
+                    controller: _referenceCtrl,
+                    // Spelled out. This was "Receipt / ref. no. (optional)" to
+                    // survive a 329dp screen, which abbreviated the one word
+                    // that tells a member they may skip it.
+                    label: 'Reference number (optional)',
+                  ),
+                  const SizedBox(height: 16),
+                  MpTextField(
+                    controller: _notesCtrl,
+                    label: 'Notes (optional)',
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'MetroPaws will review your claim against your plan '
+                    "benefits. You'll be notified in the app and by email "
+                    'when the status changes.',
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        _submitFooter(
+          blockedReason: blockedReason,
+          enabled: !(_submitting ||
+              loading ||
+              walletExhausted ||
+              planExpired ||
+              benefitLocked ||
+              memberNeedsPayoutMethod),
+        ),
+      ],
+    );
+  }
+
+  /// Switching the payout target resets what it invalidates. The two paths
+  /// have opposite date ranges (already-happened vs. upcoming), so the current
+  /// pick likely falls outside the new one.
+  void _setPayoutTarget(String target) {
+    if (_payoutTarget == target) return;
+    setState(() {
+      _payoutTarget = target;
+      _selectedProviderId = null;
+      _selectedProviderName = null;
+      _serviceDate = DateTime.now();
+    });
+  }
+
+  /// "₱1,500.00 claimed · ₱500.00 left after this", once the amount parses and
+  /// fits. Null while it doesn't — the validator is already speaking then.
+  String? _amountImpact(WalletPet? selectedWallet, int remaining) {
+    final value = _parseAmount(_amountCtrl.text);
+    if (value == null || value <= 0) return null;
+    final centavos = (value * 100).round();
+    if (selectedWallet == null) return '${pesoFromCentavos(centavos)} claimed';
+    if (centavos > remaining) return null;
+    return '${pesoFromCentavos(centavos)} claimed · '
+        '${pesoFromCentavos(remaining - centavos)} left after this';
+  }
+
+  /// The submit action, pinned. It used to sit at the foot of a form that runs
+  /// past two screens, so the way to finish was invisible for the whole time
+  /// the member was filling it in — and when it was disabled, the reason was
+  /// a banner scrolled somewhere above it.
+  Widget _submitFooter({required String? blockedReason, required bool enabled}) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(top: BorderSide(color: cs.outline)),
+      ),
+      child: SafeArea(
+        top: false,
+        maintainBottomViewPadding: true,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (blockedReason != null) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: cs.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        blockedReason,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+              ],
+              MpButton(
+                label: 'Submit claim',
+                gold: true,
+                loading: _submitting,
+                onPressed: enabled ? _submit : null,
               ),
-              const SizedBox(height: 12),
             ],
-            MpButton(
-              label: 'Submit claim',
-              gold: true,
-              loading: _submitting,
-              onPressed:
-                  (_submitting ||
-                      loading ||
-                      walletExhausted ||
-                      planExpired ||
-                      benefitLocked ||
-                      memberNeedsPayoutMethod)
-                  ? null
-                  : _submit,
-            ),
-            const SizedBox(height: 12),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The benefit a claim will draw from, stated once — which pool, how much is
+/// left, which plan it comes from, and anything standing in the way.
+///
+/// Replaces a `bodySmall` line under the pet field plus three separately
+/// hand-styled banners scattered down the form, which meant the balance and
+/// the reason it couldn't be spent were never on screen together.
+class _BenefitCard extends StatelessWidget {
+  const _BenefitCard({
+    required this.poolLabel,
+    required this.remainingCentavos,
+    required this.planType,
+    required this.exhausted,
+    required this.expired,
+    required this.lockedLabel,
+    required this.note,
+    required this.paymentsMade,
+    required this.showPayments,
+  });
+
+  final String poolLabel;
+  final int remainingCentavos;
+  final String? planType;
+  final bool exhausted;
+  final bool expired;
+
+  /// The server's verbatim membership status for a vesting monthly member.
+  /// Agreement §5.7 — never paraphrase it.
+  final String? lockedLabel;
+  final String? note;
+  final int paymentsMade;
+  final bool showPayments;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final gold = isDark ? AppColors.gold : AppColors.goldDark;
+    final unavailable = exhausted || expired || lockedLabel != null;
+
+    // Gold is the member's money. It stops being gold the moment the money
+    // isn't theirs to spend.
+    final Color figureColor;
+    if (expired || exhausted) {
+      figureColor = cs.error;
+    } else if (lockedLabel != null) {
+      figureColor = cs.onSurfaceVariant;
+    } else {
+      figureColor = gold;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: unavailable ? cs.outline : gold.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                poolLabel,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (planType case final plan? when plan.isNotEmpty)
+                TierBadge(planType: plan, small: true),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Flexible(
+                child: Text(
+                  pesoFromCentavos(remainingCentavos),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: figureColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'left',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          if (lockedLabel != null) ...[
+            const SizedBox(height: 10),
             Text(
-              'MetroPaws will review your claim against your plan benefits. '
-              'You\'ll be notified in the app and by email when the status changes.',
-              style: theme.textTheme.bodySmall!.copyWith(
-                color: cs.onSurfaceVariant,
-                height: 1.5,
+              lockedLabel!,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: gold,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
+          if (note != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  expired || exhausted
+                      ? Icons.error_outline_rounded
+                      : Icons.schedule_rounded,
+                  size: 16,
+                  color: expired || exhausted ? cs.error : gold,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    showPayments ? '$note $paymentsMade paid so far.' : note!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurface,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One of the two claim paths, as a card that says what it means.
+class _PayoutChoice extends StatelessWidget {
+  const _PayoutChoice({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$title. $subtitle',
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: selected ? cs.surfaceContainerHighest : cs.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? cs.primary : cs.outline,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? cs.primary : cs.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: selected ? cs.primary : cs.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  size: 20,
+                  color: selected ? cs.primary : cs.outline,
+                ),
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+enum _NoticeTone { neutral, gold }
+
+/// One inline notice treatment. The form previously hand-rolled four, each
+/// with its own fill, border and radius, so the same class of message looked
+/// like several different kinds of thing.
+class _NoticeCard extends StatelessWidget {
+  const _NoticeCard({
+    required this.tone,
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final _NoticeTone tone;
+  final IconData icon;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final gold = isDark ? AppColors.gold : AppColors.goldDark;
+    final isGold = tone == _NoticeTone.gold;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isGold
+            ? AppColors.gold.withValues(alpha: 0.12)
+            : cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isGold ? AppColors.gold.withValues(alpha: 0.45) : cs.outline,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: isGold ? gold : cs.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurface,
+                    height: 1.4,
+                  ),
+                ),
+                if (actionLabel != null && onAction != null) ...[
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: onAction,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(44, 44),
+                      alignment: Alignment.centerLeft,
+                    ),
+                    child: Text(actionLabel!),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1352,32 +1749,44 @@ class _DateField extends StatelessWidget {
     required this.date,
     required this.onTap,
     this.label = 'Service date',
+    this.hint,
   });
   final DateTime date;
   final VoidCallback onTap;
   final String label;
 
+  /// Says WHICH date is being asked for. The two claim paths want opposite
+  /// things here — the day of a visit that happened, or the day one is booked
+  /// for — and the label alone never said which.
+  final String? hint;
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: InputDecoration(labelText: label),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              _formatDate(date),
-              style: Theme.of(context).textTheme.titleMedium,
+    return Semantics(
+      button: true,
+      label: '$label: ${_formatDate(date)}',
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: InputDecorator(
+            decoration: InputDecoration(labelText: label, helperText: hint),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatDate(date),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 18,
+                  color: cs.onSurfaceVariant,
+                ),
+              ],
             ),
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 18,
-              color: cs.onSurfaceVariant,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1389,12 +1798,18 @@ class _ReceiptAttachment extends StatelessWidget {
     required this.hasFile,
     required this.ext,
     required this.onTap,
+    this.hasError = false,
     this.attachedLabel = 'Receipt attached',
     this.emptyLabel = 'Attach receipt (photo or PDF)',
   });
   final bool hasFile;
   final String? ext;
   final VoidCallback onTap;
+
+  /// Marks the tile itself when submit was pressed with nothing attached. The
+  /// message underneath was the only signal before, which reads as unrelated
+  /// text rather than as this control being the problem.
+  final bool hasError;
   final String attachedLabel;
   final String emptyLabel;
 
@@ -1416,8 +1831,12 @@ class _ReceiptAttachment extends StatelessWidget {
           color: hasFile ? cs.secondaryContainer : cs.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: hasFile ? gold.withValues(alpha: 0.5) : cs.outline,
-            width: hasFile ? 1.5 : 1,
+            color: hasError
+                ? cs.error
+                : hasFile
+                    ? gold.withValues(alpha: 0.5)
+                    : cs.outline,
+            width: (hasFile || hasError) ? 1.5 : 1,
           ),
         ),
         child: Row(
@@ -1447,7 +1866,7 @@ class _ReceiptAttachment extends StatelessWidget {
                 child: Text(
                   hasFile
                       ? '$attachedLabel (${ext == 'pdf' ? 'PDF' : 'photo'}) · tap to change'
-                      : emptyLabel,
+                      : '$emptyLabel — photo or PDF',
                   key: ValueKey('${hasFile}_$ext'),
                   style: theme.textTheme.bodyMedium!.copyWith(
                     color: hasFile ? cs.onSurface : cs.onSurfaceVariant,

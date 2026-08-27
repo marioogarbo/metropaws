@@ -35,6 +35,8 @@ class MpTextField extends StatelessWidget {
   /// keyboard should say so rather than leaving "bella" to be corrected.
   final TextCapitalization textCapitalization;
 
+  final void Function(String)? onChanged;
+
   /// Per-field validation timing. Set this rather than putting
   /// `autovalidateMode` on the enclosing [Form]: a Form-level setting marks the
   /// WHOLE form as interacted with the first time any one field changes, so
@@ -69,6 +71,7 @@ class MpTextField extends StatelessWidget {
     this.suffixText,
     this.helperText,
     this.textCapitalization = TextCapitalization.none,
+    this.onChanged,
     this.autovalidateMode,
   });
 
@@ -86,6 +89,7 @@ class MpTextField extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       inputFormatters: inputFormatters,
       textCapitalization: textCapitalization,
+      onChanged: onChanged,
       maxLength: maxLength,
       maxLines: obscure ? 1 : (maxLines ?? 1),
       style: style,

@@ -480,6 +480,11 @@ ThemeData buildLightTheme() {
         borderSide: const BorderSide(color: AppColors.navy, width: 1.5),
       ),
       hintStyle: GoogleFonts.montserrat(fontSize: 14, color: AppColors.grey),
+      // Material truncates a validation message to ONE line by default, which
+      // turned "Insufficient Emergency Benefit balance — ₱900.00 left" into
+      // "…balance — ₱90…" and hid the figure the member needed. A clipped
+      // error is worse than a long one.
+      errorMaxLines: 3,
     ),
     cardTheme: CardThemeData(
       color: AppColors.white,
@@ -579,6 +584,8 @@ ThemeData buildDarkTheme() {
       filled: true,
       fillColor: AppDarkColors.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      // See the light theme: Material clips a validation message to one line.
+      errorMaxLines: 3,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppDarkColors.border),
