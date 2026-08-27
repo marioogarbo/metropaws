@@ -361,13 +361,23 @@ admin renaming that category breaks both again.
 5. See [`mobile-prod-build`](./android-distribution.md) and the memory of the
    same name for keystore and appbundle specifics.
 
-## Not resolved, and it gates the monthly half
+## Monthly: prices settled, §5.5 wording still owed
 
-Romy has not answered on the monthly **prices** (₱300 / ₱600 / ₱900 appear in no
-document) or on Premium being **+8%** over annual where the other two plans are
-**+20%**. The vesting thresholds are data, so a change is a config edit rather
-than a rebuild — but the copy and the member's experience of the waiting period
-depend on the answer.
+**The pricing half is CLOSED (client decision, 2026-08-27).** Romy created the
+subscription amounts; they stand as configured and the +8% / +20% asymmetry is
+not to be raised again. Verified the same day against the live admin portal:
+the annual fees and all six benefit pools match Manual Rev. 3C exactly. The
+monthly prices appear in neither controlled document — a silence, not a
+contradiction.
+
+**What is still owed is written confirmation of §5.5**, not a price. The
+controlled PDF still reads "two (6)", "three (8)", "four (10)" for
+planned-service eligibility while its own Emergency column reads an unambiguous
+3 / 3 / 4; the numerals are the correct reading and the system implements them
+(see item 10 of
+[`document-system-alignment.md`](./document-system-alignment.md)). Romy owes a
+confirmation and a reissued PDF. The thresholds are database values, so a ruling
+the other way is a config edit, not a rebuild — this does not gate the build.
 
 **The pet-records half has no such blocker** — but as of 2026-08-19 the split is
 no longer free. Everything is merged into `main` and built together as

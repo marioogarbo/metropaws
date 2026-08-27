@@ -41,6 +41,17 @@ the seed data and the site:
 Nothing in the website hardcodes a price — it all comes from the backend, so
 there is no third copy to drift.
 
+**Re-verified 2026-08-27 against the LIVE admin portal** (`metropaws.ph/admin/plans`),
+not just the seed file: all three annual fees and all six benefit pools match
+Manual Rev. 3C exactly. The **monthly** prices (₱300 / ₱600 / ₱900) appear in
+**neither document** — Agreement Rev. 5A carries the monthly rules (§5.2–§5.10)
+with no peso amounts, and the manual lists annual fees only. That is a silence,
+not a contradiction. **Closed by the client 2026-08-27:** Romy owns the
+subscription amounts and they stand as configured; the Premium monthly working
+out +8% over annual where Standard and De Luxe are +20% is his call and is not
+to be raised again. Documenting the monthly prices in the manual remains
+unaddressed but nobody has asked for it.
+
 ---
 
 ## 1. The settlement model is inverted — the big one
@@ -165,9 +176,18 @@ planned-service eligibility only after **6 (Standard) / 8 (Deluxe) / 10
 (Premium)** consecutive cleared monthly payments. Emergency support needs 3/3/4.
 §5.8 forbids paying for anything obtained before the eligibility date.
 
-`grep -ri "vesting\|consecutive" backend` returns nothing outside `.venv`. There
-is no consecutive-payment counter, no eligibility date, no gate on claim
-submission. A monthly member can submit a claim on day one.
+`grep -ri "vesting\|consecutive" backend` returned nothing outside `.venv` when
+this was written. There was no consecutive-payment counter, no eligibility date,
+and no gate on claim submission — a monthly member could submit a claim on day
+one.
+
+> **Stale as of 2026-08-27 — this was built.**
+> [`backend/app/domain/subscription_utils.py`](../../backend/app/domain/subscription_utils.py)
+> now implements the §5.5 gate, thresholds live on the plan rows
+> (`vesting_planned_payments` 6 / 8 / 10, `vesting_emergency_payments` 3 / 3 / 4
+> in [`seed.py`](../../backend/scripts/seed.py)), and the app shows unvested
+> pools as unavailable on the Benefits card, the Home pet card and the claim
+> form. The item stays open only for the written confirmation tracked in item 10.
 
 **Note this cuts both ways.** The thresholds were just raised from 2/3/4 to
 6/8/10 — that is a longer wait, and it is now published. If the business does
@@ -478,6 +498,25 @@ than asked to choose: the words are a stale leftover from an earlier 2/3/4 draft
 that the numerals were raised past. **This must be settled in writing before any
 monthly-subscription code ships** — the thresholds are the feature, and 2/3/4
 versus 6/8/10 is a materially different product.
+
+### 2026-08-27 — that condition is now due, and still unmet
+
+The defect is **still present** in the controlled PDF as supplied; re-verified
+today with both `pdftotext -layout` and the raw extraction, and confirmed
+visually in the rendered table. Nothing has been reissued.
+
+Meanwhile `1.7.0+14` is built and uploaded to the Play production track. It is
+the first production build in which a member can reach and pay for a monthly
+plan — 1.4.1 has no monthly at all — so the "before any monthly-subscription
+code ships" deadline has arrived. Nobody is affected yet: a read of the code
+confirms the thresholds are `vesting_planned_payments` 6 / 8 / 10 and
+`vesting_emergency_payments` 3 / 3 / 4 in
+[`backend/scripts/seed.py`](../../backend/scripts/seed.py), matching the
+numerals, so shipping does not act on the disputed reading.
+
+What is owed is Romy's **written confirmation and a reissued PDF**, not a code
+change. Drafted and sent 2026-08-27. These are database values, so if he rules
+the other way the fix is a config edit, not a rebuild.
 
 ---
 
