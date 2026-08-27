@@ -11,8 +11,16 @@ removed, and the pre-redesign pet card. This exists so refreshing it is a re-run
 rather than a redo.
 
 ```bash
-python tools/store-art/store_art.py     # reads captures/, writes out/
+python tools/store-art/store_art.py     # framed screens: captures/ -> out/
+python tools/store-art/lifestyle.py     # lifestyle hero + banner: scenes/ + captures/ -> out/
 ```
+
+Two generators, because the listing mixes two treatments:
+
+| | Source | Used for |
+| --- | --- | --- |
+| `store_art.py` | a capture, on a branded navy frame | screenshots 2-5, the product shots |
+| `lifestyle.py` | a capture keyed into a generated photo | screenshot 1 and the feature graphic |
 
 **`out/` and `captures/` are both gitignored**, and `captures/` deliberately so:
 a capture contains real member data — the member's name, pet names, benefit
@@ -95,6 +103,35 @@ curl -s -X PUT "http://localhost:8000/pets/<id>" -H "Authorization: Bearer $TOKE
 **`APP_ENV` on the backend defaults to `dev`, which is the shared dev Supabase —
 there is no local throwaway database.** Demo data written here is visible to
 anyone else on dev. Never point this at prod.
+
+## Lifestyle scenes
+
+`lifestyle.py` keys a chroma screen out of an AI-generated photo and drops a
+**real capture** into it. The scene is generated; the phone screen never is.
+Play requires screenshots to represent the actual app, and a generated UI is
+invented text in a layout that is not ours.
+
+Ask the image model for a **flat bright green screen**, not a white one — white
+blends into highlights and cannot be masked cleanly. Also ask for no logo and no
+UI; both come out wrong and are composited afterwards.
+
+Two scenes are needed and they are not interchangeable:
+
+- `scenes/hero.jpg` — **phone-forward close shot**. The prompt must say the
+  phone is *"the closest object to the lens"* and *"fills roughly one third of
+  the total image height"*. A model responds to a proportion, not to "large". A
+  first attempt put the screen at **12.5% of frame width**, which is ~135px once
+  scaled to 1080 — the app was unreadable, which defeats the point of a
+  screenshot. The second, at 25.3%, reads.
+- `scenes/banner.jpg` — **wider room shot** for the 1024x500. Cropping the close
+  shot to landscape cuts the phone mid-screen and collides its own UI with the
+  headline.
+
+The keying uses the render's own rounded corners as the alpha, so the screen
+edge is the photo's rather than one we guess at. `scenes/` is gitignored.
+
+**The scrim over a bright interior has to be near-opaque where the type sits.**
+A gentle tint was tried first and the subline vanished into a cream wall.
 
 ## Sizes
 
