@@ -514,9 +514,31 @@ confirms the thresholds are `vesting_planned_payments` 6 / 8 / 10 and
 [`backend/scripts/seed.py`](../../backend/scripts/seed.py), matching the
 numerals, so shipping does not act on the disputed reading.
 
-What is owed is Romy's **written confirmation and a reissued PDF**, not a code
-change. Drafted and sent 2026-08-27. These are database values, so if he rules
-the other way the fix is a config edit, not a rebuild.
+### Downgraded 2026-08-27 — members never see the defective artifact
+
+The severity assessment above was wrong in the member's favour, and this is the
+fact that settles it: **the app links the website transcription, not the PDF.**
+`ApiConstants.agreementUrl` is `tosUrl` is `{webUrl}/terms-of-service`, so the
+document a member accepts through `AgreementCheckbox` is
+[`website/app/terms-of-service/page.tsx`](../../website/app/terms-of-service/page.tsx),
+which reads **"six (6)" / "eight (8)" / "ten (10)" consecutive** — words and
+numerals agreeing, matching the database. Members never reach MP-CON-001 through
+the app.
+
+Manual Rev. 3C carries the thresholds **nowhere at all** — checked 2026-08-27.
+Its single mention of monthly is a disclaimer: *"Monthly equivalents shown on the
+website are for communication purposes only and may be subject to payment terms,
+availability, activation preconditions and approved billing arrangements."* That
+also retroactively supports closing the pricing question — the manual never
+promised a monthly price, so there was nothing to contradict.
+
+So nothing a member agrees to is ambiguous, and nothing the code does disagrees
+with what they agreed to. **Client decision 2026-08-27: do not chase Romy; ship.**
+
+What remains is document hygiene on the master template, not exposure. Keep the
+item open: MP-CON-001 is the controlled source, and if it is ever printed,
+signed, or re-transcribed to the site, the contradiction travels with it. The
+thresholds are database values, so any future ruling is a config edit.
 
 ---
 
