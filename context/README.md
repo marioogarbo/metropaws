@@ -22,6 +22,10 @@ context/
                  left open?"
 ```
 
+Method that belongs beside its code lives with the code, not here — see
+[`tools/store-art/README.md`](../tools/store-art/README.md) for how the Play
+Store listing art is regenerated, and the traps that cost time building it.
+
 ## When to write here
 
 Add to `features/` when a decision will still matter in six months —
@@ -218,7 +222,15 @@ says. If a fact is derivable by reading a file, link to that file instead.
   entirely; and the birth-date control went through four designs, with the
   research-backed typed-numeric version built, verified and then rejected
   because the finding is about a different control. Static analysis caught none
-  of it, three sessions running.
+  of it, three sessions running. **Continues into 2026-08-28**: 1.7.0+14
+  published (1.4.1+9 straight to 14, so versionCodes 10–13 never reached a
+  member), the internal testing track left behind production and silently
+  pinning every tester to 1.6.0, and the Play listing art rebuilt — the old
+  screenshots were 432x930 RGBA, which is undersized and an alpha channel Play
+  rejects. Records why the AI generates the scene but never the UI, that an
+  image model needs a *proportion* rather than "large" to put the phone forward,
+  that the Digital Pawprint screenshot carries a live scannable `qr_token`, and
+  the demo-data edits on dev that explain why "Alex" changed.
 - [`sessions/2026-08-20-paw-trail-pinned-focus-and-1-5-1.md`](sessions/2026-08-20-paw-trail-pinned-focus-and-1-5-1.md) —
   answered the open question the auth redesign ended on — the paw trail is
   **pinned to the screen** — and found the previous fix had protected the

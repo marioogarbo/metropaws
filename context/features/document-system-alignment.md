@@ -310,6 +310,13 @@ in the app on the same day. Two distinct pieces of work:
   — a migration touching pricing logic. Only worth doing alongside item 1, if at
   all. Internal names carry no legal weight.
 
+**Still live in a shipped build, confirmed 2026-08-28.** The plan-selection
+screen in 1.7.0 renders "₱4,000 Preventive Wellness Wallet" and "₱900 Emergency
+Wallet" from these seed strings — seen on a real device while shooting the Play
+listing. The app-wide rename (§7 of `mobile-unreleased.md`) covered the app's own
+copy but never the plan features, which come from the database. Client decision
+2026-08-28: leave it for now. These are rows, so the fix needs no build.
+
 ## 6. PawPoints — 4 of 9 earning activities are missing
 
 **Manual §9.** The manual publishes a 9-row earning table. `POINTS_BY_TIER` in

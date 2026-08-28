@@ -194,3 +194,104 @@ missed the defects that mattered three sessions running.
   separately and reported it acceptable.
 - Test pets left on the **local dev** database: "Mochi" (Standard, registered,
   unpaid) and possibly "Kobe".
+
+
+---
+
+# 2026-08-28 — 1.7.0 published, and the Play listing art rebuilt
+
+The session ran past midnight. `1.7.0+14` was submitted 2026-08-27 23:58 and
+published 2026-08-28; the listing art was rebuilt the same night.
+
+## The release
+
+Production went **1.4.1+9 → 1.7.0+14** in one jump, so versionCodes 10–13 never
+reached a member and the release notes had to cover §1–§8 of
+[`mobile-unreleased.md`](../features/mobile-unreleased.md), not one section.
+Play's release-notes field caps at 500 characters; the shipped note is 423.
+
+**The internal testing track is now behind production** — it holds 12 (1.6.0)
+while production has 14. Track priority is `internal > production` **per Google
+account**, so every tester is pinned to 1.6.0 and will not receive 1.7.0,
+including the emergency-pool fix, however often they check. The symptom is
+silent: their Play page reads "up to date".
+[`android-distribution.md`](../features/android-distribution.md) predicted this
+exact failure mode before it happened; it is now marked as sprung.
+
+## The listing art
+
+The published screenshots were raw app captures at **432x930 with an alpha
+channel** — undersized against Play's 1080x1920, non-compliant (Play rejects
+alpha), and showing pre-redesign UI: "Wallet" in the nav, a plan badge removed
+from the Home header, the old pet card. `website/public/app-*.png` are the same
+files and are still stale.
+
+Rebuilt as one lifestyle hero, four framed product shots, and a 1024x500 feature
+graphic. Tooling committed at [`tools/store-art/`](../../tools/store-art/), which
+holds the full method; only the decisions are recorded here.
+
+**The scene is AI-generated; the phone screen never is.** Play requires
+screenshots to represent the actual app, and a generated UI is invented text in a
+layout that is not ours. Gemini renders the room with a flat green chroma screen;
+the real capture is keyed in afterwards, using the render's own rounded corners
+as the alpha.
+
+**Two scenes were needed and they do not swap.** The first attempt put the phone
+screen at **12.5% of frame width** — about 135px once scaled to 1080, which makes
+the app unreadable and defeats the point of a screenshot. A regeneration asking
+for the phone as *"the closest object to the lens"* filling *"roughly one third
+of the total image height"* landed at 25.3% and reads. The close shot makes the
+hero; a wider room shot makes the banner, because cropping the close-up to
+landscape cuts the phone mid-screen and collides its own UI with the headline.
+Both were tried the wrong way round first. **A model responds to a proportion,
+not to "large".**
+
+## Demo data curated on dev — why "Alex" changed
+
+The captures came from the **dev Supabase** (`APP_ENV` defaults to `dev`; there is
+no local throwaway database, so this is shared state). Changed through the API,
+not by writing to the database:
+
+- Alex's breed `None` → **Poodle**. "Golden Retriever" ellipsised to "Golden
+  Retriev…" on the Home card, and the photo is a cream poodle regardless — the
+  old website screenshot labelled the same dog "Poodle".
+- Alex given a birth date; the Digital Pawprint read **"0 yrs"** without one.
+- Gelly's breed set the same way.
+- **Mochi deleted** — a test pet created earlier in this session. "Kobe" was never
+  created at all, which confirms the pet row is not written until Activate.
+
+## The Digital Pawprint screenshot contains a live QR token
+
+The pawprint screen renders a scannable `qr_token`. The published screenshot
+therefore carries a working QR of whatever account it was shot from. **These came
+from dev, so the token does not resolve against production** — but re-shooting
+the listing against prod would put a real member's token in a public store
+listing. `tools/store-art/captures/` and `scenes/` are gitignored for the same
+reason: a capture also holds the member's name, pet names and balances, and this
+repository is public.
+
+## Two defects that kept a screen out of the listing
+
+- **`plan_selection_screen.dart` does not format prices.** It interpolates raw
+  integers in six places, so the screen where a member commits to ₱9,999 renders
+  **"₱5999"** and **"₱9999"** with no thousands separators, unlike everywhere
+  else in the app. The screen was dropped from the listing rather than fixed and
+  shot, because the screenshot would then show behaviour the published 1.7.0 does
+  not have. That also costs the listing its "pay monthly" story, which is this
+  release's headline feature. **Client decision 2026-08-28: leave it.**
+- **Plan feature strings still read "Wallet"** — visible as "₱4,000 Preventive
+  Wellness Wallet" on that same screen. Not a new finding: item 5 of
+  [`document-system-alignment.md`](../features/document-system-alignment.md)
+  already names these exact `seed.py` strings. This is confirmation they are
+  still live in a shipped build. **Client decision 2026-08-28: leave it.**
+
+## Still open
+
+- The store **descriptions have not been touched since 1.4.1** — no mention of
+  monthly instalments, pet health records, or the wallet→benefit rename.
+- `website/public/app-*.png` remain stale, undersized and RGBA.
+- Tablet screenshot slots are empty; the track covers "Phones, Tablets, Chrome
+  OS, Android XR". Optional, but the app has no distinct tablet layout.
+- A debug build is installed on the test device. It must be uninstalled before
+  the Play build can be installed — Play App Signing means the two cannot replace
+  each other.
